@@ -1,0 +1,87 @@
+#!/bin/bash
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+engine=pthread
+
+declare -a run_args
+declare -a probe_args
+run_number=0
+probe_number=0
+
+
+function show_help() 
+{
+cat <<EOF
+USAGE:
+   lpfprobe [--engine=<pthread|mpimsg|mpirma|ibverbs|hybrid>]
+            [ lpfrun options ... ] [ probe options ... ]
+
+   Measures the BSP parameters of the current machine. If the --engine=...
+   option is not given, it uses the pthread engine. The lpfrun options should
+   be prefixed with '--lpfrun'. Run 'lpfrun -help' to list them.  The probe
+   options are listed below.
+
+PROBE OPTIONS
+EOF
+
+bash @lpfrun@ -n 1 -engine $engine "${run_args[@]}" @lpf_probe@ --help-params
+
+exit 0
+}
+
+for arg 
+do
+    case $arg in
+
+      --help)
+            show_help
+            shift
+            exit 0
+            ;;
+
+      --engine=*)
+            engine="${arg#--engine=}"
+            shift
+            ;;
+
+      --lpfrun*=*)
+            param="${arg#--lpfrun}"
+            param="${param%%=*}"
+            value="${arg#*=}"
+            run_args[$run_number]="${param}"
+            run_number=$(( run_number + 1 ))
+            run_args[$run_number]="${value}"
+            run_number=$(( run_number + 1 ))
+            shift
+            ;;
+
+      --lpfrun*)
+            run_args[$run_number]="${arg#--lpfrun}"
+            run_number=$(( run_number + 1 ))
+            shift
+            ;;
+
+      *)
+            probe_args[$probe_number]="${arg}"
+            probe_number=$(( probe_number + 1 ))
+            shift
+            ;;
+    esac
+done
+
+bash @lpfrun@ -engine $engine "${run_args[@]}" @lpf_probe@ "${probe_args[@]}"

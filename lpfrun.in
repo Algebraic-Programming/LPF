@@ -1,0 +1,1120 @@
+#!/bin/bash
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name=`basename $0`
+bash_verbose=
+if echo $- | grep x ; then
+  bash_verbose="-x"
+fi
+
+# define a function to print help
+function printhelp()
+{
+    echo "Lightweight Parallel Foundations (LPF)"
+    echo "======================================"
+    echo "v@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@ - @BUILD_DATE@"
+    echo 
+    echo "SYNPOSIS:"
+    echo "    $name [-help] [-np <procs>] [-engine <engine>] <executable> [<param 0> ...]"
+    echo
+    echo "DESCRIPTION"
+    echo "This command runs an executable compiled by the lpfcc frontend compiler"
+    echo
+    echo "OPTIONS"
+    echo "   -help       Shows this message"
+    echo 
+    echo "   -n <tasks>  Defines the total number of parallel tasks available to"
+    echo "               the runtime. These can be processes, threads, or a"
+    echo "               combination of both, depending on the engine. By"
+    echo "               default, it takes one."
+    echo 
+    echo "   -N <nodes>  Defines the number of processes available to the"
+    echo "               runtime. If omitted, the default behaviour is to use"
+    echo "               the minimum number of processes to provide the number"
+    echo "               of equested tasks." 
+    echo 
+    echo "   -show       Command line that will be executed by this frontend"
+    echo
+    echo "   -verbose    Shows various pinning information."
+    echo 
+    echo "   -log <level>"
+    echo "               Set the level of log detail. The default is 0=OFF"
+    echo
+    echo "   -engine <engine>"
+    echo "               Allow you to choose the engine. Currently supported"
+    echo "               are: pthread, mpirma, mpimsg, ibverbs, hybrid"
+    echo 
+    echo "   -probe <seconds>"
+    echo "               Set the number of seconds to probe the system for BSP"
+    echo "               machine parameters. Use 0 to disable probing, which is"
+    echo "               the default."
+    echo
+    echo "   -pinning <scatter|compact|none>"
+    echo "               Set the pinning mode of processes to CPU cores."
+    echo "               'none' is the default."
+    echo
+    echo "   -process-per [ <core|socket|node> | number ]"
+    echo "               Only relevant for the hybrid engine, because it defined"
+    echo "               how to the processes and their threads or organized. "
+    echo 
+    echo "   -spinlock <fast|pause|yield>"
+    echo "               Specifies the spin-lock mode. Use 'fast' for"
+    echo "               the tightest spinlock possible, 'pause' to allow"
+    echo "               companion hyperthreads to use this thread's resources,"
+    echo "               or 'yield' to allow other (OS) threads to run."
+    echo
+    echo "   -a2amode  <sparse|dense|hoefler>"
+    echo "               Specifies the all-to-all mode. In most cases the"
+    echo "               default 'sparse' is the best mode."
+    echo
+    echo "   -tiny-msg-size <bytes for shared mem>:<bytes for distrib mem>"
+    echo "     or just simply"
+    echo "   -tiny-msg-size <bytes>"
+    echo "               Specifies the number of bytes of a message that is"
+    echo "               small enough to be transported along with the meta-data."
+    echo "               Although this implies that these small messages are  "
+    echo "               buffered, it may improve speed because it eliminates"
+    echo "               some of the start-up cost of such small messages."
+    echo "               Increasing this size also requires extra memory. By"
+    echo "               default this value is '16' bytes for pthreads, '128'"
+    echo "               bytes for MPI, and '16:128' for the hybrid implementation."
+    echo
+    echo "   -write-conflict-block-size <bytes>"
+    echo "               Specifies the block size for write-conflict resolution."
+    echo "               This number must be a power of 2."
+    echo 
+    echo "   -bsplib <safe|fast>[:<max_hp_regs>|unlimited]"
+    echo "               Choose whether BSPlib mode runs in fast or safe mode."
+    echo "               Optionally, the maximum number of memory registrations"
+    echo "               available for hp messages can be set. "
+    echo "               The default is 'safe' without a limitation of memory"
+    echo "               registrations."
+    echo 
+    echo "   -mpirun,<MPIRUN ARG>"
+    echo "               Passes <MPIRUN ARG> directly to the underlying mpirun,"
+    echo "               if applicable. For the pthread engine these will be"
+    echo "               ignored."
+    echo
+    echo "   -max-mpi-msg-size <bytes>"
+    echo "               Limits the message size for the mpimsg and mpirma"
+    echo "               engines. Effectively, this means that any lpf_put or"
+    echo "               lpf_get larger than <bytes> will be split up into"
+    echo "               multiple smaller messages, all smaller than <bytes>."
+    echo "               This is useful, if the underlying MPI implementation"
+    echo "               experiences memory allocation/pinning difficulties."
+    echo "               The default maximum size is INT_MAX, which is"
+    echo "               2147483647 on machines with 32-bit ints."
+    echo 
+    echo "   -ibverbs-mtu <256|512|1024|2048|4096>"
+    echo "               Sets the maximum transfer unit (MTU) for the infiniband"
+    echo "               devices, when using the ibverbs engine."
+    echo
+    echo "   <executable>"
+    echo "               The path to the executable to run"
+    echo 
+    echo "   <param 0>..."
+    echo "               The command line parameters for the program"
+    echo 
+
+    if [ x$engine = xmpirma -o x$engine = xmpimsg -o x$engine = xhybrid \
+         -o x$engine = xibverbs ]; then
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        @MPIRUN@ -help
+    fi
+}
+
+############# DATA STRUCTURES ################
+function params_to_stream()
+{
+    printf "%s\n" "$@"
+}
+
+# Creates a comma separated list from a newline separated stream
+function plus_list_create()
+{
+    paste -sd+
+}
+
+# Returns the first or first $1 elements from the comma separated list
+function plus_list_head()
+{
+    local n
+    if [ "x$1" = "x" ]; then
+        n=1
+    else
+        n="$1"
+    fi
+    cut -d+ -f $n 
+}
+
+# Drops first or first $1 elements from the comma separated list
+function plus_list_drop()
+{
+    local n
+    if [ "x$1" = "x" ]; then
+        n=1
+    else
+        n="$1"
+    fi
+    cut -d+ -f "$((n +1 ))-"
+}
+
+# Creates a comma separated list from its parameters
+function plus_list_concat()
+{
+    params_to_stream "$@" | plus_list_create
+}
+
+# Converts a comma separated list in a tokenized list (useful for loops)
+function plus_list_tokenize()
+{
+#    sed -e '/./s/^/"/;/./s/$/"/;s/+/" "/g'
+    sed -e 's/+/ /g'
+}
+
+# Converts a comma separated list into a newline separated stream
+function plus_list_stream()
+{
+    sed -ne "/^\$/d;s/+/\n/g;p"
+}
+
+# Counts the number of elements in the list
+function plus_list_get_size()
+{
+    sed -ne '/^$/d;s/[^+]//gp;' | wc -c
+}
+
+function plus_list_is_empty()
+{
+     sed -ne '/./q1;q0'
+}
+
+
+# From an item formatted as '3(x4)', get the 3
+function item_get()
+{
+    local element="$1"
+    echo "${element%%(*)}"
+}
+
+# From an item formatted as '3(x4)', get the 4
+function item_get_count()
+{
+    local element="$1"
+    local item="${element%%(*)}"
+
+   if [ $item = $element ]; then
+     echo 1
+   else
+     local a=${element##*x}
+     echo "${a%%)}"
+   fi
+}
+
+
+
+
+
+################ MPI WRAPPERS ###############
+
+
+MPIRUN_ENV=
+declare -a MPIRUN_STD_PARAMS
+declare -a MPIRUN_LOCAL_PARAMS
+
+function add_mpirun_param()
+{
+    MPIRUN_STD_PARAMS=( "${MPIRUN_STD_PARAMS[@]}" "$@" )
+}
+
+function add_mpirun_local_param()
+{
+    MPIRUN_LOCAL_PARAMS=( "${MPIRUN_LOCAL_PARAMS[@]}" "$@" )
+}
+
+# Detect the MPI implementation of MPIRUN
+function mpi_detect()
+{
+    if ( @MPIRUN@ -version 2>&1 | grep 'Intel' > /dev/null ; ) then
+        echo intel
+    elif ( @MPIRUN@ -version 2>&1 | grep 'Open MPI' > /dev/null ; ) then
+        echo ompi
+    elif ( @MPIRUN@ -version 2>&1 | grep 'HYDRA' > /dev/null ; ) then
+        echo mpich
+        # also matches MVAPICH
+    elif ( @MPIRUN@ -version 2>&1 | grep 'IBM Platform MPI' > /dev/null ; ) then
+        echo platform
+    else
+        echo generic
+    fi
+}
+
+function mpi_set_local_env()
+{
+    local mpi
+    if [ x$3 = x ]; then
+        mpi=$(mpi_detect)
+    else
+        mpi=$3
+    fi
+
+    if [ x$mpi = xintel ]; then
+        add_mpirun_param "-genv" "$1" "$2"
+    elif [ x$mpi = xompi ]; then
+        add_mpirun_local_param "-x" "$1=$2"
+    elif [ x$mpi = xmpich ]; then
+        add_mpirun_param "-genv" "$1" "$2"
+    elif [ x$mpi = xplatform ]; then
+        add_mpirun_param "-e" "$1=$2"
+    fi
+}
+
+function mpi_disable_pinning()
+{
+    local mpi
+    if [ x$1 = x ]; then
+        mpi=$(mpi_detect)
+    else
+        mpi=$1
+    fi
+
+    if [ x$mpi = xintel ]; then
+        MPIRUN_ENV=$( plus_list_concat $MPIRUN_ENV "I_MPI_PIN=disable" )
+    elif [ x$mpi = xompi ]; then
+        add_mpirun_param "--bind-to" "none"
+    elif [ x$mpi = xplatform ]; then
+        add_mpirun_param "-aff=skip"
+    fi
+    # MPICH doesn't do pinning
+}
+
+function mpi_use_env()
+{
+    for x in $(echo $MPIRUN_ENV | plus_list_tokenize  )
+    do
+        $show export $x
+    done
+}
+
+#### GENERIC wrapper
+function set_local_env()
+{
+    if [ x$engine = xpthread ]; then
+        $show export "$1=$2"
+    else
+        mpi_set_local_env $1 $2
+    fi
+}
+
+function remove_local_env()
+{
+    if [ x$engine = xpthread ]; then
+        $show export -n "$1"
+    fi
+    # not implemented for MPI, because it's not really necessary
+}
+
+
+################ SLURM functions ###########
+
+function slurm_hostlist_expand()
+{
+    scontrol show hostname "$@" 
+}
+
+function tasklist_create()
+{
+   uniq -c \
+   | sed -e 's/^[[:space:]]*\([[:digit:]]*\)[[:space:]]\+\([^[:space:]]*\)/\2(x\1)/' \
+   | plus_list_create
+}
+
+function tasklist_expand()
+{
+    function expand { eval printf "$1%.0s\\\n" {1..$2} ; };
+    export -f expand
+    
+    plus_list_stream \
+       | sed -e '/(x/!s/.*/& 1/;/(x/s/\([^[:space:]]*\)(x\([[:digit:]]*\))/\1 \2/;' \
+       | xargs  -n2 bash -c 'expand $0 "$@"'    2> /dev/null
+  
+    # note: the 2> /dev/null is necessary to make xargs shut-up
+    # about broken pipes that are caused by subsequent commands
+
+    export -n expand
+}
+
+function tasklist_zip()
+{
+    local as=`mktemp`
+    local bs=`mktemp`
+    local sep=$1
+    local n1=$( echo $2 | tasklist_expand | tee $as | wc -l )
+    tasklist_expand | head -n $n1 > $bs
+    local n2=$( cat $bs | wc -l )
+
+    head -n $n2 $as | paste -d"$sep" $bs - | tasklist_create 
+
+    rm $as $bs
+}
+
+function tasklist_unzip_first()
+{
+    local sep=$1
+    sed -e "s/${sep}[^(+]*//g"
+}
+
+function tasklist_unzip_second()
+{
+    local sep=$1
+    sed -e "s/\(^\|+\)[^()+;]*;/\1/g"
+}
+
+function tasklist_create_common()
+{
+    local as=`mktemp`
+
+    echo $1 | tasklist_expand > $as
+
+    tasklist_expand | paste -d\; - $as | \
+        tasklist_create | sed -e 's/;[^(+]*//g'
+
+    rm $as
+}
+
+function tasklist_match_sum()
+{
+    local total=$1
+    local s=`mktemp`
+    cat > $s
+
+    local sum=0
+    local next_sum=0
+    local sep=
+    for x in $(plus_list_tokenize < $s)
+    do
+       local i=$( item_get $x )
+       local n=$( item_get_count $x )
+
+       next_sum=$((sum + i*n))
+       if [ $next_sum -ge $total ]; then
+           remainder=$(( total - sum ))
+           
+           head=$(( remainder / i ))
+           tail=$(( remainder - head * i ))
+
+           if [ $head -gt 0 ]; then
+             echo -n "${sep}${i}(x${head})"
+             sep=+
+           fi
+
+           if [ $tail -gt 0 ]; then
+             echo -n "${sep}${tail}"
+             sep=+
+           fi
+
+         sum=$total
+         break
+
+       else
+         
+         echo -n "${sep}${i}(x${n})"
+         sep=+
+         sum=${next_sum}
+       fi
+    done
+
+    rm $s
+}
+
+####
+function VERB
+{
+    test "x$verbose" = xyes && echo "$@"
+}
+
+
+# parse parameters
+doPrinthelp=no
+verbose=no
+show=
+procs=0
+nodes=0
+engine=pthread
+probe="0.0"
+pinning=none
+process_per=default
+loglevel=0
+bsplib_safemode=1
+spinlock=DEFAULT
+a2amode=SPARSE
+bsplib_hpregs=unlimited
+tiny_size="16 128"
+write_conflict_blocksize=1024
+max_mpi_msg_size=
+ibmtu=4096
+state=
+
+declare -a mpirun_args
+mpirun_arg_number=0
+declare -a other_cmds
+for arg 
+do
+    case $arg in
+       -h|--hilfe|--ausecours|--alaide|--help|-help)
+            doPrinthelp=yes
+            shift
+            ;;
+
+       -np|-n|-npes)
+            state=procs
+            shift
+            ;;
+
+       -N)
+            state=nodes
+            shift
+            ;;
+
+       -engine)
+            state=engine
+            shift
+            ;;
+
+       -probe)
+            state=probe
+            shift
+            ;;
+
+       -pinning)
+            state=pinning
+            shift
+            ;;
+
+       -log)
+            state=loglevel
+            shift
+            ;;
+
+       -bsplib)
+            state=bsplib
+            shift
+            ;;
+
+       -process-per)
+            state=process_per
+            shift
+            ;;
+
+       -spinlock)
+            state=spinlock
+            shift
+            ;;
+
+       -a2amode)
+            state=a2amode
+            shift
+            ;;
+
+       -tiny-msg-size)
+            state=tinysize
+            shift
+            ;;
+            
+       -write-conflict-block-size)
+            state=writeconflict
+            shift
+            ;;
+
+       -show)
+            show=echo
+            shift
+            ;;
+
+       -verbose)
+            verbose=yes
+            shift
+            ;;
+
+       -max-mpi-msg-size)
+            state=maxmpimsgsize
+            shift
+            ;;
+
+       -ibverbs-mtu)
+            state=ibmtu
+            shift
+            ;;
+
+       -mpirun,*)
+            # add mpirun parameters
+            mpirun_args[$mpirun_arg_number]="${arg#-mpirun,}"
+            mpirun_arg_number=$((mpirun_arg_number + 1))
+            shift
+            ;;
+
+       *)   case $state in
+                procs)
+                    procs=$arg
+                    state=
+                    shift
+                    ;;
+
+                nodes)
+                    nodes=$arg
+                    state=
+                    shift
+                    ;;
+
+                engine)
+                    engine=$arg
+                    state=
+                    shift
+                    ;;
+
+                probe)
+                    probe="$arg"
+                    state=
+                    shift
+                    ;;
+
+                pinning)
+                    pinning="$arg"
+                    state=
+                    shift
+                    ;;
+
+                process_per)
+                    process_per="$arg"
+                    state=
+                    shift
+                    ;;
+
+                loglevel)
+                    loglevel="$arg"
+                    state=
+                    shift
+                    ;;
+
+                spinlock)
+                    case $arg in
+                       fast)   spinlock=FAST;;
+                       pause)  spinlock=PAUSE;;
+                       yield)  spinlock=YIELD;;
+                       cond)   spinlock=COND;;
+                       *) echo "ERROR: invalid parameter for option -spinlock '$arg'"
+                          printhelp
+                          exit 1;
+                    esac
+                    state=
+                    shift
+                    ;;
+
+                a2amode)
+                    case $arg in
+                       sparse) a2amode=SPARSE;;
+                       dense)  a2amode=DENSE;;
+                       hoefler) a2amode=HOEFLER;;
+                       *) echo "ERROR: invalid parameter for option -a2amode '$arg'"
+                          printhelp
+                          exit 1;
+                    esac
+                    state=
+                    shift
+                    ;;
+
+                tinysize)
+                    # the argument for can either be of the form "128" or "16:128"
+                    if echo $arg | grep -q ':'; then
+                      tiny_size="${arg/:/ }"
+                    else
+                      tiny_size="${arg} ${arg}"
+                    fi
+                    state=
+                    shift
+                    ;;
+
+                writeconflict)
+                    write_conflict_blocksize=$arg
+                    state=
+                    shift
+                    ;;
+
+                maxmpimsgsize)
+                    max_mpi_msg_size=$arg
+                    state=
+                    shift
+                    ;;
+
+                ibmtu)
+                    ibmtu=$arg
+                    state=
+                    shift 
+                    ;;
+
+                bsplib)
+                    case $arg in
+                       safe) bsplib_safemode=1
+                             ;;
+                       safe:*) bsplib_safemode=1
+                               bsplib_hpregs="${arg#safe:}"
+                               
+                             ;;
+                       fast) bsplib_safemode=0
+                             ;;
+                       fast:*) bsplib_safemode=0
+                               bsplib_hpregs=${arg#fast:}
+                             ;;
+                    esac
+                    state=
+                    shift
+
+                    if echo "$bsplib_hpregs" |  grep -vq '^unlimited$\|^[[:digit:]]\+$'; then
+                       echo "ERROR: invalid maximum number of hp registers specified using -bsplib $arg."
+                       echo "       It must be a positive integer or 'unlimited'"
+                       exit 1
+                    fi
+                    ;;
+
+
+                *)  # stop parsing the command line
+                    other_cmds=( "${other_cmds[@]}" "$@" )
+                    break
+                    ;;
+
+            esac
+            ;;
+     esac
+done
+
+if [ $doPrinthelp = yes ]; then
+  printhelp
+  exit 0
+fi
+
+if [ x$verbose = xyes ]; then
+    echo "VERSION @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@"
+    echo "DATE @BUILD_DATE@"
+    echo "ENGINE:         $engine"
+    echo "PROBE DURATION: $probe seconds"
+    echo "PINNING:        $pinning"
+    echo "LOG LEVEL:      $loglevel"
+    echo "HWLOC ENABLED:  @HWLOC_FOUND@"
+    echo "TINY MSG SIZE:  $tiny_size"
+    
+    if [ $engine != pthread ]; then
+      echo "WRITE CONFLICT BLOCK SIZE: $write_conflict_blocksize"
+      echo "ALL-TO-ALL MODE  $a2amode"
+    fi
+
+    if [ $bsplib_safemode -eq 1 ]; then
+    echo "BSPLIB MODE:    SAFE"
+    else
+    echo "BSPLIB MODE:    FAST"
+    fi
+    echo "BSPLIB HP REGS: $bsplib_hpregs"
+fi
+
+# set-up common environment
+LPFLIB=@CMAKE_INSTALL_PREFIX@
+lpfcore_pat="@lpfcore@"
+LPFCORE=( ${lpfcore_pat/ENGINE/${engine}} )
+
+if [ "${#LPFCORE[*]}" -ne 1 ]; then
+    echo "INTERNAL ERROR: LPF engine was not correctly set"
+    exit 1
+fi
+
+if [ ! -f $LPFCORE ]; then
+  echo "ERROR: LPF engine ${engine} was not installed"
+  exit 1
+fi
+
+set_local_env "LD_LIBRARY_PATH" "$LPFLIB/lib:$LD_LIBRARY_PATH"
+set_local_env "LPF_MAX_SECONDS_FOR_PROBE" "$probe"
+set_local_env "LPF_LOG_LEVEL" "$loglevel"
+set_local_env "LPF_ENGINE" "$engine"
+set_local_env "LPF_A2A_MODE" "$a2amode"
+set_local_env "LPF_TINY_MSG_SIZE" "$tiny_size"
+set_local_env "LPF_WRITE_CONFLICT_BLOCK_SIZE" "$write_conflict_blocksize"
+set_local_env "LPF_BSPLIB_SAFETY_MODE" "$bsplib_safemode"
+set_local_env "LPF_INFINIBAND_MTU_SIZE" "$ibmtu"
+
+if [ x$bsplib_hpregs = xunlimited ]; then
+  remove_local_env LPF_BSPLIB_MAX_HP_REGS
+else 
+  set_local_env "LPF_BSPLIB_MAX_HP_REGS" "$bsplib_hpregs"
+fi
+
+if [ x$max_mpi_msg_size = x ]; then
+  remove_local_env LPF_MPI_MAX_MSG_SIZE
+else
+  set_local_env "LPF_MPI_MAX_MSG_SIZE" "$max_mpi_msg_size"
+fi
+
+
+exit_status=0
+case $engine in
+
+    pthread)
+
+
+        if [ $mpirun_arg_number -ge 1 ]; then
+            echo "Ignoring mpirun parameters in pthread mode '${mpirun_args[@]}'"
+        fi
+
+        if [ $procs -eq 0 ]; then    
+            if [ x"@HWLOC_FOUND@" = xYES ]; then
+                procs=$(@hwloc_calc@ --number-of core all)
+
+                VERB "PTHREAD TASKS: $procs (detected by hwloc)"
+            else
+                procs=
+                VERB "PTHREAD TASKS: (detected by LPF)"
+            fi
+        else
+           VERB "PTHREAD TASKS: $procs (as required by user)"
+        fi
+
+        bitmaps=
+        if [ x"@HWLOC_FOUND@" = xYES ]; then
+            hwcores=$(@hwloc_calc@ --number-of core all)
+            maxcoreid=$(( procs-1 ))
+            if [ $procs -gt $hwcores ]; then
+               maxcoreid=$(( hwcores - 1 ))
+               
+               if [ $spinlock = DEFAULT ]; then
+                   VERB "PTHREAD DETECTED OVERSUBSCRIPTION"
+                   spinlock=PAUSE
+               fi
+            fi
+            if [ x$pinning = xscatter ]; then
+                bitmaps=$( @hwloc_distrib@ --single $procs | plus_list_create )
+            elif [ x$pinning = xcompact ]; then
+                compact_set=$( @hwloc_calc@ core:0-${maxcoreid} )
+                bitmaps=$( @hwloc_distrib@ --single --restrict $compact_set $procs | plus_list_create )
+            fi
+        fi
+ 
+        if [ $spinlock = DEFAULT ]; then
+          VERB "PTHREAD DETECTED AT MOST ONE THREAD PER CORE "
+           spinlock=FAST
+        fi
+       
+        VERB "PTHREAD CPUMASKS: '$bitmaps' (by hwloc)"
+        VERB "PTHREAD SPINLOCK MODE:  $spinlock"
+
+        $show export LPF_SPIN_MODE="$spinlock"
+
+        # run with designated number of processors
+        set_local_env LPF_PROC_PINNING "$bitmaps"
+        set_local_env LPF_MAX_PROCS $procs
+        set_local_env LD_PRELOAD "$LPFCORE"
+        $show "${other_cmds[@]}" 
+        exit_status=$?
+        ;;
+
+    mpirma|mpimsg|ibverbs)
+
+        mpi_impl=$(mpi_detect)
+        proc_args=
+        if [ x$mpi_impl = xplatform ]; then
+            if [ x$SLURM_NTASKS != x ]; then
+                VERB "DETECTED SLURM"
+                if [ $procs -gt 0 ]; then
+                  VERB "MPI TASKS: $procs"
+                  proc_args="-srun -n $procs"
+                else
+                  VERB "MPI TASKS: (autodetected by mpirun)"
+                  proc_args="-srun"
+                fi
+            else      
+                if [ $procs -gt 0 ]; then
+                  VERB "MPI TASKS: $procs"
+                  proc_args="-np $procs"
+                else
+                  VERB "MPI TASKS: (autodetected by mpirun)"
+                fi
+            fi
+        else 
+            if [ $procs -gt 0 ]; then
+                VERB "MPI TASKS: $procs"
+                proc_args="-n $procs"
+            else
+                VERB "MPI TASKS: (autodetected by mpirun)"
+            fi
+        fi
+
+        set_local_env LD_PRELOAD "$LPFCORE"
+
+        $show @MPIRUN@  @MPIEXEC_PREFLAGS@ "${mpirun_args[@]}" \
+            "${MPIRUN_STD_PARAMS[@]}" "${MPIRUN_LOCAL_PARAMS[@]}"\
+            ${proc_args} "${other_cmds[@]}" @MPIEXEC_POSTFLAGS@
+        exit_status=$?
+        ;;
+
+    hybrid)
+        # autodetect whether SLURM is running this command
+        slurm=false
+        if [ x$SLURM_NTASKS != x ]; then
+            slurm=true
+
+        fi
+        VERB "HYBRID SLURM:   $slurm"
+
+        # Set procs correctly if it wasn't
+        if [ $procs -eq 0 ]; then    
+
+            # try to autodetect number of tasks
+            if $slurm; then
+                procs=$SLURM_NTASKS
+            else
+                procs=1
+            fi
+        fi
+
+        if $slurm && test $procs -ge $SLURM_NTASKS; then
+            procs=$SLURM_NTASKS
+        fi
+        VERB "HYBRID TASKS:   $procs"
+
+        # Set nodes correctly if it wasnt
+        if [ $nodes -eq 0 ]; then
+
+            # try to autodetect number of nodes
+            if $slurm; then
+                nodes=$SLURM_JOB_NUM_NODES
+            else
+                nodes=$procs
+            fi
+        fi
+
+        if [ $nodes -ge $procs ]; then
+            nodes=$procs;
+        fi
+
+        if $slurm && test $nodes -ge $SLURM_JOB_NUM_NODES ; then
+            nodes=$SLURM_JOB_NUM_NODES
+        fi
+        VERB "HYBRID NODES:   $nodes"
+
+        # autodetect MPI implementation
+        mpi_impl=$(mpi_detect)
+
+        # set process_per by default to per socket if more than one 
+        # node is used. Use only one process if run on one node.
+        # Note that we only have socket information when in SLURM mode
+        if [ x${process_per} = xdefault ] ; then
+           if $slurm && [ $nodes -gt 1 ] ; then
+              process_per=socket
+           else
+              process_per=node
+           fi
+
+           VERB "HYBRID DEFAULT PROCESSES PER NODE: $process_per"
+        fi
+
+        # Launch job depending on job scheduler
+        if $slurm ; then
+
+            threadlist="$( echo $SLURM_TASKS_PER_NODE | sed -e 's/,/+/g' \
+                          |  tasklist_match_sum $procs)"
+
+        else
+            high=$(( ( procs + nodes - 1) / nodes ))
+            low=$(( procs / nodes ))
+
+            head=$(( procs % nodes ))
+            tail=$(( nodes - head ))
+
+            if [ $head -gt 0 ]; then
+                threadlist="${high}(x${head})+${low}(x${tail})"
+            else
+                threadlist="${low}(x${tail})"
+            fi
+
+        fi
+
+        single=no
+        case ${process_per} in
+          socket)
+              if $slurm ; then
+                # get machine info from SLURM
+                sockets=$(sinfo -N -h --nodes="$SLURM_JOB_NODELIST" -o "%X" | \
+                        head -n $nodes | tasklist_create )
+                check_count=$( echo $sockets | tasklist_expand |  wc -l )
+
+                # check whether that information is complete
+                if [ $check_count -lt $nodes ]; then
+                    
+                    echo "ERROR: Slurm doesn't know number of sockets for all nodes"
+                    echo "       Please, use another value for the -process-per option"
+                    exit 1
+                fi
+
+                threadlist=$( echo $threadlist | tasklist_zip ';' $sockets )
+                single="single"
+
+                VERB "HYBRID PROCESS MAPPING: One process per socket"
+                VERB "HYBRID PINNING: Exact pinning enabled"
+                 
+              else
+                echo "ERROR: No socket information available. Please use"
+                echo "       option -process-per <number>"
+                exit 1
+              fi
+              ;;
+
+          node)
+              one_proc_per_node=$( yes 1 | head -n $nodes | tasklist_create )
+              threadlist=$( echo $threadlist | tasklist_zip ';' $one_proc_per_node )
+              VERB "HYBRID PROCESS MAPPING: One process per compute node"
+              if $slurm ; then single="single"; VERB "HYBRID PINNING: exact pinning enabled";fi
+              ;;
+
+
+          core)
+              threadlist=$( echo $threadlist | tasklist_expand | head -n $nodes | tasklist_create )
+              threadlist=$( echo $threadlist | tasklist_zip ';' $threadlist )
+              VERB "HYBRID PROCESS MAPPING: One process per processor core"
+              if $slurm ; then single="single"; VERB "HYBRID PINNING: exact pinning enabled";fi
+              ;;
+
+          *)  number=${process_per}
+              if ( echo $number | grep -q '[^[:digit:]]' ; ) || test $number -le 0 ; then
+                echo "ERROR: Valid arguments for -process-per are socket, node,"
+                echo "       core, or just a number"
+                exit 1
+              fi
+              VERB "HYBRID PROCESS MAPPING: ${process_per} process/processes per compute node"
+              procs_per_node=$( yes ${number} | head -n $nodes | tasklist_create )
+              threadlist=$( echo $threadlist | tasklist_zip ';' $procs_per_node )
+              ;;
+        esac
+
+        if [ x$pinning = xcompact -a x$single = xno -a $nodes -ne 1 ]; then
+           VERB "HYBRID PINNING MODE OVERRIDDEN TO scatter"
+           # Honestly, can't produce a reliable pinning when no information
+           # is available from a job scheduler or when  number of processes
+           # per node does not have easy match with the compute nodes.
+           pinning=scatter
+        fi
+
+        mode=${pinning}${show:+-show}
+        if [ "x$verbose" = xyes ] ; then mode="${mode}-verbose"; fi
+        colon=
+        nodelist=
+        cmd=
+        proclist=
+        usednodes=0
+        comma=
+        appfile=/dev/null
+        pwd=`pwd`
+        if [ "x$mpi_impl" = xplatform ]; then 
+            appfile=`mktemp`; 
+            if $slurm; then
+                nodelist=`slurm_hostlist_expand $SLURM_JOB_NODELIST | plus_list_create`
+            fi
+        fi
+        for element in $( echo $threadlist | plus_list_tokenize )
+        do
+            threads=$(item_get $( echo $element | tasklist_unzip_first ";" ))
+            processes=$(item_get $( echo $element | tasklist_unzip_second ";" ))
+            repetition=$( item_get_count $element )
+
+            if [ $threads -lt $processes ]; then
+              processes=$threads
+            fi
+
+            # only slurm guarantees that $processes is spread over the nodes evenly
+            # so that each $processes processes run on a different node.
+            # Note: we can't use SLURM mode for IBM Platform MPI
+            if $slurm && [ "x$mpi_impl" != xplatform ] ; then 
+              n=1
+              m=$repetition
+            else
+              n=$repetition
+              m=1
+            fi
+
+            for ((i=0; i < n; ++i))
+            do
+                id=$(uuidgen)
+                # Generate generic MPI command
+                cmd="$cmd $colon ${MPIRUN_LOCAL_PARAMS[@]} @MPIEXEC_NUMPROC_FLAG@ $((m * processes))"
+                cmd="$cmd bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}"
+                colon=":"
+                proclist="${proclist}${comma}${processes}(x${repetition})"
+                usednodes=$(( usednodes + repetition ))
+                comma=,
+                # Generate appfile for IBM Platform MPI
+                if $slurm ; then
+                   host=`echo $nodelist | plus_list_head`
+                   nodelist=`echo $nodelist | plus_list_drop`
+                   echo -n "-h $host " >> $appfile
+                fi
+                echo "-np $((m * processes)) bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}" >> $appfile
+            done
+        done
+
+        # Workaround for odd behaviour, where mpiexec fails with a floating 
+        # point exception. This is observed with Intel MPI and MPICH in SLURM mode
+        if $slurm && [ $SLURM_JOB_NUM_NODES -gt $usednodes ] ; then
+          # add an entry for each unused node
+          unusednodes=$((SLURM_JOB_NUM_NODES - usednodes ))
+          proclist="${proclist},1(x${unusednodes})"
+        fi
+            
+
+        if $slurm ; then
+            $show export SLURM_TASKS_PER_NODE="$proclist"
+            $show export SLURM_STEP_TASKS_PER_NODE="$proclist"
+        fi
+
+        mpi_disable_pinning $mpi_impl
+
+        if [ x$mpi_impl = xplatform ]; then 
+            if [ "x$show" != x ]; then
+               echo "cat > $appfile <<EOF"
+               cat $appfile
+               echo "EOF"
+            fi
+            add_mpirun_param "-stdio=i0" "-f" "$appfile"
+            cmd=
+        fi
+        
+        mpi_use_env $mpi_impl
+        $show @MPIRUN@ "${MPIRUN_STD_PARAMS[@]}" "${mpirun_args[@]}" $cmd
+        exit_status=$?
+    
+        if [ "x$mpi_impl" = xplatform ]; then
+            rm $appfile
+        fi
+
+        ;;
+
+    *)
+        echo "Engine '$engine' is not supported. Please choose 'pthread',"
+        echo "'mpirma', or 'hybrid'"
+        exit_status=1
+        ;;
+esac
+
+exit $exit_status
+       
+

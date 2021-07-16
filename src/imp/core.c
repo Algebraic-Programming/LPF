@@ -1,0 +1,181 @@
+
+/*
+ *   Copyright 2021 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <lpf/core.h>
+
+#include <limits.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdint.h>
+
+const lpf_err_t LPF_SUCCESS = 0;
+const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
+const lpf_err_t LPF_ERR_FATAL = 2;
+
+const lpf_init_t LPF_INIT_NONE = NULL;
+
+const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
+
+const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
+
+const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
+
+const lpf_pid_t LPF_MAX_P = UINT_MAX;
+
+const lpf_memslot_t LPF_INVALID_MEMSLOT = SIZE_MAX;
+
+const lpf_machine_t LPF_INVALID_MACHINE = { 0, 0, NULL, NULL };
+
+const lpf_t LPF_NONE = NULL;
+const lpf_t LPF_ROOT = "ROOT";
+
+lpf_err_t lpf_hook( lpf_init_t _init, lpf_spmd_t spmd, lpf_args_t args)
+{
+    (void) _init;
+    (*spmd)( LPF_ROOT, 0, 1, args );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_rehook( lpf_t ctx, lpf_spmd_t spmd, lpf_args_t args)
+{
+    (*spmd)( ctx, 0, 1, args );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_exec( lpf_t ctx, lpf_pid_t P, lpf_spmd_t spmd, lpf_args_t args)
+{
+    (void) P;
+    (*spmd)( ctx, 0, 1, args );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_register_global( lpf_t lpf, void * pointer, size_t size, 
+        lpf_memslot_t * memslot )
+{
+    (void) lpf;
+    (void) size;
+    char * null = NULL;
+    *memslot = (char *) pointer - null;//lint !e413 Intentional use of NULL
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_register_local( lpf_t lpf, void * pointer, size_t size, 
+        lpf_memslot_t * memslot )
+{
+    (void) lpf;
+    (void) size;
+    char * null = NULL;
+    *memslot = (char * ) pointer - null;//lint !e413 Intentional use of NULL
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_deregister( lpf_t lpf, lpf_memslot_t memslot )
+{
+    (void) lpf;
+    (void) memslot;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_put( lpf_t lpf,
+    lpf_memslot_t src_slot, 
+    size_t src_offset,
+    lpf_pid_t dst_pid, 
+    lpf_memslot_t dst_slot, 
+    size_t dst_offset, 
+    size_t size, 
+    lpf_msg_attr_t attr
+)
+{
+    (void) lpf;
+    (void) attr;
+    (void) dst_pid;
+    char * null = NULL;
+    char * src_ptr = null + src_slot;//lint !e413 Intentional use of NULL
+    char * dst_ptr = null + dst_slot;//lint !e413 Intentional use of NULL
+    memcpy( dst_ptr + dst_offset, src_ptr + src_offset, size );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get(
+    lpf_t lpf, 
+    lpf_pid_t src_pid, 
+    lpf_memslot_t src_slot, 
+    size_t src_offset, 
+    lpf_memslot_t dst_slot, 
+    lpf_memslot_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+){
+    (void) lpf;
+    (void) attr;
+    (void) src_pid;
+    char * null = NULL;
+    char * src_ptr = null + src_slot;//lint !e413 Intentional use of NULL
+    char * dst_ptr = null + dst_slot;//lint !e413 Intentional use of NULL
+    memcpy( dst_ptr + dst_offset, src_ptr + src_offset, size );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_sync( lpf_t lpf, lpf_sync_attr_t attr )
+{
+    (void) lpf;
+    (void) attr; 
+    return LPF_SUCCESS;
+}
+
+static double messageGap( lpf_pid_t p, size_t min_msg_size, lpf_sync_attr_t attr)
+{ 
+    (void) p;
+    (void) min_msg_size;
+    (void) attr;
+    return 0.0; 
+}
+
+static double latency( lpf_pid_t p, size_t min_msg_size, lpf_sync_attr_t attr)
+{ 
+    (void) p;
+    (void) min_msg_size;
+    (void) attr;
+    return 0.0; 
+}
+
+lpf_err_t lpf_probe( lpf_t lpf, lpf_machine_t * params )
+{
+    (void) lpf;
+
+    params->p = 1;
+    params->free_p = 1;
+    params->g = messageGap;
+    params->l = latency;
+
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_resize_message_queue( lpf_t lpf, size_t max_msgs )
+{
+    (void) lpf;
+    (void) max_msgs;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
+{
+    (void) lpf;
+    (void) max_regs ;
+    return LPF_SUCCESS;
+}
+

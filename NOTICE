@@ -1,0 +1,74 @@
+The following is a list of contributors to LPF. All following contributors
+were employed by, or outsourced to, Huawei Technologies Co., Ltd., or one of
+its subsidiaries at the time the contributions were made. All copyright rests
+with Huawei Technologies Co., Ltd.
+
+Documentation / Specification
+    - 2015 - 2021     Albert-Jan Yzelman
+        1) Core API
+        2) BSMP
+        3) Collectives
+
+    - 2015 - 2021     Wijnand Suijlen
+        1) Core API
+        2) BSPlib
+
+    - 2017, February - August, Dimitris Vekris (dim.vekris@gmail.com)
+        1) Formal Semantics
+
+    - 2017, January-July, Jonathan Nash (jonathan.mark.nash@gmail.com)
+        1) Collectives
+
+
+Implementation
+    - 2015 - 2018, Wijnand Suijlen
+        1) Pthread implementation
+        2) MPI Remote Memory Access (RMA) implementation
+        3) BSPlib
+
+    - 2017, January-July, Jonathan Nash (jonathan.mark.nash@gmail.com)
+        1) Collectives
+
+    - 2015 - 2017, Albert-Jan Yzelman
+        1) BSMP
+        2) Collectives
+        3) Pthread implementation
+
+    - 2018, Pierre Leca
+        1) Usability improvements of compiler frontends and CMake integration
+
+
+Quality Assurance
+    - 2017, Daniel Di Nardo (daniel.di.nardo@huawei.com,
+            danieldinardo@gmail.com)
+        1) Continuous Integration with Jenkins
+        2) PCLint analysis
+
+    - 2015 - 2017, Wijnand Suijlen
+        1) API test suite
+        2) Performance test suite
+
+    - 2015 - 2017, Albert-Jan Yzelman
+        1) Performance test suite
+
+
+Miscellaneous / Acknowledgments
+    - 2016 - 2017, Antoine Petitet
+        1) Most active early user with SML.
+
+    - 2017, Pierre Leca
+        1) Used it in ActiveBSP and submitted many helpful bug reports.
+
+    - 2017, Arvid Jakobsson
+        1) Used it for experimental evaluation in his paper about automatic
+           cost analysis of BSP programmes and also submitted many helpful
+           bug reports.
+
+    - 2015 - 2018, The parallel algorithm team in Paris, France
+        1) For being such an inspiring environment.
+
+    - 1990 - 2021 Bill McColl
+        1) For developing BSP and BSPlib.
+        2) Inspiring the LPF write conflict resolution model.
+        3) Fostering the aforementioned inspiring research environments.
+

@@ -1,0 +1,146 @@
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+set(LPF_ENGINES @ENGINES@)
+set(LPF_CONFIG_NAME @LPFLIB_CONFIG_NAME@)
+set(LPF_LPFCC @lpfcc@)
+set(LPF_LPFCXX @lpfcxx@)
+set(LPF_LPFRUN @lpfrun@)
+
+include(@INSTALL_CMAKE_MODULES@/lpf.cmake)
+include(CMakeParseArguments)
+
+function(target_add_compilation_flags target visibility)
+    if (ARGC LESS 3)
+      return()
+    endif()
+
+    string(REPLACE ";" " " ws_sep_flags ${ARGN})
+    if ( visibility STREQUAL PRIVATE OR visibility STREQUAL PUBLIC)
+      get_target_property(f ${target} COMPILE_FLAGS)
+      if (f)
+        set_target_properties(${target} PROPERTIES COMPILE_FLAGS "${f} ${ws_sep_flags}")
+      else()
+        set_target_properties(${target} PROPERTIES COMPILE_FLAGS "${ws_sep_flags}")
+      endif()
+    endif()
+    if (visibility STREQUAL INTERFACE OR visibility STREQUAL PUBLIC)
+      get_target_property(f ${target} INTERFACE_COMPILE_FLAGS)
+      if (f)
+        set_target_properties(${target} PROPERTIES INTERFACE_COMPILE_FLAGS "${f} ${ws_sep_flags}")
+      else()
+        set_target_properties(${target} PROPERTIES INTERFACE_COMPILE_FLAGS "${ws_sep_flags}")
+      endif()
+    endif()
+endfunction(target_add_compilation_flags)
+
+# add compilation flags to the target's compilation list and the list
+# that is required to compile stuff that uses it (INTERFACE_COMPILE_FLAGS)
+# Instead of flags, targets can also be passed along, whose flags will then
+# be copied
+function(target_compile_flags target)
+  set(mode INIT)
+  set(vis UNKNOWN)
+  set(xs)
+  foreach( a ${ARGN})
+    if ( mode STREQUAL INIT )
+      set(vis ${a})
+      set(mode CONT)
+    else()
+      if (a STREQUAL PUBLIC OR a STREQUAL PRIVATE OR a STREQUAL INTERFACE)
+         if (NOT (vis STREQUAL UNKNOWN) )
+           target_add_compilation_flags( ${target} ${vis} ${xs})
+         endif()
+         set(vis ${a})
+      else()
+        set(f ${a})
+        if (TARGET ${a})
+          get_target_property(x ${target} INTERFACE_COMPILE_FLAGS) 
+          if (x)
+            set(f ${x})
+          else()
+            set(f)
+          endif()
+        endif()
+        list(APPEND xs ${f})
+      endif()
+    endif()
+  endforeach(a)
+
+  if (NOT (vis STREQUAL UNKNOWN) )
+    target_add_compilation_flags( ${target} ${vis} ${xs})
+  endif()
+endfunction(target_compile_flags)
+
+
+function(target_link_lpf target)
+    set(options BSPLIB HL PUBLIC PRIVATE INTERFACE)
+    set(oneValueArgs ENGINE)
+    set(multiValueArgs)
+    cmake_parse_arguments(args "${options}" "${oneValueArgs}"
+                               "${multiValueArgs}" ${ARGN} )
+
+    if(NOT args_ENGINE)
+        set(args_ENGINE "imp")
+    endif()
+    
+    set(visibility)
+    if (args_PUBLIC)
+       set(visibility PUBLIC)
+    endif()
+    if (args_PRIVATE)
+       if (visibility)
+         message(SEND_ERROR "Cannot combine link visibility ${visibility} with PRIVATE target_link_lpf()")
+       endif()
+       set(visibility PRIVATE)
+    endif()
+    if (args_INTERFACE)
+       if (visibility)
+         message(SEND_ERROR "Cannot combine link visibility ${visibility} with INTERFACE target_link_lpf()")
+       endif()
+       set(visibility INTERFACE)
+    endif()
+    if (NOT visibility)
+      set(visibility PUBLIC)
+    endif()
+  
+
+    set(engine_config ${args_ENGINE}_${LPF_CONFIG_NAME})
+
+    if(args_BSPLIB)
+        target_link_libraries(${target} LINK_${visibility} bsplib )
+    endif()
+
+    if (args_HL)
+        target_link_libraries(${target} LINK_${visibility} lpf_hl )
+    endif()
+
+    target_link_libraries(${target} LINK_${visibility} lpf_core_univ_${engine_config} )
+
+    message(STATUS "Linking with lpf_core_univ_${engine_config}")
+
+    # Because CMake 2.8.12 has no way transitive LINK_FLAGS yet, we do those
+    # manually
+    get_target_property(target_type ${target} TYPE)
+    if (target_type STREQUAL "EXECUTABLE")
+        set_target_properties(${target} PROPERTIES LINK_FLAGS "@LPF_CORE_LIB_LINK_FLAGS@ @LPF_CORE_EXE_LINK_FLAGS@")
+    else()  
+        set_target_properties(${target} PROPERTIES LINK_FLAGS "@LPF_CORE_LIB_LINK_FLAGS@")
+    endif()
+    set_target_properties(${target} PROPERTIES COMPILE_FLAGS "@LPF_CORE_COMPILE_FLAGS@")
+endfunction()
+

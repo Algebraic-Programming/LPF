@@ -1,0 +1,223 @@
+#!/bin/bash
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name=`basename $0`
+
+function to_plus_list()
+{
+    paste -sd+
+}
+
+function drop
+{
+    local n=$1
+    tail -n +$((n+1))
+}
+
+function min
+{
+    sort -n | head -n 1
+}
+
+        
+#parameters
+id=$1
+mode=$2
+single=$3
+procs_per_node=$4
+threads_per_node=$5
+spinlock=$6
+pwd=$7
+
+# Change to the working directory.
+# Which is necessary for MPI's such as IBM Platform MPI
+cd $pwd
+
+# When the lpfrun launcher runs in SLURM mode, it knows really how many
+# processes per node are being started, which allows it to force
+# pinning to a single specific core. If running without SLURM then it 
+# has to be more lenient with pinning, because no guarantees on 
+# availability of cores can be provided.
+if [ x$single = xno ]; then
+    hwloc_single=""
+elif [ x$single = xsingle ]; then
+    hwloc_single="--single"
+else
+    hwloc_single="";
+fi
+
+# lockfile
+lock=/tmp/lpfproxy-$id
+
+# All processes should assign themselves a rank 
+pid=$$
+rank=$( flock $lock -c "echo $pid >> $lock; cat $lock | wc -l" )
+size=$procs_per_node
+# the last process should delete the lock file
+if [ $rank -eq $procs_per_node ]; then
+  rm -f $lock
+fi
+
+# consume the parameters
+shift 7
+
+if [ "x$size" = x ]; then
+  echo "$name: Problem synchronizing during startup"
+  exit 1
+fi
+
+
+#sanity check
+if [ $procs_per_node != $size ]; then
+  echo "$name: Startup sanity check failed"
+  exit 1
+fi
+
+# 1 <= rank <= size
+if [ $rank -lt 1   -o   $rank -gt $size ]; then
+  echo "$name: Startup sanity check failed"
+  exit 1
+fi
+
+
+# compute min number of local threads           
+threads=$(( threads_per_node  / size ))
+first_rank_with_few_threads=$(( threads_per_node % size ))
+
+if [ $((rank - 1)) -lt $first_rank_with_few_threads ] ; then
+  offset=$(( (rank-1) * (threads+1) ))
+  threads=$((threads+1))
+else
+  offset=$(( first_rank_with_few_threads * (threads+1) ))
+  offset=$(( offset + (rank - first_rank_with_few_threads - 1) * threads  ))
+fi
+
+
+if [ $threads -eq 0 ]; then
+   echo "lpfproxy: internal error. thread counts is zero"
+   exit 1
+fi
+
+if [ x"@HWLOC_FOUND@" = xYES ]; then
+    hwcores=$(@hwloc_calc@ --number-of core all)
+    maxcoreid=$(( threads_per_node-1 ))
+    if [ $threads_per_node -gt $hwcores ]; then
+       maxcoreid=$(( hwcores - 1 ))
+
+       if [ $spinlock = DEFAULT ]; then
+         spinlock=PAUSE
+       fi
+    fi
+fi
+
+if [ $spinlock = DEFAULT ]; then
+  spinlock=FAST
+fi
+
+# Compute pinning
+pinmode=none
+case $mode in
+
+    *compact*)
+        if [ x"@HWLOC_FOUND@" != xYES ]; then
+           pinning=
+
+        else
+           # threads are separated over multiple sockets. Still try to pack them
+           # as close as possible
+           compact_set=$( @hwloc_calc@ core:0-${maxcoreid} )
+           pinning=$( @hwloc_distrib@ $hwloc_single --restrict $compact_set $threads_per_node \
+                      | drop $offset | head -n $threads | to_plus_list )
+           pinmode=compact
+
+        fi
+
+
+        ;;
+
+
+    *scatter*)
+        
+        if [ x"@HWLOC_FOUND@" != xYES ]; then
+           pinning=
+
+        else
+           # processes have to share sockets, so just cut out the right range
+           # of the whole list
+           pinning=$( @hwloc_distrib@ $hwloc_single $threads_per_node | drop $offset\
+                      | head -n $threads | to_plus_list )
+           pinmode=scatter
+        fi
+
+        ;;
+
+    *)
+        pinning=
+        ;;
+esac
+
+
+# Determine whether we're printing or executing statements
+case $mode in
+  *verbose*) name=$(hostname)
+        cat <<EOF
+$name process $rank of $size: THREADS $threads; PIN STRATEGY $pinmode; SPINLOCK $spinlock
+$name process $rank of $size: CPUMASK $pinning 
+$name process $rank of $size: EXECUTES $@
+EOF
+          ;;
+esac
+
+# Resolve Core library
+lpfcore_pat="@lpfcore@"
+LPFCORE=( ${lpfcore_pat/ENGINE/${LPF_ENGINE}} )
+
+if [ "${#LPFCORE[*]}" -ne 1 ]; then
+    echo "INTERNAL ERROR: LPF engine was not correctly set"
+    exit 1
+fi
+
+if [ ! -f $LPFCORE ]; then
+  echo "ERROR: LPF engine ${LPF_ENGINE} was not installed"
+  exit 1
+fi
+
+case $mode in
+*show*) name=$(hostname)
+        cat <<EOF
+
+# INFO: $0 @ $name executes as process $rank of $size
+bash -c "export LPF_MAX_PROCS=$threads ;
+export LPF_PROC_PINNING=$pinning ;
+export LPF_SPIN_MODE=$spinlock ;
+export LD_PRELOAD=$LPFCORE ;
+exec $@"
+EOF
+        # Execute the dummy MPI program so that the calling MPIRUN 
+        # can be satisfied by running a program which calls MPI_Init
+        # IBM Platform MPI requires that.
+        exec @lpf_proxy_dummy@
+          ;;
+esac
+
+# Execute the command
+export LPF_MAX_PROCS=$threads
+export LPF_PROC_PINNING="$pinning"
+export LPF_SPIN_MODE="$spinlock"
+export LD_PRELOAD="$LPFCORE"
+exec "$@"

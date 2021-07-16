@@ -1,0 +1,5 @@
+func_lpf_put_parallel_bad_pattern_.*
+func_lpf_hook_tcp_mpi..._[^_]*_mvapich2
+func_lpf_hook_tcp_mpi..._[^_]*_openmpi_gcc_64_1_10_7
+func_lpf_hook_tcp_timeout_mpi..._[^_]*_openmpi_gcc_64_1_10_7
+func_lpf_hook_tcp_mpi..._[^_]*_mpich_ge_gcc_64_3_2rc2

@@ -1,0 +1,379 @@
+#!/bin/bash
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name=`basename $0`
+
+# define a function to print help
+function printhelp()
+{
+    echo "LPF Compiler Frontend"
+    echo "====================="
+    echo 
+    echo "SYNPOSIS:"
+    echo "    $name [-help] [-engine <engine>] <sources> ... <libs> ..."
+    echo
+    echo "DESCRIPTION"
+    echo "This command compiles C sources and links them with the LPF library"
+    echo
+    echo "OPTIONS"
+    echo "   -help       Shows this message"
+    echo 
+    echo "   -show[=quoted]"
+    echo "               Command line that will be executed by this frontend."
+    echo "               If 'quoted' is given, the printed parameters will be"
+    echo "               quoted with single (') quotes."
+    echo
+    echo "   -compile_info[=quoted]"
+    echo "               Prints the generic compilation command, ignoring any"
+    echo "               provided source, object, or output files. If 'quoted'"
+    echo "               is given, the printed parameters will be quoted with"
+    echo "               single (') quotes."
+    echo 
+    echo "   -link_lib_info[=quoted]"
+    echo "               Prints the generic link command for linking libraries,"
+    echo "               ignoring any provided source, object, or output files."
+    echo "               If 'quoted' is given, the printed parameters will be"
+    echo "               quoted with single (') quotes."
+    echo 
+    echo "   -link_exe_info[=quoted]"
+    echo "               Prints the generic link command for linking executables,"
+    echo "               ignoring any provided source, object, or output files."
+    echo "               If 'quoted' is given, the printed parameters will be"
+    echo "               quoted with single (') quotes."
+    echo 
+    echo "   -engine <engine>"
+    echo "               Allow you to choose the engine. Currently supported"
+    echo "               are: pthread, mpirma, mpimsg, ibverbs"
+    echo
+    echo "   <sources>"
+    echo "               Source files (.c)"
+    echo
+    echo "   <lib>"
+    echo "               Any C/C++ library. "
+    echo "               LPF provides the following option libraries: "
+    echo "                  -llpf_hl    Link with the higher-level libraries"
+    echo "                  -llpf_debug Use the debug core-interface layer"
+    echo "                  -lbsplib    Link with BSPlib API as defined by Hill et al."
+    echo "                  -lmcbsp     Link with MulticoreBSP C API"
+    echo 
+
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    @CMAKE_C_COMPILER@ --help
+}
+
+
+# parse parameters
+doPrinthelp=no
+link_exe=yes
+link_lib=no
+show=
+show_link_lib=
+show_link_exe=
+show_compile=
+engine=imp
+config=@LPFLIB_CONFIG_NAME@
+declare -a sources
+sources_number=0
+declare -a objects
+objects_number=0
+extra_libs=
+debug=no
+output=
+state=
+declare -a other_args
+arg_number=0
+for arg 
+do
+    case $arg in
+       -help)
+            doPrinthelp=yes
+            shift
+            ;;
+
+       -show)
+            show=echo
+            shift
+            ;;
+
+       -show=quoted)
+            show=quote
+            shift
+            ;;
+
+       -link_lib_info)
+            show_link_lib=echo
+            shift
+            ;;
+
+       -link_lib_info=quoted)
+            show_link_lib=quote
+            shift
+            ;;
+
+       -link_exe_info)
+            show_link_exe=echo
+            shift
+            ;;
+
+       -link_exe_info=quoted)
+            show_link_exe=quote
+            shift
+            ;;
+
+       -compile_info)
+            show_compile=echo
+            shift
+            ;;
+
+       -compile_info=quoted)
+            show_compile=quote
+            shift
+            ;;
+
+       -engine)
+            state=engine
+            shift
+            ;;
+
+       -llpf_hl)
+            extra_libs="$extra_libs hl"
+            shift
+            ;;
+
+       -llpf_debug)
+            debug=yes
+            shift
+            ;;
+
+       -lbsplib)
+            extra_libs="$extra_libs bsplib"
+            shift
+            ;;
+
+       -lmcbsp)
+            extra_libs="$extra_libs mcbsp"
+            shift
+            ;;
+
+       -o)
+            state=output
+            shift
+            ;;
+
+       -c)
+            link_lib=no
+            link_exe=no
+            shift
+            ;;
+
+       -shared)
+            link_lib=yes
+            link_exe=no
+            shift
+            ;;
+
+       *)   case $state in
+
+                engine)
+                    engine=$arg
+                    state=
+                    shift
+                    ;;
+
+                output)
+                    output="$arg"
+                    state=
+                    shift
+                    ;;
+
+                *)
+                    case $arg in
+
+                      *.c)  sources[$sources_number]="$arg"
+                            sources_number=$((sources_number + 1))
+                            shift
+                            ;;
+
+                      *.o) objects[$objects_number]="$arg"
+                            objects_number=$((objects_number + 1))
+                            shift
+                            ;;
+
+
+                       *)  other_args[$arg_number]="$arg"
+                           arg_number=$((arg_number + 1))
+                           shift
+                          ;;
+                    esac 
+                    ;;
+            esac
+            ;;
+     esac
+done
+
+if [ $doPrinthelp = yes ]; then
+  printhelp
+  exit 0
+fi
+
+
+compiler="@CMAKE_C_COMPILER@"
+linker="@CMAKE_CXX_COMPILER@"
+
+cflags=( "-I@INSTALL_HEADERS@" @LPF_CORE_COMPILE_FLAGS@ )
+lib_ldflags=( @LPF_CORE_LIB_LINK_FLAGS@ -shared )
+exe_ldflags=( @LPF_CORE_LIB_LINK_FLAGS@ @LPF_CORE_EXE_LINK_FLAGS@ )
+
+mcbsp_cflags=( "-I@INSTALL_HEADERS@/bsp" "-DLPF_USE_MCBSP_API=1" )
+bsplib_cflags=( "-I@INSTALL_HEADERS@/bsp" )
+defs=()
+stdlibs=()
+
+if [ x$debug = xyes ]; then
+    stdlibs=( "-llpf_debug" "@LIB_POSIX_THREADS@" "${stdlibs[@]}" )
+    cflags=( "-I@INSTALL_HEADERS@/lpf/debug" "${cflags[@]}" )
+fi    
+
+for lib in $extra_libs
+do
+  case $lib in 
+       hl)  if [ x$debug = xyes ]; then
+                stdlibs=( "-llpf_hl_debug" "${stdlibs[@]}" )
+            else
+                stdlibs=( "-llpf_hl" "${stdlibs[@]}" )
+            fi
+            ;;
+
+       bsplib)
+            stdlibs=( "-lbsplib" "@LIB_POSIX_THREADS@" "-llpf_hl" "${stdlibs[@]}" )
+            cflags=( "${cflags[@]}" ${bsplib_cflags[@]} )
+            defs=()
+            ;;
+
+       mcbsp)
+            stdlibs=( "-lbsplib" "@LIB_POSIX_THREADS@" "-llpf_hl" "${stdlibs[@]}" )
+            cflags=( "${cflags[@]}" ${mcbsp_cflags[@]} )
+            defs=()
+            ;;
+  esac
+done
+
+case $engine in
+  mpimsg|mpirma|ibverbs) stdlibs=( @MPI_C_LIB_CMDLINE@ ${stdlibs[@]} ) ;;
+  *)                     ;;
+esac
+
+stdlibs=( "${stdlibs[@]}" "-llpf_core_univ_${engine}_${config}" )
+
+compile_flags=("${other_args[@]}" "${cflags[@]}" "${defs[@]}")
+link_lib_flags=("${other_args[@]}"  "-L@INSTALL_LIB@" "${stdlibs[@]}" "${lib_ldflags[@]}" )
+link_exe_flags=("${other_args[@]}"  "-L@INSTALL_LIB@" "${stdlibs[@]}" "${exe_ldflags[@]}" )
+
+function quote() {
+  for arg
+  do
+      echo -ne "'${arg}' "
+  done
+  echo
+}
+
+if [ x"$show_compile" != "x" ]; then
+    $show_compile $compiler "${compile_flags[@]}"
+    exit 0
+fi
+
+if [ x"$show_link_exe" != "x" ]; then
+    $show_link_exe $linker "${link_exe_flags[@]}"
+    exit 0
+fi
+
+if [ x"$show_link_lib" != "x" ]; then
+    $show_link_lib $linker "${link_lib_flags[@]}"
+    exit 0
+fi
+
+
+# Compile first each source file separately
+declare -a tmpobjects
+tmpobject_nr=0
+if [ $sources_number -gt 0 ]; then
+    for src in "${sources[@]}"
+    do
+      tmpobjects[$tmpobject_nr]=`mktemp -u`.o
+      $show $compiler "${compile_flags[@]}" -c "$src" -o "${tmpobjects[$tmpobject_nr]}" 
+
+      exitstatus=$?
+
+      tmpobject_nr=$((tmpobject_nr + 1))
+
+      if [ $exitstatus -ne 0 ]; then
+        rm -f "${tmpobjects[@]}"
+        exit $exitstatus
+      fi
+    done
+fi
+
+#Then link or rename the source files
+
+if [ x$link_exe = xyes ]; then
+
+    if [ "x$output" = x ]; then
+        $show $linker "${tmpobjects[@]}" "${objects[@]}" "${link_exe_flags[@]}"
+        exitstatus=$?
+    else
+        $show $linker "${tmpobjects[@]}" "${objects[@]}" "${link_exe_flags[@]}" -o "$output"
+        exitstatus=$?
+    fi
+    rm -f "${tmpobjects[@]}"
+
+elif [ x$link_lib = xyes ]; then
+
+    if [ "x$output" = x ]; then
+        $show $linker "${tmpobjects[@]}" "${objects[@]}" "${link_lib_flags[@]}"
+        exitstatus=$?
+    else
+        $show $linker "${tmpobjects[@]}" "${objects[@]}" "${link_lib_flags[@]}" -o "$output"
+        exitstatus=$?
+    fi
+    rm -f "${tmpobjects[@]}"
+else
+
+    if [ "x$output" = x ]; then
+        tmpobject_nr=0
+        for src in "${sources[@]}"
+        do
+            objname=$(basename "$src" .c)".o"
+            mv "${tmpobjects[tmpobject_nr]}" "$objname"
+ 
+            tmpobject_nr=$((tmpobject_nr + 1))
+        done
+
+    else
+       if [ $tmpobject_nr -ne 1 ]; then
+         echo "lpfcc: Cannot specify -o with multiple files"
+         rm -f "${tmpobjects[@]}"
+         exit 1
+       fi
+
+       mv "${tmpobjects[0]}" "$output"
+    fi
+
+fi
+
+
+exit $exitstatus

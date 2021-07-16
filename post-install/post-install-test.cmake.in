@@ -1,0 +1,469 @@
+
+#
+#   Copyright 2021 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+message("POST INSTALL CHECK")
+
+if (DEFINED ENV{DESTDIR})
+
+    message("NOTE: Post install check skipped because DESTDIR is set")
+
+else()
+
+message("Compiling a BSPlib program with pthreads engine")
+execute_process(
+       COMMAND @bindir@/lpfcc -engine pthread
+               @exampledir@/hello_world/hw_bsplib.c
+            -o hello_world_bsplib_post_install -lbsplib
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed compiling a simple pthread BSP program")
+endif()
+
+message("Compiling a BSPlib program with C++ compiler and pthreads engine")
+execute_process(
+       COMMAND @bindir@/lpfcxx -engine pthread
+               @exampledir@/hello_world/hw_bsplib.c
+            -o hello_world_bsplib_pthread_cxx -lbsplib
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed compiling a simple pthread BSP program")
+endif()
+
+### Testing "universal binaries"
+if (UNIX AND NOT APPLE)
+## Universal binaries are not supported on MacOS, because LD_PRELOAD will not work
+
+message("Compiling an LPF program for any engine")
+execute_process(
+       COMMAND @bindir@/lpfcc @srcdir@/test-lpf-nprocs.c -o test-lpf-nprocs
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed compiling a simple LPF program into a universal binary")
+endif()
+
+message("Running an LPF program on any of the engines: @ENGINES@")
+foreach(engine @ENGINES@)
+    foreach( nprocs 1 2 3 )
+        execute_process(
+               COMMAND @bindir@/lpfrun -engine ${engine} -np ${nprocs} ./test-lpf-nprocs ${nprocs}
+               WORKING_DIRECTORY @builddir@
+               OUTPUT_FILE @builddir@/test-lpf-nprocs-${engine}-${nprocs}.log
+               RESULT_VARIABLE status
+               )
+
+        if (NOT status EQUAL 0 )
+              message(SEND_ERROR "lpfrun failed running a simple universal program with ${engine} engine")
+        endif()
+    endforeach(nprocs)
+endforeach(engine)
+
+### Testing linking with debug library
+
+message("Compiling an LPF program with debug library")
+execute_process(
+       COMMAND @bindir@/lpfcc @srcdir@/test-lpf-debug.c -o test-lpf-debug -llpf_debug
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed compiling a simple LPF program with debug library")
+endif()
+
+message("Running an LPF program with debug library on any of the engines: @ENGINES@")
+foreach(engine @ENGINES@)
+    foreach( nprocs 2 3 )
+        execute_process(
+               COMMAND @bindir@/lpfrun -engine ${engine} -np ${nprocs} ./test-lpf-debug ${nprocs}
+               WORKING_DIRECTORY @builddir@
+               OUTPUT_FILE @builddir@/test-lpf-debug-${engine}-${nprocs}.log
+               ERROR_FILE  @builddir@/test-lpf-debug-${engine}-${nprocs}.log
+               RESULT_VARIABLE status
+               )
+
+        # error when no error has been detected
+        if (status EQUAL 0)
+              message(SEND_ERROR "Debug library failed to detect runtime error on engine ${engine} on P=${nprocs}")
+        endif()
+    endforeach(nprocs)
+endforeach(engine)
+
+endif(UNIX AND NOT APPLE)
+
+
+### Testing -compile_info and -link_info params in the lpfcc frontend
+message("Compiling a BSPlib C program with pthreads engine using -link_info and -compile_info output")
+
+execute_process(
+        COMMAND @bindir@/lpfcc -lbsplib -compile_info
+        OUTPUT_VARIABLE compile_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed to produce compiler flags with -compile_info for a simple pthread BSPlib program")
+endif()
+
+execute_process(
+        COMMAND @bindir@/lpfcc -lbsplib -link_lib_info
+        OUTPUT_VARIABLE link_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed to produce linker flags with -link_lib_info for a simple pthread BSPlib program")
+endif()
+
+execute_process(
+        COMMAND @bindir@/lpfcc -lbsplib -link_exe_info
+        OUTPUT_VARIABLE link_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed to produce linker flags with -link_exe_info for a simple pthread BSPlib program")
+endif()
+
+#Tokenize compiler and linker flags
+string(REPLACE " " ";" compile_cmd ${compile_cmd})
+string(REPLACE " " ";" link_cmd ${link_cmd})
+
+set(unit_name test_info_c)
+
+execute_process(
+       COMMAND ${compile_cmd} -c @srcdir@/cmake-lpfcc-compact-test/hello.c -o ${unit_name}.o
+       OUTPUT_VARIABLE out
+       ERROR_VARIABLE out
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed to produce *correct* compiler flags for a simple pthread BSPlib program")
+endif()
+
+list(INSERT link_cmd 1 ${unit_name}.o) # since the linker requires objects
+execute_process(                       # to appear in order!
+       COMMAND ${link_cmd} -o ${unit_name}.run
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcc failed to produce *correct* linker flags for a simple pthread BSPlib program")
+endif()
+
+### Testing -compile_info and -link_info params in the lpfcxx frontend
+message("Compiling a BSPlib C++ program with pthreads engine using -link_info and -compile_info output")
+
+execute_process(
+        COMMAND @bindir@/lpfcxx -lbsplib -compile_info
+        OUTPUT_VARIABLE compile_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed to produce compiler flags with -compile_info for a simple pthread BSPlib program")
+endif()
+
+execute_process(
+        COMMAND @bindir@/lpfcxx -lbsplib -link_lib_info
+        OUTPUT_VARIABLE link_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed to produce linker flags with -link_lib_info for a simple pthread BSPlib program")
+endif()
+
+execute_process(
+        COMMAND @bindir@/lpfcxx -lbsplib -link_exe_info
+        OUTPUT_VARIABLE link_cmd
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY @builddir@
+        RESULT_VARIABLE status
+        )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed to produce linker flags with -link_exe_info for a simple pthread BSPlib program")
+endif()
+
+#convert strings to cmake lists
+string(REPLACE " " ";" compile_cmd ${compile_cmd})
+string(REPLACE " " ";" link_cmd ${link_cmd})
+
+set(unit_name test_info_cxx)
+
+execute_process(
+       COMMAND ${compile_cmd} -c @srcdir@/cmake-lpfcc-compact-test/hello.cpp -o ${unit_name}.o
+       OUTPUT_VARIABLE out
+       ERROR_VARIABLE out
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed to produce *correct* compiler flags for a simple pthread BSPlib program")
+endif()
+
+list(INSERT link_cmd 1 ${unit_name}.o) # since the linker requires objects
+execute_process(                       # to appear in order!
+       COMMAND ${link_cmd} -o ${unit_name}.run
+       WORKING_DIRECTORY @builddir@
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfcxx failed to produce *correct* linker flags for a simple pthread BSPlib program")
+endif()
+
+
+# Tests when there is MPI
+set( MPI_FOUND @MPI_FOUND@ )
+if (MPI_FOUND)
+
+    if (MPI_RMA)
+        message("Compiling a BSPlib program with mpirma engine")
+        execute_process(
+               COMMAND @bindir@/lpfcc -engine mpirma
+                       @exampledir@/hello_world/hw_bsplib.c
+                    -o hello_world_bsplib_mpirma_cc -lbsplib
+               WORKING_DIRECTORY @builddir@
+               RESULT_VARIABLE status
+               )
+        if (NOT status EQUAL 0 )
+              message(SEND_ERROR "lpfcc failed compiling a simple MPI BSP program")
+        endif()
+    endif()
+
+    message("Compiling a BSPlib program with mpimsg engine")
+    execute_process(
+           COMMAND @bindir@/lpfcc -engine mpimsg
+                   @exampledir@/hello_world/hw_bsplib.c
+                -o hello_world_bsplib_mpimsg_cc -lbsplib
+           WORKING_DIRECTORY @builddir@
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "lpfcc failed compiling a simple MPI BSP program")
+    endif()
+
+
+    message("Compiling a simple LPF program with mpimsg engine")
+    # Compile this to check whether mpi.h can be found
+    execute_process(
+           COMMAND @bindir@/lpfcc -engine mpimsg  -I@common@
+                   @testdir@/func_lpf_hook_subset.mpimsg.c
+                -o lpfhook_subset_mpimsg_cc
+           WORKING_DIRECTORY @builddir@
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "lpfcc failed to compile a simple MPI LPF program")
+    endif()
+
+    if (MPI_IS_THREAD_COMPAT)
+        message("Compiling a BSPlib program with hybrid engine")
+        execute_process(
+           COMMAND @bindir@/lpfcc -engine hybrid
+                   @exampledir@/hello_world/hw_bsplib.c
+                -o hello_world_bsplib_hybrid_cc -lbsplib
+           WORKING_DIRECTORY @builddir@
+           RESULT_VARIABLE status
+           )
+        if (NOT status EQUAL 0 )
+              message(SEND_ERROR "lpfcc failed compiling a simple hybrid BSP program")
+        endif()
+    endif()
+
+    if (MPI_RMA)
+        message("Compiling a BSPlib program with C++ compiler and mpirma engine")
+        execute_process(
+               COMMAND @bindir@/lpfcxx -engine mpirma
+                       @exampledir@/hello_world/hw_bsplib.c
+                    -o hello_world_bsplib_mpirma_cxx -lbsplib
+               WORKING_DIRECTORY @builddir@
+               RESULT_VARIABLE status
+               )
+        if (NOT status EQUAL 0 )
+              message(SEND_ERROR "lpfcxx failed compiling a simple MPI BSP program")
+        endif()
+    endif()
+
+    message("Compiling a BSPlib program with C++ compiler and mpimsg engine")
+    execute_process(
+           COMMAND @bindir@/lpfcxx -engine mpimsg
+                   @exampledir@/hello_world/hw_bsplib.c
+                -o hello_world_bsplib_mpimsg_cxx -lbsplib
+           WORKING_DIRECTORY @builddir@
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "lpfcxx failed compiling a simple MPI BSP program")
+    endif()
+
+    if (MPI_IS_THREAD_COMPAT)
+        message("Compiling a BSPlib program with C++ compiler and hybrid engine")
+        execute_process(
+           COMMAND @bindir@/lpfcxx -engine hybrid
+                   @exampledir@/hello_world/hw_bsplib.c
+                -o hello_world_bsplib_hybrid_cxx -lbsplib
+           WORKING_DIRECTORY @builddir@
+           RESULT_VARIABLE status
+           )
+        if (NOT status EQUAL 0 )
+              message(SEND_ERROR "lpfcxx failed compiling a simple hybrid BSP program")
+        endif()
+    endif()
+
+endif()
+
+message("Running a BSPlib program with pthreads engine")
+execute_process(
+       COMMAND @bindir@/lpfrun -engine pthread -np 1 ./hello_world_bsplib_post_install
+       WORKING_DIRECTORY @builddir@
+       INPUT_FILE @srcdir@/one
+       OUTPUT_FILE @builddir@/hello_world_bsplib.log
+       RESULT_VARIABLE status
+       )
+
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "lpfrun failed running a simple program with pthread engine")
+endif()
+
+######   CMake integration using generated CMake module file ############
+
+foreach(engine @ENGINES@)
+    message("Testing generated CMake module files for engine ${engine}")
+
+    set(test_dir @builddir@/cmake-module-test-${engine})
+
+    execute_process(
+           COMMAND ${CMAKE_COMMAND} -E remove_directory ${test_dir}
+           RESULT_VARIABLE status
+    )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "Could not cleanup directory for testing CMake")
+    endif()
+    execute_process(
+           COMMAND ${CMAKE_COMMAND} -E copy_directory
+                @srcdir@/cmake-module-test ${test_dir}
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "Could not create directory for testing CMake")
+    endif()
+
+    execute_process(
+           COMMAND ${CMAKE_COMMAND} -DTEST_ENGINE=${engine} 
+                                    -DCMAKE_PREFIX_PATH=@CMAKE_INSTALL_PREFIX@
+                                    -DCMAKE_C_COMPILER=@CMAKE_C_COMPILER@
+                                    -DCMAKE_CXX_COMPILER=@CMAKE_CXX_COMPILER@
+                                    src
+           WORKING_DIRECTORY ${test_dir}
+           OUTPUT_FILE ${test_dir}/cmake-module-cmake.log
+           ERROR_FILE ${test_dir}/cmake-module-cmake.log
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "CMake project configuration and generation failed while using the generated module files. See ${test_dir}/cmake-module-cmake.log" )
+    endif()
+    execute_process(
+           COMMAND make
+           WORKING_DIRECTORY ${test_dir}
+           OUTPUT_FILE ${test_dir}/cmake-module-make.log
+           ERROR_FILE ${test_dir}/cmake-module-make.log
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "'Make' failed while using the generated CMake module files. See ${test_dir}/cmake-module-make.log" )
+    endif()
+    execute_process(
+           COMMAND make test
+           WORKING_DIRECTORY ${test_dir}
+           OUTPUT_FILE ${test_dir}/cmake-module-test.log
+           ERROR_FILE ${test_dir}/cmake-module-test.log
+           RESULT_VARIABLE status
+           )
+    if (NOT status EQUAL 0 )
+          message(SEND_ERROR "'Make test' failed while using the generated CMake module files. See ${test_dir}/cmake-module-test.log" )
+    endif()
+
+endforeach()
+
+
+######   CMake integration using CC and CXX environment variables ###########
+
+message("Testing compiler frontend compatibility with CMake")
+execute_process(
+       COMMAND ${CMAKE_COMMAND} -E remove_directory @builddir@/cmake-lpfcc-compact-test
+       RESULT_VARIABLE status
+)
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "Could not cleanup directory for testing CMake")
+endif()
+execute_process(
+       COMMAND ${CMAKE_COMMAND} -E copy_directory
+            @srcdir@/cmake-lpfcc-compact-test @builddir@/cmake-lpfcc-compact-test
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "Could not create directory for testing CMake")
+endif()
+
+set( ENV{CC} @bindir@/lpfcc )
+set( ENV{CXX} @bindir@/lpfcxx )
+set( ENV{LPFRUN} @bindir@/lpfrun )
+#Note: although the following commands could have been executed in one execute_process,
+#the currently used cmake doesn't seem to be able to deal with it.
+execute_process(
+       COMMAND ${CMAKE_COMMAND} .
+       WORKING_DIRECTORY @builddir@/cmake-lpfcc-compact-test
+       OUTPUT_FILE @builddir@/cmake-compat-cmake.log
+       ERROR_FILE @builddir@/cmake-compat-cmake.log
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "Compiler frontends don't seem to work properly during configuration. See @builddir@/cmake-compat-cmake.log" )
+endif()
+execute_process(
+       COMMAND make
+       WORKING_DIRECTORY @builddir@/cmake-lpfcc-compact-test
+       OUTPUT_FILE @builddir@/cmake-compat-make.log
+       ERROR_FILE @builddir@/cmake-compat-make.log
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "Compiler frontends don't seem to work properly during build. See @builddir@/cmake-compat-make.log" )
+endif()
+execute_process(
+       COMMAND make test
+       WORKING_DIRECTORY @builddir@/cmake-lpfcc-compact-test
+       OUTPUT_FILE @builddir@/cmake-compat-test.log
+       ERROR_FILE @builddir@/cmake-compat-test.log
+       RESULT_VARIABLE status
+       )
+if (NOT status EQUAL 0 )
+      message(SEND_ERROR "Compiler frontends don't seem to work properly for running tests. See @builddir@/cmake-compat-test.log" )
+endif()
+
+endif(DEFINED ENV{DESTDIR})
