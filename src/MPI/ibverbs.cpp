@@ -27,7 +27,7 @@
 namespace lpf { namespace mpi {
 
 
-struct IBVerbs::Exception : std::runtime_error { 
+struct IBVerbs::Exception : std::runtime_error {
     Exception(const char * what) : std::runtime_error( what ) {}
 };
 
@@ -71,7 +71,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_wcs(m_nprocs)
     , m_memreg()
     , m_dummyMemReg()
-    , m_dummyBuffer() 
+    , m_dummyBuffer()
     , m_comm( comm )
 {
     m_peerList.reserve( m_nprocs );
@@ -88,7 +88,7 @@ IBVerbs :: IBVerbs( Communication & comm )
             try_get_device_list,
             ibv_free_device_list );
 
-    LOG(3, "Retrieved Infiniband device list, which has " << numDevices 
+    LOG(3, "Retrieved Infiniband device list, which has " << numDevices
             << " devices"  );
 
     if (numDevices < 1) {
@@ -101,7 +101,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
     struct ibv_device * dev = NULL;
-    for (int i = 0; i < numDevices; i ++) 
+    for (int i = 0; i < numDevices; i ++)
     {
         std::string name = ibv_get_device_name( (&*devList)[i]);
         LOG(3, "Device " << i << " has name '" << name << "'" );
@@ -149,11 +149,11 @@ IBVerbs :: IBVerbs( Communication & comm )
         throw Exception("Completion queue has insufficient completion queue capabilities");
 
     struct ibv_port_attr port_attr; std::memset( &port_attr, 0, sizeof(port_attr));
-    if (ibv_query_port( m_device.get(), m_ibPort, & port_attr )) 
+    if (ibv_query_port( m_device.get(), m_ibPort, & port_attr ))
         throw Exception("Cannot query IB port");
- 
+
     LOG(3, "Queried IB port " << m_ibPort << " capabilities" );
-    
+
     // store Maximum message size
     m_maxMsgSize = port_attr.max_msg_sz;
     LOG(3, "Maximum IB message size is " << m_maxMsgSize );
@@ -161,9 +161,9 @@ IBVerbs :: IBVerbs( Communication & comm )
     size_t sysRam = Config::instance().getLocalRamSize();
     m_minNrMsgs = sysRam  / m_maxMsgSize;
     LOG(3, "Minimum number of messages to allocate = "
-            "total system RAM / maximum message size = " 
+            "total system RAM / maximum message size = "
             <<  sysRam << " / " << m_maxMsgSize << " = "  << m_minNrMsgs );
- 
+
     // store LID
     m_lid = port_attr.lid;
     LOG(3, "LID is " << m_lid );
@@ -174,7 +174,7 @@ IBVerbs :: IBVerbs( Communication & comm )
 
     LOG(3, "Opened protection domain");
 
-    m_cq.reset( ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0) );
+    m_cq.reset( ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0), ibv_destroy_cq );
     if (!m_cq) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
@@ -200,7 +200,7 @@ IBVerbs :: ~IBVerbs()
 
 }
 
-void IBVerbs :: stageQPs( size_t maxMsgs ) 
+void IBVerbs :: stageQPs( size_t maxMsgs )
 {
     // create the queue pairs
     for ( int i = 0; i < m_nprocs; ++i) {
@@ -212,14 +212,19 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.send_cq = m_cq.get();
         attr.recv_cq = m_cq.get();
         attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
-        attr.cap.max_recv_wr = 1; // one for the dummy 
+        attr.cap.max_recv_wr = 1; // one for the dummy
         attr.cap.max_send_sge = 1;
         attr.cap.max_recv_sge = 1;
 
-        m_stagedQps[i].reset( 
-                ibv_create_qp( m_pd.get(), &attr ), 
+        struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
+        if( ibv_new_qp_p == NULL ) {
+            m_stagedQps[i].reset();
+        } else {
+            m_stagedQps[i].reset(
+                ibv_new_qp_p,
                 ibv_destroy_qp
-        );
+            );
+        }
 
         if (!m_stagedQps[i]) {
             LOG( 1, "Could not create Infiniband Queue pair number " << i );
@@ -230,7 +235,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
     }
 }
 
-void IBVerbs :: reconnectQPs() 
+void IBVerbs :: reconnectQPs()
 {
     ASSERT( m_stagedQps[0] );
     m_comm.barrier();
@@ -268,7 +273,7 @@ void IBVerbs :: reconnectQPs()
     }
     if (m_comm.allreduceOr( false) )
         throw Exception("Peer failed to allocate memory or query device while setting-up QP");
-        
+
     m_comm.allToAll( localQpNums.data(), remoteQpNums.data() );
     m_comm.allgather( m_lid, lids.data() );
     m_comm.allgather( myGid, gids.data() );
@@ -293,7 +298,7 @@ void IBVerbs :: reconnectQPs()
             }
 
             // post a dummy receive
-            
+
             struct ibv_recv_wr rr;  std::memset(&rr, 0, sizeof(rr));
             struct ibv_sge     sge; std::memset(&sge, 0, sizeof(sge));
             struct ibv_recv_wr *bad_wr = NULL;
@@ -323,7 +328,7 @@ void IBVerbs :: reconnectQPs()
             attr.ah_attr.sl = 0;
             attr.ah_attr.src_path_bits  = 0;
             attr.ah_attr.port_num = m_ibPort;
-            if (m_gidIdx >= 0) 
+            if (m_gidIdx >= 0)
             {
                 attr.ah_attr.is_global = 1;
                 attr.ah_attr.port_num = 1;
@@ -334,7 +339,7 @@ void IBVerbs :: reconnectQPs()
                 attr.ah_attr.grh.traffic_class = 0;
             }
             flags = IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER;
-            
+
             if (ibv_modify_qp(m_stagedQps[i].get(), &attr, flags)) {
                 LOG(1, "Cannot bring state of QP " << i << " to RTR" );
                 throw Exception("Failed to bring QP's state to RTR" );
@@ -348,7 +353,7 @@ void IBVerbs :: reconnectQPs()
             attr.rnr_retry     = 0;
             attr.sq_psn        = 0;
             attr.max_rd_atomic = 1;
-            flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | 
+            flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
                 IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC;
             if( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
                 LOG(1, "Cannot bring state of QP " << i << " to RTS" );
@@ -358,19 +363,19 @@ void IBVerbs :: reconnectQPs()
             LOG(3, "Connected Queue pair for " << m_pid << " -> " << i );
 
         } // for each peer
-    } 
+    }
     catch(...) {
         m_comm.allreduceOr( true );
         throw;
     }
 
-    if (m_comm.allreduceOr( false )) 
+    if (m_comm.allreduceOr( false ))
         throw Exception("Another peer failed to set-up Infiniband queue pairs");
 
     LOG(3, "All staged queue pairs have been connected" );
 
     m_connectedQps.swap( m_stagedQps );
-    for (int i = 0; i < m_nprocs; ++i) 
+    for (int i = 0; i < m_nprocs; ++i)
         m_stagedQps[i].reset();
 
     LOG(3, "All old queue pairs have been removed");
@@ -410,7 +415,7 @@ void IBVerbs :: resizeMesgq( size_t size )
 
     m_srs.reserve( size + m_minNrMsgs );
     m_sges.reserve( size + m_minNrMsgs );
-    
+
     stageQPs(size);
     LOG(4, "Message queue has been reallocated to size " << size );
 }
@@ -422,7 +427,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     MemorySlot slot;
     if ( size > 0) {
         LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
-        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size, 
+        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size,
                     IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE |
                     IBV_ACCESS_REMOTE_WRITE )
                      , ibv_dereg_mr );
@@ -453,7 +458,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     MemorySlot slot;
     if ( size > 0 ) {
         LOG(4, "Registering globally memory area at " << addr << " of size  " << size );
-        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size, 
+        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size,
                     IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE |
                     IBV_ACCESS_REMOTE_WRITE )
                      , ibv_dereg_mr );
@@ -493,7 +498,7 @@ void IBVerbs :: dereg( SlotID id )
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
 
-void IBVerbs :: put( SlotID srcSlot, size_t srcOffset, 
+void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size )
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
@@ -505,9 +510,9 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
-        const char * localAddr 
+        const char * localAddr
             = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
-        const char * remoteAddr 
+        const char * remoteAddr
             = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
@@ -541,7 +546,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     }
 }
 
-void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset, 
+void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size )
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
@@ -554,9 +559,9 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
-        const char * localAddr 
+        const char * localAddr
             = static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
-        const char * remoteAddr 
+        const char * remoteAddr
             = static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
@@ -608,31 +613,33 @@ void IBVerbs :: sync( bool reconnect )
                 // so: dequeue the top m_maxMsgs and post them
                 struct ibv_send_wr * const pBasis =  &m_srs[0];
                 struct ibv_send_wr * pLast = &m_srs[ head ];
-                for (size_t i = 0 ; i < m_maxSrs-1; ++i )  
+                for (size_t i = 0 ; i < m_maxSrs-1; ++i )
                     pLast = pLast->next;
 
                 ASSERT( pLast != NULL );
                 ASSERT( pLast->next != NULL ); // because m_nMsgsperPeer[*p] > m_maxSrs
-                
+
                 ASSERT( pLast->next - pBasis ); // since all send requests are stored in an array
 
                 // now do the dequeueing
                 m_srsHeads[*p] = pLast->next - pBasis;
                 pLast->next = NULL;
                 pLast->send_flags = IBV_SEND_SIGNALED;
-                LOG(4, "Posting " << m_maxSrs << " of " << m_nMsgsPerPeer[*p] 
+                LOG(4, "Posting " << m_maxSrs << " of " << m_nMsgsPerPeer[*p]
                         << " messages from " << m_pid << " -> " << *p );
                 m_nMsgsPerPeer[*p] -= m_maxSrs;
             }
             else {
                 // signal that we're done
-                LOG(4, "Posting remaining " << m_nMsgsPerPeer[*p] 
+                LOG(4, "Posting remaining " << m_nMsgsPerPeer[*p]
                         << " messages " << m_pid << " -> " << *p );
                 m_nMsgsPerPeer[*p] = 0;
             }
 
             struct ibv_send_wr * bad_wr = NULL;
-            if (int err = ibv_post_send(m_connectedQps[*p].get(), &m_srs[ head ], &bad_wr ))
+            struct ibv_qp * const ibv_qp_p = m_connectedQps[*p].get();
+            ASSERT( ibv_qp_p != NULL );
+            if (int err = ibv_post_send(ibv_qp_p, &m_srs[ head ], &bad_wr ))
             {
                 LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
                 throw Exception("Error while posting RDMA requests");
@@ -650,9 +657,9 @@ void IBVerbs :: sync( bool reconnect )
             if ( pollResult > 0) {
                 LOG(4, "Received " << pollResult << " acknowledgements");
                 n-= pollResult;
-                
+
                 for (int i = 0; i < pollResult ; ++i) {
-                    if (m_wcs[i].status != IBV_WC_SUCCESS) 
+                    if (m_wcs[i].status != IBV_WC_SUCCESS)
                     {
                         LOG( 2, "Got bad completion status from IB message."
                                 " status = 0x" << std::hex << m_wcs[i].status
@@ -662,12 +669,12 @@ void IBVerbs :: sync( bool reconnect )
                     }
                 }
             }
-            else if (pollResult < 0) 
+            else if (pollResult < 0)
             {
                 LOG( 1, "Failed to poll IB completion queue" );
                 throw Exception("Poll CQ failure");
             }
-        } 
+        }
 
         if (error) {
             throw Exception("Error occurred during polling");
