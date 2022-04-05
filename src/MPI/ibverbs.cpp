@@ -118,7 +118,11 @@ IBVerbs :: IBVerbs( Communication & comm )
         throw Exception("Infiniband device not found");
     }
 
-    m_device.reset( ibv_open_device(dev), ibv_close_device );
+    struct ibv_context * const ibv_context_new_p = ibv_open_device(dev);
+    if( ibv_context_new_p == NULL )
+        m_device.reset();
+    else
+        m_device.reset( ibv_context_new_p, ibv_close_device );
     if (!m_device) {
         LOG(1, "Failed to open Infiniband device '" << m_devName << "'");
         throw Exception("Cannot open IB device");
@@ -168,13 +172,22 @@ IBVerbs :: IBVerbs( Communication & comm )
     m_lid = port_attr.lid;
     LOG(3, "LID is " << m_lid );
 
-    m_pd.reset( ibv_alloc_pd( m_device.get()), ibv_dealloc_pd );
-    if (!m_pd)
+    struct ibv_pd * const pd_new_p = ibv_alloc_pd( m_device.get() );
+    if( pd_new_p == NULL )
+        m_pd.reset();
+    else
+        m_pd.reset( pd_new_p, ibv_dealloc_pd );
+    if (!m_pd) {
+        LOG(1, "Could not allocate protection domain ");
         throw Exception("Could not allocate protection domain");
-
+    }
     LOG(3, "Opened protection domain");
 
-    m_cq.reset( ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0), ibv_destroy_cq );
+    struct ibv_cq * const ibv_cq_new_p = ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 );
+    if( ibv_cq_new_p == NULL )
+        m_cq.reset();
+    else
+        m_cq.reset( ibv_cq_new_p, ibv_destroy_cq );
     if (!m_cq) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
@@ -185,11 +198,18 @@ IBVerbs :: IBVerbs( Communication & comm )
 
     // allocate dummy buffer
     m_dummyBuffer.resize( 8 );
-    m_dummyMemReg.reset( ibv_reg_mr( m_pd.get(),
-                m_dummyBuffer.data(), m_dummyBuffer.size(),
-                IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE ),
-            ibv_dereg_mr );
-
+    struct ibv_mr * const ibv_reg_mr_new_p = ibv_reg_mr(
+        m_pd.get(), m_dummyBuffer.data(), m_dummyBuffer.size(),
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+    );
+    if( ibv_reg_mr_new_p == NULL )
+        m_dummyMemReg.reset();
+    else
+        m_dummyMemReg.reset( ibv_reg_mr_new_p, ibv_dereg_mr );
+    if (!m_dummyMemReg) {
+        LOG(1, "Could not register memory region");
+        throw Exception("Could not register memory region");
+    }
 
     // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
@@ -220,12 +240,8 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         if( ibv_new_qp_p == NULL ) {
             m_stagedQps[i].reset();
         } else {
-            m_stagedQps[i].reset(
-                ibv_new_qp_p,
-                ibv_destroy_qp
-            );
+            m_stagedQps[i].reset( ibv_new_qp_p, ibv_destroy_qp );
         }
-
         if (!m_stagedQps[i]) {
             LOG( 1, "Could not create Infiniband Queue pair number " << i );
             throw std::bad_alloc();
@@ -427,10 +443,14 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     MemorySlot slot;
     if ( size > 0) {
         LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
-        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size,
-                    IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE |
-                    IBV_ACCESS_REMOTE_WRITE )
-                     , ibv_dereg_mr );
+        struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
+            m_pd.get(), addr, size,
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+        );
+        if( ibv_mr_new_p == NULL )
+            slot.mr.reset();
+        else
+            slot.mr.reset( ibv_mr_new_p, ibv_dereg_mr );
         if (!slot.mr) {
             LOG(1, "Could not register memory area at "
                    << addr << " of size " << size << " with IB device");
@@ -458,11 +478,14 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     MemorySlot slot;
     if ( size > 0 ) {
         LOG(4, "Registering globally memory area at " << addr << " of size  " << size );
-        slot.mr.reset( ibv_reg_mr( m_pd.get(), addr, size,
-                    IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE |
-                    IBV_ACCESS_REMOTE_WRITE )
-                     , ibv_dereg_mr );
-
+        struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
+            m_pd.get(), addr, size,
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+        );
+        if( ibv_mr_new_p == NULL )
+            slot.mr.reset();
+        else
+            slot.mr.reset( ibv_mr_new_p, ibv_dereg_mr );
         if (!slot.mr) {
             LOG(1, "Could not register memory area at "
                    << addr << " of size " << size << " with IB device");
@@ -472,7 +495,6 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     }
     if (m_comm.allreduceOr(false))
         throw Exception("Another process could not register memory area");
-
 
     SlotID id = m_memreg.addGlobalReg( slot );
     MemorySlot & ref = m_memreg.update(id);
