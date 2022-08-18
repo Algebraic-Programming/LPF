@@ -55,7 +55,6 @@ int ec_create_ct(MPI_Comm comm, struct ec_ct *ct);
  * without iniatilizing every other processes with it.
  * 
  * @param[in] ct The context to erase and unallocate
- * @param[in] comm The relevant MPI Communicator
  */
 void ec_destroy_ct(struct ec_ct *ct);
 
