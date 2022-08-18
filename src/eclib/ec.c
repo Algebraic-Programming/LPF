@@ -232,7 +232,6 @@ freeinfo:
  * 
  * @param[in] ct The context relevant to this receiving operation
  * @param[in] transfer_size The maximum transfer size (of a single message, set by default to ct.fi->tx_attr->inject_size)
- * @param[in] src_rank The rank supposed to send data toward this process.
  * @return int 0 if everything went well, !=0 if the receiving operation or the inject operation went wrong
  */
 int ec_get(struct ec_ct *ct, size_t transfer_size){

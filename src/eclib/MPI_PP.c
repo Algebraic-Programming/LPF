@@ -52,7 +52,7 @@ int point_to_point_get_inject_test(struct ec_ct *ct, size_t iterations, FILE *fp
 				if(myrank == dest_rank){
 					/*"SERVER"*/
 					for(i = 0; i<iterations;i++){
-						ret = ec_get(ct, transfer_size, src_rank);
+						ret = ec_get(ct, transfer_size);
 						if(ret) return ret;
 					}
 					sleep(0);
