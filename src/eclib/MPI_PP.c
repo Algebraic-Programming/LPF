@@ -1,5 +1,5 @@
 /*
- * 	Copyright (c) 2021 Huawei Technologies Co., Ltd.
+ * 	Copyright (c) 2022 Huawei Technologies Co., Ltd.
  * 
  * Licenced under the Apache License, Version 2.0 (the "Licence");
  * You may not use this file except in compliance with the License.
@@ -196,7 +196,7 @@ int a2a_latin_square_test(struct ec_ct *ct, size_t iterate, FILE *fptr, FILE *ef
 			if(i==myrank) continue;
 			for(j = 0; j<1500; j++){
 				if(buffers[i][j]!=msg1[j]) {
-					fprintf(efptr, "rank = %d, wtf buffer[%d]? %d instead of %d\n", myrank, i, buffers[i][j], msg1[j]);
+					fprintf(efptr, "rank = %d, error in buffer[%d]? %d instead of %d\n", myrank, i, buffers[i][j], msg1[j]);
 					error_happend = 1;
 					error_happend_now = 1;
 				}
