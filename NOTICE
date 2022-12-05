@@ -37,6 +37,9 @@ Implementation
     - 2018, Pierre Leca
         1) Usability improvements of compiler frontends and CMake integration
 
+    - 2022 May-August, Eyal Cohen
+        1) eclib
+
 
 Quality Assurance
     - 2017, Daniel Di Nardo (daniel.di.nardo@huawei.com,
