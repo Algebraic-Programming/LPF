@@ -77,35 +77,40 @@ foreach(engine @ENGINES@)
     endforeach(nprocs)
 endforeach(engine)
 
-### Testing linking with debug library
+# Debug tests do not work in some distributions (e.g., Ubuntu 22.04), hence they can be disabled during configuration
+if (RUN_DEBUG_TESTS)
+      ### Testing linking with debug library
 
-message("Compiling an LPF program with debug library")
-execute_process(
-       COMMAND @bindir@/lpfcc @srcdir@/test-lpf-debug.c -o test-lpf-debug -llpf_debug
-       WORKING_DIRECTORY @builddir@
-       RESULT_VARIABLE status
-       )
-if (NOT status EQUAL 0 )
-      message(SEND_ERROR "lpfcc failed compiling a simple LPF program with debug library")
-endif()
+      message("Compiling an LPF program with debug library")
+      execute_process(
+            COMMAND @bindir@/lpfcc @srcdir@/test-lpf-debug.c -o test-lpf-debug -llpf_debug
+            WORKING_DIRECTORY @builddir@
+            RESULT_VARIABLE status
+            )
+      if (NOT status EQUAL 0 )
+            message(SEND_ERROR "lpfcc failed compiling a simple LPF program with debug library")
+      endif()
 
-message("Running an LPF program with debug library on any of the engines: @ENGINES@")
-foreach(engine @ENGINES@)
-    foreach( nprocs 2 3 )
-        execute_process(
-               COMMAND @bindir@/lpfrun -engine ${engine} -np ${nprocs} ./test-lpf-debug ${nprocs}
-               WORKING_DIRECTORY @builddir@
-               OUTPUT_FILE @builddir@/test-lpf-debug-${engine}-${nprocs}.log
-               ERROR_FILE  @builddir@/test-lpf-debug-${engine}-${nprocs}.log
-               RESULT_VARIABLE status
-               )
+      message("Running an LPF program with debug library on any of the engines: @ENGINES@")
+      foreach(engine @ENGINES@)
+      foreach( nprocs 2 3 )
+            execute_process(
+                  COMMAND @bindir@/lpfrun -engine ${engine} -np ${nprocs} ./test-lpf-debug ${nprocs}
+                  WORKING_DIRECTORY @builddir@
+                  OUTPUT_FILE @builddir@/test-lpf-debug-${engine}-${nprocs}.log
+                  ERROR_FILE  @builddir@/test-lpf-debug-${engine}-${nprocs}.log
+                  RESULT_VARIABLE status
+                  )
 
-        # error when no error has been detected
-        if (status EQUAL 0)
-              message(SEND_ERROR "Debug library failed to detect runtime error on engine ${engine} on P=${nprocs}")
-        endif()
-    endforeach(nprocs)
-endforeach(engine)
+            # error when no error has been detected
+            if (status EQUAL 0)
+                  message(SEND_ERROR "Debug library failed to detect runtime error on engine ${engine} on P=${nprocs}")
+            endif()
+      endforeach(nprocs)
+      endforeach(engine)
+else()
+      message(WARNING "skipping debug tests")
+endif(RUN_DEBUG_TESTS)
 
 endif(UNIX AND NOT APPLE)
 
