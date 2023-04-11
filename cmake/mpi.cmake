@@ -15,6 +15,15 @@
 # limitations under the License.
 #
 
+# assume MPI was compiled with GCC, as in most Linux distributions;
+# with recent distributions, MPI may contain Link-Time Optimization
+# flags, which are compiler-specific and thus not portable:
+# if the compiler is not gcc, disable LTO and allow FindMPI to
+# make MPI work with Clang
+if ( CMAKE_CXX_COMPILER_ID STREQUAL "Clang" )
+     set( MPI_COMPILER_FLAGS "-fno-lto" )
+     message( STATUS "detecting MPI with Clang by disabling LTO" )
+endif()
 find_package(MPI)
 
 # Find the 'mpirun' frontend
