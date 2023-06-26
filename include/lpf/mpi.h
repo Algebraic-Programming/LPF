@@ -29,7 +29,7 @@ extern "C" {
  *
  * @{
  *
- * \defgroup LPF_MPI Specific to the implementations based on MPI.
+ * \defgroup LPF_MPI Specific to implementations based on MPI
  *
  * @{
  */

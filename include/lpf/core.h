@@ -151,13 +151,12 @@
  * \defgroup LPF_CORE Core API
  *
  * \section LPF_SEMANTICS Semantics
- * The C language is well know for its speed (when the programmer does
- * everything right) and its Undefined Behaviour (UB, when the programmer did
- * something wrong). This is acceptable because the semantics for C are well
- * defined.
- * The same holds true for this API: for each function its behaviour is well
- * defined provided that a set of preconditions are satisfied; while when
- * any precondition is violated UB will ensue. We capture these semantics in
+ * The C language is well known for its speed when the programmer does
+ * everything right, as well as for its Undefined Behaviour (UB) when the
+ * programmer did something wrong.
+ * The same holds true for this API: each function has well-defined behaviour,
+ * provided that a set of preconditions are satisfied; when any precondition is
+ * violated, a call will instead result in UB. We capture these semantics in
  * natural language as well as formal semantics. Behaviour of a function
  * comprises, given the input state and the function parameters, the following
  * aspects:
@@ -172,30 +171,41 @@
  * its preconditions, then UB will be the result. If, during a call to an LPF
  * primitive, an implementation encounters an error, it will behave as defined
  * for the encountered error condition (usually meaning the primitive shall have
- * no effect), and return an error code.
+ * no effect) and return the associated error code.
  *
  * \subsection LPF_COSTS Cost model
- * To the designer of an immortal algorithm predictability of the LPF system is
+ * To the designer of an immortal algorithm, predictability of the LPF system is
  * just as important as its functional behaviour. Precisely specifying costs for
  * each function individually, however, would restrict the implementation more
- * than is necessary. For example, an implementation could choose to overlap
+ * than is necessary, as well as more than is realisable within acceptable cost.
+ *
+ * Regarding necessity, and for example, LPF defines nonblocking semantics for
+ * RDMA communication. Therefore, an implementation could choose to overlap
  * communication with computation by initiating data transfers at each call to
- * lpf_get() or lpf_put(). It could also choose to temporally separate
- * communication from computation by delaying the initiation of data transfers
- * until such time all computation globally has completed. Both of these options
- * can lead to valid implementations-- yet will incur different costs when
- * considering each of lpf_get(), lpf_put(), and lpf_sync() separately.
+ * lpf_get() or lpf_put(), without waiting for an lpf_sync(). On the other hand,
+ * another implementation could choose to temporally separate communication from
+ * computation by delaying the initiation of data transfers until such time all
+ * all computation globally has completed. LPF allows both (and more), yet
+ * strives to assign an unambiguous cost as to the completion of the
+ * communication pattern as a whole, and in isolation from any computational
+ * cost: the LPF, as a communication layer, only assigns a precise cost to
+ * communication, not computation.
  *
- * Therefore, instead of specifying the cost for each function individually,
- * LPF specifies the \em total runtime costs of communication during groups of
- * independent supersteps. If no extensions to the core API are in use, the BSP
- * cost model specifies the average wall-clock time of all calls to lpf_put(),
- * lpf_get(), and lpf_sync() in a single superstep; see \ref BSPCOSTS for more
- * details.
+ * In line with the above, instead of specifying the cost for each function
+ * individually, LPF specifies the \em total runtime costs of communication
+ * during groups of independent supersteps. If no extensions to the core API are
+ * in use, the BSP cost model specifies the wall-clock time of all calls to
+ * lpf_put(), lpf_get(), and lpf_sync() in a single superstep; see \ref BSPCOSTS
+ * for more details. An LPF implementation may enable the alternative choice of
+ * any relaxed BSP model.
+ * LPF also allows for probabilistic superstep costs that may futhermore be
+ * subject to SLAs over many executions of identical communication patterns.
+ * Finally, a call to \em any LPF primitive has asymptotic work complexity
+ * guarantees. These constitute the only guarantees that LPF defines on
+ * computational cost.
  *
- * By default, LPF hence realises (immortal) BSP algorithms. LPF also supports
- * extensions that modify or `relax' the BSP model; these are discussed within
- * the \ref LPF_EXTENSIONS section.
+ * Through all these guarantees, probabilistic or otherwise, LPF allows for the
+ * reliable realisation of immortal algorithms.
  *
  * \section LPF_COMM Communication
  *
@@ -206,14 +216,6 @@
  * execution of a given communication pattern. Note that a run-time system may
  * overlap computation and communication during actual execution as long as
  * doing so does not conflict with the chosen BSP or BSP-like cost model.
- *
- * BSP-like models may be employed via dedicated implementations of the LPF core
- * API and/or via extensions to the LPF core API. LPF specifies in which ways
- * the core API can be extended to ensure any algorithm making use of extensions
- * still functions using the standard semantics. LPF additionally requires that
- * implementations ensure that the overall time spent communicating does not
- * exceed the cost defined by the BSP cost model-- that is, implementations may
- * only define extensions and modify the cost model if it improves the default.
  *
  * \subsection BSP_BAGS A conceptual description of the communication model
  *
@@ -234,12 +236,13 @@
  *  -# a destination memory area identifier \f$ d \f$ that encapsulates a
  *     process and a memory address on that process, and
  *  -# the number of bytes \f$ b \f$ to copy.
+ *
  * Any call to lpf_put() or lpf_get() is translated into such a memory request,
  * after which the memory request is put into a conceptual bag of message
  * requests \f$ M \f$. A communication request, once executed, is removed from
  * \f$ M \f$. A subsequent call to lpf_sync() guarantees that all messages
- * \f$ ( s, d, b ) \in M \f$ are executed and removed from * \f$ M \f$. Any
- * given process is safe to continue whenever, for all remaining messages
+ * \f$ ( s, d, b ) \in M \f$ are executed and removed from \f$ M \f$. Any given
+ * process is safe to continue whenever, for all remaining messages
  * \f$ (s,d,b) \in M \f$:
  *  -# \f$ s \f$ does not reside on the given process, and
  *  -# \f$ d \f$ does not reside on the given process. 
@@ -257,8 +260,8 @@
  * must match a serialisation, an implementation is \em not required to actually
  * serialise communication-- implementations are, in fact, not even allowed to
  * serialise for more than one processes since doing so would violate the BSP
- * cost model: alternative BSP-like cost models are only allowed to improve
- * the default BSP cost.
+ * cost model, while relaxed BSP models are only allowed to improve this default
+ * cost.
  *
  * While it is legal to define global communication patterns with write
  * conflicts, some illegal patterns remain. Specifically, a global communication
@@ -266,11 +269,12 @@
  *  -# there exist any two message requests \f$ r_0=(s_0,d_0,b_0) \f$ and
  *     \f$ r_1=(s_1,d_1,b_1) \f$, \f$ r_\{0,1\} \in M \f$ such that
  *     \f$ s_0 = d_1 \f$ or \f$ d_0 = s_1 \f$.
+ *
  * Violating this restriction results in undefined behaviour.
  *
  * Recall that communication patterns in LPF are registered during the
- * computational phase of a superstep. User code, during a computational phase
- * shall not address outside of LPF primitives:
+ * computational phase of a superstep. User code, during a computational phase,
+ * shall not address (except via LPF primitives):
  *  -# a source memory area after it was locally designated as such after an
  *     lpf_put().
  *  -# a destination memory area after it was locally designated as such after
@@ -279,7 +283,19 @@
  *     requested during the same superstep.
  *  -# a destination memory area that is designated as such by a remote
  *     lpf_put() requested during the same superstep.
+ *
  * Violating any of these restrictions results in undefined behaviour.
+ *
+ * \subsection RELAXED_BSP Using relaxed BSP models
+ *
+ * BSP-like models may be employed via dedicated implementations of the LPF core
+ * API and/or via extensions to the LPF core API. LPF specifies in which ways
+ * the core API can be extended to ensure any algorithm making use of extensions
+ * still functions using the standard semantics. LPF additionally requires that
+ * implementations ensure that the overall time spent communicating does not
+ * exceed the cost defined by the BSP cost model-- that is, implementations may
+ * only define extensions and modify the cost model if the default cost remains
+ * a valid upper bound to the actual cost.
  *
  * \section LPF_APPS_DEV Application development support
  *
@@ -401,6 +417,17 @@
  *    }
  * \endcode
  *
+ * If existing code already has spawned multiple processes using a framework
+ * other than LPF, then calling lpf_exec() will not re-use those pre-existing
+ * processes to run the requested LPF program; rather, it may instead spawn
+ * additional new LPF processes <em>per pre-existing process</em>, and then
+ * have each pre-existing process run its own instance of the requested LPF
+ * program.
+ *
+ * If this is not intended, and the given LPF program should instead re-use
+ * the pre-existing processes and \em not spawn new ones, the lpf_hook() should
+ * be used instead.
+ *
  * \subsubsection No SPMD section structure
  * Besides SPMD section confinement there are no other features that help
  * structuring SPMD program text. Although the C language supports structured
@@ -419,10 +446,10 @@
  *
  *      // copy 'a' to the higher neighbour in a ring fashion
  *      lpf_pid_t dst_pid = ( pid + 1 ) % nprocs;
- *    	lpf_put( ctx, a, 0, dst_pid , b, 0, 1, NULL);
+ *      lpf_put( ctx, a, 0, dst_pid , b, 0, 1, NULL);
  *
  *      // call a 3rd-party SPMD function
- *   	black_box( ctx, pid, nprocs );
+ *      black_box( ctx, pid, nprocs );
  *
  *      // and finish the superstep
  *	lpf_sync( ctx, LPF_SYNC_DEFAULT );
@@ -443,11 +470,12 @@
  *      // gather 'b' from all processes on process 0
  *      lpf_pid_t dst_pid = 0;
  *      size_t dst_offset = myPid;
- *    	lpf_put( ctx, b, 0, dst_pid, c, dst_offset, 1, NULL);
+ *      lpf_put( ctx, b, 0, dst_pid, c, dst_offset, 1, NULL);
  *    }
  * \endcode
  * which means the final lpf_sync() in \a foo will be a \f$ (p+1) \f$-relation,
- * where \f$p\f$ is the number of processes. On the other hand, it could just be
+ * where \f$p\f$ is the number of processes. On the other hand, the black box
+ * could read
  * \code
  *    void black_box( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs )
  *    {
@@ -457,7 +485,7 @@
  *      // copy 'b' to the lower neighbour in a ring fashion.
  *      lpf_pid_t dst_pid = (pid + nprocs - 1) % nprocs;
  *      size_t dst_offset = 0 ;
- *    	lpf_put( ctx, b, 0, dst_pid, c, dst_offset, 1, NULL);
+ *      lpf_put( ctx, b, 0, dst_pid, c, dst_offset, 1, NULL);
  *    }
  * \endcode
  * which would mean that the final lpf_sync() in \a foo would be a
@@ -465,24 +493,27 @@
  * lpf_sync(), complete knowledge of \em all SPMD code is required.
  *
  * To enable the design of `black boxes' (libraries) on top of LPF that do not
- * require their users to keep track of contracts on the use of LPF primitives,
- * the lpf_rehook() starts a new SPMD section within an existing one, mapping
- * existing LPF processes to new ones on a one-to-one basis, providing a new
- * context that is completely disjoint from the older one. This allows the
- * definition of LPF libraries that take input and output through the standard
- * #lpf_args_t structure.
+ * require their users to track the use of LPF primitives with all libraries,
+ * LPF defines the lpf_rehook(). This primitive starts a new SPMD section within
+ * an existing one, mapping existing LPF processes to new ones on a one-to-one
+ * basis, providing a new context that is disjoint from the older one. This
+ * allows the definition of LPF libraries that take input and output through the
+ * standard #lpf_args_t structure.
+ *
  * Note that this is the exact same mechanism LPF defines to simplify the
  * integration of LPF algorithms from arbitrary external software via lpf_exec()
  * and lpf_hook().
  *
- * It makes sense for higher-level libraries that require tight integration into
- * LPF algorithms to expose explicit LPF contracts that a user has to keep track
- * of. This enables best performance by not requiring many calls into the
- * encapsulation-friedly lpf_rehook().
+ * Nevertheless, some higher-level libraries that require tight integration by
+ * LPF algorithms, may opt to expose explicit LPF contracts for users to track.
+ * This enables best performance by not requiring many calls into the
+ * encapsulation-friedly lpf_rehook(), and make sense, e.g., for a collectives
+ * library.
+ *
  * Higher-level libraries that provide relatively heavy computations, in
  * contrast, would do well to benefit of the lpf_rehook(). For example, a
  * library designed to compute large-scale fast Fourier transforms in parallel
- * would effectively hide any overhead from an encapsulating lpf_rehook().
+ * would hide any overhead from encapsulation by lpf_rehook().
  *
  * Finally, one may envision higher-level libraries that completely hide the LPF
  * core API. LPF comes bundled with one example of this, namely, \ref BSPLIB.
@@ -529,9 +560,9 @@
  * unrealistically high value, however, or if the system is under unusually high
  * memory utilisation pressure, this assumption is violated.
  * In such cases, LPF returns an error code that allows for user mitigation of
- * the problem. Following the above example, a user can either lower the amount
- * of communications required (at the cost of extra supersteps), or may free any
- * non-critical memory areas and simply retry the same resize call again.
+ * the problem: for example, the caller may opt to lower the amount of
+ * communications required (e.g., at the cost of extra supersteps) or may free
+ * non-critical memory and retry the same resize call again.
  *
  * Runtime errors are communicated through return values. The special type for
  * return codes is #lpf_err_t, which is therefore the return type for all LPF
@@ -545,10 +576,10 @@
  * Sometimes errors happen that are assumed to be so rare that it is acceptable
  * to terminate an LPF program immediately. Still, the application must have the
  * opportunity to log the failure and/or seek end-user advice on how to proceed.
- * For example, in a traditional HPC environment the implementation should not
- * need to deal with an unplugged network cable, but must inform the end-user
- * appropriately when such a catastrophic network failure occurs.
- * For this reason, the LPF defines the #LPF_ERR_FATAL non-mitigable error code.
+ * For example, an LPF algorithm employed within a traditional HPC environment
+ * need not tolerate a suddenly-unplugged network cable, yet should inform its
+ * user when such a catastrophic network failure occurs.
+ * For this reason, the LPF defines the non-mitigable #LPF_ERR_FATAL error code.
  * When an LPF process encounters this error code, it enters a so-called
  * <em>failure state</em> which guarantees the following and the following only:
  *   -# any subsequent lpf_sync(), lpf_rehook(), and lpf_exec() will return
@@ -559,11 +590,18 @@
  *      current SPMD section will return #LPF_ERR_FATAL;
  *   -# other processes in this SPMD section \em may enter a <em>failure
  *      state</em> at any subsequent call to lpf_sync();
- *   -# all function calls to LPF functions not mentioned in the above four
- *      points will not have any effect.
+ *   -# any other process \em must enter a failure state during any superstep
+ *      which requires data to be communicated from any LPF process already in a
+ *      failure state.
+ *
+ * All calls to any other LPF functions not mentioned in the above \em may
+ * return #LPF_ERR_FATAL. If they do not, they shall function as though the
+ * process were not in a failure state.
+ *
  * A failure state is a property of an LPF process-- LPF does not define a
  * global (error) state. This allows for the lazy handling of failed processes,
- * thus reducing communication and synchronisation requirements.
+ * thus reducing communication and synchronisation requirements when no process
+ * is in a failure state.
  *
  * \note
  * Another way of thinking about failures states is that after a process
@@ -1374,10 +1412,12 @@ lpf_err_t lpf_exec(
  *
  * \note The \a init parameter is necessarily implementation defined: an
  *       implementation of this API on top of PThreads would require a pointer
- *       to an initialisation struct that lives in shared-memory, while an
+ *       to an initialisation struct that lives in shared-memory, an
  *       implementation based on TCP/IP would require addresses or sockets,
- *       and an MPI implementation would require communicators. A hybrid LPF
- *       implementation could even support multiple of such \em hooks.
+ *       while an MPI implementation would require communicators. A hybrid LPF
+ *       implementation could even support multiple of these. For examples of
+ *       such implementation-specific ways to retrieve an \a init object, see
+ *       the \ref LPF_EXTENSIONS section.
  *
  * \returns #LPF_SUCCESS
  *            When the requested LPF SPMD section was successfully started and
