@@ -26,15 +26,37 @@
 		  //IO streams.
 
 #include <cstdlib> //for abort
+#include <stdlib.h>
+#include <string.h>
 
 #include "interface.hpp"
 
 extern "C" const int LPF_MPI_AUTO_INITIALIZE;
 
+static const char * ENV_VAR_NAME = "LPF_INIT";
+
 
 namespace lpf {
 
 	bool mpi_initializer_ran = false;
+
+	enum lpf_env_control {
+		NONE, YES, NO
+	};
+
+	static lpf_env_control is_env_enabled() {
+		const char * env_var = getenv( ENV_VAR_NAME );
+		if ( env_var == NULL ) {
+			return NONE;
+		}
+		if ( strncmp( env_var, "YES", 3 ) == 0 ) {
+			return YES;
+		}
+		if ( strncmp( env_var, "NO", 2 ) == 0 ) {
+			return NO;
+		}
+		return NONE;
+	}
 
 	void __attribute__((constructor)) mpi_initializer( int argc, char ** argv ) {
 		const char * const engine_c = std::getenv( "LPF_ENGINE" );
@@ -66,8 +88,18 @@ namespace lpf {
 		//ensure we run only once
 		mpi_initializer_ran = true;
 
+		lpf_env_control env = is_env_enabled();
+
+		bool force_init = false;
+		if ( env == NO ) {
+			return;
+		}
+		if ( env == YES ) {
+			force_init = true;
+		}
+
 		//check if we need to initialise MPI
-		if( LPF_MPI_AUTO_INITIALIZE ) {
+		if( LPF_MPI_AUTO_INITIALIZE || force_init ) {
 			//yes-- in so doing, take care of the command-line arguments
 			//that the MPI implementation <em>may</em> modify. Most (all?)
 			//modern implementations do not change the given argc/argv,
