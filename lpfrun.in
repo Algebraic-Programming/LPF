@@ -129,6 +129,13 @@ function printhelp()
     echo 
     echo "   <param 0>..."
     echo "               The command line parameters for the program"
+    echo
+    echo "   -no-auto-init"
+    echo "               Do not initialize the underlying LPF engine automatically;"
+    echo "               suitable for those applications that may decide to"
+    echo "               initialize and hook into LPF based on runtime conditions,"
+    echo "               thus performing manual initialization of the engine"
+    echo "               (e.g., by calling MPI_Init(...))"
     echo 
 
     if [ x$engine = xmpirma -o x$engine = xmpimsg -o x$engine = xhybrid \
@@ -469,6 +476,7 @@ write_conflict_blocksize=1024
 max_mpi_msg_size=
 ibmtu=4096
 state=
+preload_lpf=yes
 
 declare -a mpirun_args
 mpirun_arg_number=0
@@ -565,6 +573,11 @@ do
             # add mpirun parameters
             mpirun_args[$mpirun_arg_number]="${arg#-mpirun,}"
             mpirun_arg_number=$((mpirun_arg_number + 1))
+            shift
+            ;;
+
+        -no-auto-init)
+            preload_lpf=no
             shift
             ;;
 
@@ -824,7 +837,9 @@ case $engine in
         # run with designated number of processors
         set_local_env LPF_PROC_PINNING "$bitmaps"
         set_local_env LPF_MAX_PROCS $procs
-        set_local_env LD_PRELOAD "$LPFCORE"
+        if [ x$preload_lpf = xyes ]; then
+            set_local_env LD_PRELOAD "$LPFCORE"
+        fi
         $show "${other_cmds[@]}" 
         exit_status=$?
         ;;
@@ -860,7 +875,9 @@ case $engine in
             fi
         fi
 
-        set_local_env LD_PRELOAD "$LPFCORE"
+        if [ x$preload_lpf = xyes ]; then
+            set_local_env LD_PRELOAD "$LPFCORE"
+        fi
 
         $show @MPIRUN@  @MPIEXEC_PREFLAGS@ "${mpirun_args[@]}" \
             "${MPIRUN_STD_PARAMS[@]}" "${MPIRUN_LOCAL_PARAMS[@]}"\
