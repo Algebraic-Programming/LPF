@@ -131,11 +131,20 @@ function printhelp()
     echo "               The command line parameters for the program"
     echo
     echo "   -no-auto-init"
-    echo "               Do not initialize the underlying LPF engine automatically;"
+    echo "               Do not initialise the underlying LPF engine automatically;"
     echo "               suitable for those applications that may decide to"
-    echo "               initialize and hook into LPF based on runtime conditions,"
-    echo "               thus performing manual initialization of the engine"
-    echo "               (e.g., by calling MPI_Init(...))"
+    echo "               initialise and hook into LPF based on runtime conditions,"
+    echo "               thus performing manual initialisation of the engine"
+    echo "               (e.g., by calling MPI_Init(...))."
+    echo "               Usually binaries to run via this launcher define an"
+    echo "               integer symbol 'LPF_MPI_AUTO_INITIALIZE' to indicate"
+    echo "               whether they request automatic initialisation of LPF"
+    echo "               (and MPI, if needed); if they do not define this symbol,"
+    echo "               the launcher initialises LPF (and MPI, if needed) by"
+    echo "               default. This option ignores any definition in the"
+    echo "               binary and any default, and does not perform any"
+    echo "               initialisation; hence, the binary is responsible to"
+    echo "               manually initialise LPF (and MPI, if needed)"
     echo 
 
     if [ x$engine = xmpirma -o x$engine = xmpimsg -o x$engine = xhybrid \
