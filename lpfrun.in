@@ -1117,10 +1117,6 @@ case $engine in
             cmd=
         fi
         
-        if [ x$preload_lpf = xyes ]; then
-            set_local_env LD_PRELOAD "$LPFCORE"
-        fi
-
         mpi_use_env $mpi_impl
         $show @MPIRUN@ "${MPIRUN_STD_PARAMS[@]}" "${mpirun_args[@]}" $cmd
         exit_status=$?
