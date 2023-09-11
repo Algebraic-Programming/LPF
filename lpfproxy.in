@@ -42,7 +42,8 @@ single=$3
 procs_per_node=$4
 threads_per_node=$5
 spinlock=$6
-pwd=$7
+preload_lpf=$7
+pwd=$8
 
 # Change to the working directory.
 # Which is necessary for MPI's such as IBM Platform MPI
@@ -74,7 +75,7 @@ if [ $rank -eq $procs_per_node ]; then
 fi
 
 # consume the parameters
-shift 7
+shift 8
 
 if [ "x$size" = x ]; then
   echo "$name: Problem synchronizing during startup"
@@ -205,7 +206,13 @@ case $mode in
 bash -c "export LPF_MAX_PROCS=$threads ;
 export LPF_PROC_PINNING=$pinning ;
 export LPF_SPIN_MODE=$spinlock ;
+EOF
+	if [ x$preload_lpf = xyes ]; then
+		cat <<EOF
 export LD_PRELOAD=$LPFCORE ;
+EOF
+	fi
+	cat <<EOF
 exec $@"
 EOF
         # Execute the dummy MPI program so that the calling MPIRUN 
@@ -219,5 +226,7 @@ esac
 export LPF_MAX_PROCS=$threads
 export LPF_PROC_PINNING="$pinning"
 export LPF_SPIN_MODE="$spinlock"
-export LD_PRELOAD="$LPFCORE"
+if [ x$preload_lpf = xyes ]; then
+	export LD_PRELOAD="$LPFCORE"
+fi
 exec "$@"

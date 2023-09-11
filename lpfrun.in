@@ -1076,7 +1076,7 @@ case $engine in
                 id=$(uuidgen)
                 # Generate generic MPI command
                 cmd="$cmd $colon ${MPIRUN_LOCAL_PARAMS[@]} @MPIEXEC_NUMPROC_FLAG@ $((m * processes))"
-                cmd="$cmd bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}"
+                cmd="$cmd bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $preload_lpf $pwd ${other_cmds[@]}"
                 colon=":"
                 proclist="${proclist}${comma}${processes}(x${repetition})"
                 usednodes=$(( usednodes + repetition ))
@@ -1087,7 +1087,7 @@ case $engine in
                    nodelist=`echo $nodelist | plus_list_drop`
                    echo -n "-h $host " >> $appfile
                 fi
-                echo "-np $((m * processes)) bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}" >> $appfile
+                echo "-np $((m * processes)) bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $preload_lpf $pwd ${other_cmds[@]}" >> $appfile
             done
         done
 
