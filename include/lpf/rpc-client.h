@@ -25,11 +25,11 @@ extern "C" {
 #endif
 
 /**
- * \addtogroup LPF_EXTENSIONS LPF API extensions
+ * \addtogroup LPF_HL Lightweight Parallel Foundation's higher-level libraries
  *
  * @{
  *
- * \defgroup LPF_RPC Implement RPC using LPF
+ * \defgroup LPF_RPC RPC over LPF
  *  
  * Some aspects are implementation defined. See, e.g., #lpf_mpirpc_open.
  * 
