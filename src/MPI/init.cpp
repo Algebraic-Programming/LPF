@@ -36,7 +36,7 @@ namespace lpf {
 
 	bool mpi_initializer_ran = false;
 
-	void __attribute__((constructor)) mpi_initializer( int argc, char ** argv ) {
+	void __attribute__((constructor)) mpi_initializer() {
 		const char * const engine_c = std::getenv( "LPF_ENGINE" );
 		const std::string engine = std::string(
 				engine_c == NULL ?
@@ -68,68 +68,19 @@ namespace lpf {
 
 		//check if we need to initialise MPI
 		if( LPF_MPI_AUTO_INITIALIZE ) {
-			//yes-- in so doing, take care of the command-line arguments
-			//that the MPI implementation <em>may</em> modify. Most (all?)
-			//modern implementations do not change the given argc/argv,
-			//but, to nevertheless be sure, we handle here the removal of
-			//CLI arguments by MPI_Init.
-			assert( argc > 0 );
-			assert( argv != NULL );
-			std::vector< size_t > arglengths;
-			for( size_t i = 0; i < static_cast< size_t >(argc); ++i ) {
-				arglengths.push_back( strlen( argv[i] ) );
-			}
-			assert( arglengths.size() == static_cast< size_t >(argc) );
-
-			int new_argc = argc;
-			char ** new_argv = argv;
-
 			try {
-				lpf::Interface::initRoot( &new_argc, &new_argv );
+				// the linker of recent Linux distributions does NOT initialize
+				// argc/argv anymore during LD_PRELOAD (it was an undocumented feature);
+				// hence, we cannot get implementation-specific MPI flags (which no major
+				// MPI implementor anyway has), and we don't care about other flags;
+				// therefore, ignore argc/argv tout court and pass NULL
+				// (which is allowed by MPI_Init[_thread]())
+				lpf::Interface::initRoot( NULL, NULL );
 			}
 			catch( std::exception &e ) {
 				const std::string error = e.what();
 				(void) std::fprintf( stderr, "Failed to auto-initialize engine:\n\t%s\n", error.c_str() );
 				std::abort();
-			}
-
-			assert( new_argc != 0 );
-			assert( new_argv != NULL );
-			assert( new_argc <= argc );
-
-			if( !(argc == new_argc && argv == new_argv) ) {
-				//MPI_Init changed our arguments, create a copy of the new ones
-				std::vector< std::string > modified;
-				size_t new_pos = 0;
-				for(
-					size_t i = 0;
-					i < static_cast< size_t >(new_argc);
-					++i
-				) {
-					const size_t size = strlen( new_argv[ i ] );
-					while(
-						new_pos < static_cast< size_t >(argc) &&
-						size > arglengths[ new_pos++ ]
-					) {
-						//the new string does not fit here; set this argument
-						//to empty and hope that the next one can fit it:
-						modified.push_back( "" );
-					}
-					modified.push_back( new_argv[ i ] );
-				}
-				//sanity check
-				if( modified.size() > static_cast< size_t >(argc) ) {
-					(void) std::fprintf( stderr, "Program arguments returned by MPI_Init cannot be copied back into original argument list.\n" );
-					abort();
-				}
-				//pad to size of argc
-				for( size_t i = modified.size(); i < static_cast< size_t >( argc ); ++i ) {
-					modified.push_back( "" );
-				}
-				//copy back the new arguments in the original argv
-				for( size_t i = 0; i < static_cast< size_t >( argc ); ++i ) {
-					(void) strncpy( argv[ i ], modified[ i ].c_str(), arglengths[ i ] );
-				}
 			}
 		}
 	}
