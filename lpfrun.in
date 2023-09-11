@@ -129,6 +129,15 @@ function printhelp()
     echo 
     echo "   <param 0>..."
     echo "               The command line parameters for the program"
+    echo
+    echo "   -no-auto-init"
+    echo "               Do not initialise the underlying LPF engine automatically;"
+    echo "               ignores any definition of 'LPF_MPI_AUTO_INITIALIZE' in the"
+    echo "               binary, and ignores its default value. It causes the LPF "
+    echo "               engine to *never* perform any initialisation by itself. "
+    echo "               Instead, the binary is reposible to manually initialise "
+    echo "               LPF engines that need initialisation-- these include the "
+    echo "               mpirma, mpimsg, ibverbs, and hybrid engines."
     echo 
 
     if [ x$engine = xmpirma -o x$engine = xmpimsg -o x$engine = xhybrid \
@@ -469,6 +478,7 @@ write_conflict_blocksize=1024
 max_mpi_msg_size=
 ibmtu=4096
 state=
+preload_lpf=yes
 
 declare -a mpirun_args
 mpirun_arg_number=0
@@ -565,6 +575,11 @@ do
             # add mpirun parameters
             mpirun_args[$mpirun_arg_number]="${arg#-mpirun,}"
             mpirun_arg_number=$((mpirun_arg_number + 1))
+            shift
+            ;;
+
+        -no-auto-init)
+            preload_lpf=no
             shift
             ;;
 
@@ -824,7 +839,9 @@ case $engine in
         # run with designated number of processors
         set_local_env LPF_PROC_PINNING "$bitmaps"
         set_local_env LPF_MAX_PROCS $procs
-        set_local_env LD_PRELOAD "$LPFCORE"
+        if [ x$preload_lpf = xyes ]; then
+            set_local_env LD_PRELOAD "$LPFCORE"
+        fi
         $show "${other_cmds[@]}" 
         exit_status=$?
         ;;
@@ -860,7 +877,9 @@ case $engine in
             fi
         fi
 
-        set_local_env LD_PRELOAD "$LPFCORE"
+        if [ x$preload_lpf = xyes ]; then
+            set_local_env LD_PRELOAD "$LPFCORE"
+        fi
 
         $show @MPIRUN@  @MPIEXEC_PREFLAGS@ "${mpirun_args[@]}" \
             "${MPIRUN_STD_PARAMS[@]}" "${MPIRUN_LOCAL_PARAMS[@]}"\
@@ -1057,7 +1076,7 @@ case $engine in
                 id=$(uuidgen)
                 # Generate generic MPI command
                 cmd="$cmd $colon ${MPIRUN_LOCAL_PARAMS[@]} @MPIEXEC_NUMPROC_FLAG@ $((m * processes))"
-                cmd="$cmd bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}"
+                cmd="$cmd bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $preload_lpf $pwd ${other_cmds[@]}"
                 colon=":"
                 proclist="${proclist}${comma}${processes}(x${repetition})"
                 usednodes=$(( usednodes + repetition ))
@@ -1068,7 +1087,7 @@ case $engine in
                    nodelist=`echo $nodelist | plus_list_drop`
                    echo -n "-h $host " >> $appfile
                 fi
-                echo "-np $((m * processes)) bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $pwd ${other_cmds[@]}" >> $appfile
+                echo "-np $((m * processes)) bash @lpfproxy@ $id $mode $single $processes $threads $spinlock $preload_lpf $pwd ${other_cmds[@]}" >> $appfile
             done
         done
 
