@@ -42,17 +42,30 @@ extern "C" {
  * lpf_mpi_initialize_with_mpicomm() or lpf_mpi_initialize_over_tcp(),
  * followed by lpf_hook(). 
  *
+ * By default, the LPF library will auto-initialise. When launching an LPF
+ * program binary, this behaviour can be overridden via two mechanisms:
+ *  -# launching a binary that defines this field with the value zero;
+ *  -# launching a binary while using the -no-auto-init flag to lpfrun.
+ *
+ * The former works by the LPF library weak-linking the default symbol that
+ * holds the default value of one. The latter mechanism skips the check for
+ * this symbol altogether, and assumes auto-initialisation is never required.
+ *
  * \par Rationale
  * The setting it represents must be known to the implementation before the
  * program starts, because it decides whether MPI processes with \a rank > 0
  * enter a wait-loop instead of main(). So, this rules out a function call to
- * modify this behaviour. Additionally, the operation of this setting is
- * strongly coupled with how the program text is structured: "Is it going to use
- * lpf_hook() or lpf_exec()?" That disqualifies the use of an environment
- * variable. Therefore, a constant with static storage is chosen. By letting the
- * implementation define it as a weak symbol equal to one, the normal way to
- * start a program, through lpf_exec(), is enabled by default.
- * */
+ * modify this behaviour.
+ * Additionally, the operation of this setting is strongly coupled with how the
+ * program text is structured: "Is it going to use lpf_hook() or lpf_exec()?".
+ * This disqualifies the use of an environment variable. Therefore, a constant
+ * with static storage is chosen. By letting the implementation define it as a
+ * weak symbol equal to one, the normal way to start a program, through
+ * lpf_exec(), is enabled by default.
+ * Some cases may preclude modification of the binary given to lpfrun. If,
+ * additionally, that use case aims for the use of lpf_hook(), a launch-time
+ * mechanism for is additionally required.
+ */
 extern const int LPF_MPI_AUTO_INITIALIZE ;
 
 
