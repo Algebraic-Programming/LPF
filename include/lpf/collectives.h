@@ -27,7 +27,8 @@
 extern "C" {
 #endif
 
-/** \addtogroup LPF_HL Lightweight Parallel Foundation's higher-level libraries
+/**
+ * \addtogroup LPF_HL Lightweight Parallel Foundation's higher-level libraries
  * 
  * @{
  *
