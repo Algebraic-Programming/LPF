@@ -526,6 +526,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
+    std::cout << "In IBVerbs::put\n";
     ASSERT( src.mr );
 
     while (size > 0 ) {
@@ -616,62 +617,60 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
     }
 }
 
-void IBVerbs :: sync( bool reconnect )
-{
-    if (reconnect) reconnectQPs();
+void IBVerbs :: post_sends() {
 
-    while ( !m_activePeers.empty() ) {
-        m_peerList.clear();
+    m_peerList.clear();
 
-        // post all requests
-        typedef SparseSet< pid_t> :: const_iterator It;
-        for (It p = m_activePeers.begin(); p != m_activePeers.end(); ++p )
-        {
-            size_t head = m_srsHeads[ *p ];
-            m_peerList.push_back( *p );
+    // post all requests
+    typedef SparseSet< pid_t> :: const_iterator It;
+    for (It p = m_activePeers.begin(); p != m_activePeers.end(); ++p )
+    {
+        size_t head = m_srsHeads[ *p ];
+        m_peerList.push_back( *p );
 
-            if ( m_nMsgsPerPeer[*p] > m_maxSrs ) {
-                // then there are more messages than maximally allowed
-                // so: dequeue the top m_maxMsgs and post them
-                struct ibv_send_wr * const pBasis =  &m_srs[0];
-                struct ibv_send_wr * pLast = &m_srs[ head ];
-                for (size_t i = 0 ; i < m_maxSrs-1; ++i )
-                    pLast = pLast->next;
+        if ( m_nMsgsPerPeer[*p] > m_maxSrs ) {
+            // then there are more messages than maximally allowed
+            // so: dequeue the top m_maxMsgs and post them
+            struct ibv_send_wr * const pBasis =  &m_srs[0];
+            struct ibv_send_wr * pLast = &m_srs[ head ];
+            for (size_t i = 0 ; i < m_maxSrs-1; ++i )
+                pLast = pLast->next;
 
-                ASSERT( pLast != NULL );
-                ASSERT( pLast->next != NULL ); // because m_nMsgsperPeer[*p] > m_maxSrs
+            ASSERT( pLast != NULL );
+            ASSERT( pLast->next != NULL ); // because m_nMsgsperPeer[*p] > m_maxSrs
 
-                ASSERT( pLast->next - pBasis ); // since all send requests are stored in an array
+            ASSERT( pLast->next - pBasis ); // since all send requests are stored in an array
 
-                // now do the dequeueing
-                m_srsHeads[*p] = pLast->next - pBasis;
-                pLast->next = NULL;
-                pLast->send_flags = IBV_SEND_SIGNALED;
-                LOG(4, "Posting " << m_maxSrs << " of " << m_nMsgsPerPeer[*p]
-                        << " messages from " << m_pid << " -> " << *p );
-                m_nMsgsPerPeer[*p] -= m_maxSrs;
-            }
-            else {
-                // signal that we're done
-                LOG(4, "Posting remaining " << m_nMsgsPerPeer[*p]
-                        << " messages " << m_pid << " -> " << *p );
-                m_nMsgsPerPeer[*p] = 0;
-            }
-
-            struct ibv_send_wr * bad_wr = NULL;
-            struct ibv_qp * const ibv_qp_p = m_connectedQps[*p].get();
-            ASSERT( ibv_qp_p != NULL );
-            if (int err = ibv_post_send(ibv_qp_p, &m_srs[ head ], &bad_wr ))
-            {
-                LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
-                throw Exception("Error while posting RDMA requests");
-            }
+            // now do the dequeueing
+            m_srsHeads[*p] = pLast->next - pBasis;
+            pLast->next = NULL;
+            pLast->send_flags = IBV_SEND_SIGNALED;
+            LOG(4, "Posting " << m_maxSrs << " of " << m_nMsgsPerPeer[*p]
+                    << " messages from " << m_pid << " -> " << *p );
+            m_nMsgsPerPeer[*p] -= m_maxSrs;
+        }
+        else {
+            // signal that we're done
+            LOG(4, "Posting remaining " << m_nMsgsPerPeer[*p]
+                    << " messages " << m_pid << " -> " << *p );
+            m_nMsgsPerPeer[*p] = 0;
         }
 
-        // wait for completion
+        struct ibv_send_wr * bad_wr = NULL;
+        struct ibv_qp * const ibv_qp_p = m_connectedQps[*p].get();
+        ASSERT( ibv_qp_p != NULL );
+        if (int err = ibv_post_send(ibv_qp_p, &m_srs[ head ], &bad_wr ))
+        {
+            LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+            throw Exception("Error while posting RDMA requests");
+        }
+    }
 
+}
+
+void IBVerbs :: wait_completion(int& error) {
+        // wait for completion
         int n = m_activePeers.size();
-        int error = 0;
         while (n > 0)
         {
             LOG(5, "Polling for " << n << " messages" );
@@ -697,6 +696,20 @@ void IBVerbs :: sync( bool reconnect )
                 throw Exception("Poll CQ failure");
             }
         }
+}
+
+void IBVerbs :: sync( bool reconnect )
+{
+    if (reconnect) reconnectQPs();
+
+    int error = 0;
+    while ( !m_activePeers.empty() ) {
+
+        //post_sends
+        post_sends();
+
+        wait_completion(error);
+
 
         if (error) {
             throw Exception("Error occurred during polling");
