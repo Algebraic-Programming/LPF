@@ -84,6 +84,8 @@ private:
     void stageQPs(size_t maxMsgs ); 
     void reconnectQPs(); 
 
+    void post_sends();
+    void wait_completion(int& error);
 
     struct MemoryRegistration {
         void *   addr;
