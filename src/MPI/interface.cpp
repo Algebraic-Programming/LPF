@@ -100,6 +100,10 @@ void Interface :: put( memslot_t srcSlot, size_t srcOffset,
             size );
 }
 
+void Interface :: getRcvdMsgCount(size_t * msgs) {
+    m_mesgQueue.getRcvdMsgCount(msgs);
+}
+
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
         size_t size )

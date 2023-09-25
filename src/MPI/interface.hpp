@@ -70,6 +70,8 @@ public:
 
     static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
 
+    void getRcvdMsgCount(size_t * msgs);
+
     err_t rehook( spmd_t spmd, args_t args);
 
     void probe( machine_t & machine ) ;

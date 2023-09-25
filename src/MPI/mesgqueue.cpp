@@ -315,6 +315,7 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
+    std::cout << "Enter MessageQueue::put\n";
     if (size > 0)
     {
         ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
@@ -352,6 +353,7 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 
 int MessageQueue :: sync( bool abort )
 {
+    std::cout << "Enter MessageQueue::sync(" << abort << ")\n";
     LOG(4, "mpi :: MessageQueue :: sync( abort " << (abort?"true":"false")
             << " )");
     using mpi::ipc::newMsg;
@@ -418,6 +420,7 @@ int MessageQueue :: sync( bool abort )
     while ( !m_firstQueue->empty() )
     {
         mpi::IPCMesg<Msgs> msg = recvMsg<Msgs>( *m_firstQueue, m_tinyMsgBuf.data(), m_tinyMsgBuf.size());
+        std::cout << "1st Q: RECEIVED MSG = " << static_cast<char *>(m_tinyMsgBuf.data()) << std::endl;
 
         switch ( msg.type() )
         {
@@ -442,6 +445,7 @@ int MessageQueue :: sync( bool abort )
                 size_t srcOffset, dstOffset;
                 size_t size;
 
+                std::cout << "Call msg.read in l. 447\n";
                 msg .read( DstPid,  dstPid )
                     .read( SrcSlot, srcSlot)
                     .read( DstSlot, dstSlot)
@@ -471,6 +475,7 @@ int MessageQueue :: sync( bool abort )
                 pid_t srcPid, dstPid;
                 memslot_t srcSlot, dstSlot;
                 size_t srcOffset, dstOffset;
+                std::cout << "Call msg.read in l. 477\n";
                 size_t size;
                 msg .read( SrcPid, srcPid )
                     .read( DstPid, dstPid )
@@ -669,6 +674,7 @@ int MessageQueue :: sync( bool abort )
     while( !m_secondQueue->empty() )
     {
         mpi::IPCMesg<Msgs> msg = recvMsg<Msgs>( *m_secondQueue, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() );
+        std::cout << "2nd Q: RECEIVED MSG = " << static_cast<char *>(m_tinyMsgBuf.data()) << std::endl;
 
         switch ( msg.type() )
         {
@@ -680,6 +686,7 @@ int MessageQueue :: sync( bool abort )
 
                 void * addr = m_memreg.getAddress( dstSlot, dstOffset);
 
+                std::cout << "Will read buffered get in l. 685\n";
                 msg.read( Payload, addr, msg.bytesLeft() );
                 break;
             }
@@ -773,6 +780,8 @@ int MessageQueue :: sync( bool abort )
                   - e.dstOffset + e.srcOffset;
 
             if (e.canWriteHead) {
+
+                std::cout << "Will call m_ibverbs.get in mesgqueue sync (local slot)\n";
                 m_ibverbs.get( e.srcPid, m_memreg.getVerbID( e.srcSlot),
                         e.srcOffset,
                         m_memreg.getVerbID( m_edgeBufferSlot ), e.bufOffset,
@@ -830,16 +839,20 @@ int MessageQueue :: sync( bool abort )
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
         ASSERT( ! m_memreg.isLocalSlot( e.dstSlot ) ) ;
-        if (e.canWriteHead)
+        if (e.canWriteHead) {
+            std::cout << "Will call m_ibverbs.put in mesgqueue sync 842\n";
             m_ibverbs.put( m_memreg.getVerbID( e.srcSlot), e.srcOffset,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
                     e.bufOffset, headSize );
+        }
 
-        if (e.canWriteTail)
+        if (e.canWriteTail) {
+            std::cout << "Will call m_ibverbs.put in mesgqueue sync 851\n";
             m_ibverbs.put( m_memreg.getVerbID( e.srcSlot),
                     e.srcOffset + tailOffset ,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
                     e.bufOffset + (e.canWriteHead?headSize:0), tailSize);
+    }
 #endif
 #ifdef LPF_CORE_MPI_USES_mpimsg
         if (e.canWriteHead)
@@ -871,6 +884,7 @@ int MessageQueue :: sync( bool abort )
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
         size_t shift = r.roundedDstOffset - r.dstOffset;
+        std::cout << "Will call m_ibverbs.get in mesgqueue sync 886\n";
         m_ibverbs.get( r.srcPid,
             m_memreg.getVerbID( r.srcSlot),
             r.srcOffset + shift,
@@ -974,6 +988,14 @@ int MessageQueue :: sync( bool abort )
     return 0;
 }
 
+void MessageQueue :: getRcvdMsgCount(size_t * msgs)
+{
+
+    *msgs = 0;
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        m_ibverbs.get_rcvd_msg_count(msgs);
+#endif
+}
 
 
 } // namespace lpf

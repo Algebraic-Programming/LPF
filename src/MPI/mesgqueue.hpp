@@ -59,6 +59,8 @@ public:
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 
 
+    void getRcvdMsgCount(size_t * msgs);
+
     // returns how many processes have entered in an aborted state
     int sync( bool abort );
 
