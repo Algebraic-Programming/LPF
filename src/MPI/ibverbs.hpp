@@ -19,8 +19,10 @@
 #define LPF_CORE_MPI_IBVERBS_HPP
 
 #include <string>
+#include <atomic>
 #include <vector>
 #include <memory>
+#include <thread>
 //#if __cplusplus >= 201103L    
 //  #include <memory>
 //#else
@@ -86,6 +88,7 @@ private:
 
     void post_sends();
     void wait_completion(int& error);
+    void doProgress();
 
     struct MemoryRegistration {
         void *   addr;
@@ -116,6 +119,7 @@ private:
     size_t       m_maxSrs; // maximum number of sends requests per QP  
     size_t m_postCount;
     size_t m_recvCount;
+    std::atomic_int m_stopProgress;
 
     int *m_recvCounts;
     shared_ptr< struct ibv_context > m_device; // device handle
@@ -136,6 +140,7 @@ private:
     std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
     SparseSet< pid_t >           m_activePeers; // 
     std::vector< pid_t >         m_peerList;
+    shared_ptr<std::thread> progressThread;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     //std::vector< struct ibv_wc > m_wcs; // array of work completions
