@@ -41,6 +41,7 @@
 #undef lpf_put
 #undef lpf_sync
 #undef lpf_register_local
+#undef lpf_get_rcvd_msg_count
 #undef lpf_register_global
 #undef lpf_deregister
 #undef lpf_probe
@@ -84,6 +85,7 @@
 #define lpf_put             LPF_FUNC(put)
 #define lpf_sync            LPF_FUNC(sync)
 #define lpf_register_local  LPF_FUNC(register_local)
+#define lpf_get_rcvd_msg_count LPF_FUNC(get_rcvd_msg_count)
 #define lpf_register_global LPF_FUNC(register_global)
 #define lpf_deregister      LPF_FUNC(deregister)
 #define lpf_probe           LPF_FUNC(probe)

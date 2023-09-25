@@ -28,6 +28,7 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
+#undef lpf_get_rcvd_msg_count
 
 #undef lpf_init_t
 #undef lpf_pid_t
@@ -695,6 +696,10 @@ public:
         m_new_global_regs.insert( *memslot );
         m_active_regs.insert( *memslot );
 
+        return LPF_SUCCESS;
+    }
+
+    lpf_err_t get_rcvd_msg_count(size_t *msgs) {
         return LPF_SUCCESS;
     }
 

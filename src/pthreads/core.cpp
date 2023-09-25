@@ -378,3 +378,11 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     return t->resizeMemreg(max_regs);
 }
 
+lpf_err_t lpf_get_rcvd_msg_count(lpf_t ctx, size_t * msgs) {
+    *msgs = 0;
+    lpf::ThreadLocalData * t = realCtx(ctx);
+    if (t->isAborted())
+        return LPF_SUCCESS;
+    return LPF_SUCCESS;
+}
+

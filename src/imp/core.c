@@ -179,3 +179,9 @@ lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t lpf, size_t * rcvd_msgs) {
+    (void) lpf;
+    *rcvd_msgs = 0;
+    return LPF_SUCCESS;
+}
+

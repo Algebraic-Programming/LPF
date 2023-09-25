@@ -23,6 +23,9 @@
 #include <stdexcept>
 #include <cstring>
 
+#define POLL_BATCH 8
+#define MAX_POLLING 128
+
 
 namespace lpf { namespace mpi {
 
@@ -59,7 +62,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_maxSrs(0)
     , m_device()
     , m_pd()
-    , m_cq()
+    , m_cqLocal()
+    , m_cqRemote()
     , m_stagedQps( m_nprocs )
     , m_connectedQps( m_nprocs )
     , m_srs()
@@ -68,11 +72,15 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_peerList()
     , m_sges()
-    , m_wcs(m_nprocs)
+    //, m_wcs(m_nprocs)
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
     , m_comm( comm )
+    , m_cqSize(1)
+    , m_rcvd_msg_count(0)
+    , m_postCount(0)
+    , m_recvCount(0)
 {
     m_peerList.reserve( m_nprocs );
 
@@ -183,12 +191,28 @@ IBVerbs :: IBVerbs( Communication & comm )
     }
     LOG(3, "Opened protection domain");
 
-    struct ibv_cq * const ibv_cq_new_p = ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 );
-    if( ibv_cq_new_p == NULL )
-        m_cq.reset();
-    else
-        m_cq.reset( ibv_cq_new_p, ibv_destroy_cq );
-    if (!m_cq) {
+    m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ));
+    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ));
+    /**
+     * New notification functionality for HiCR
+     */
+    struct ibv_srq_init_attr srq_init_attr;
+	srq_init_attr.srq_context = NULL;
+	srq_init_attr.attr.max_wr =  m_deviceAttr.max_srq_wr;
+	srq_init_attr.attr.max_sge = m_deviceAttr.max_srq_sge;
+	srq_init_attr.attr.srq_limit = 0;
+	m_srq.reset(ibv_create_srq(m_pd.get(), &srq_init_attr ),
+			ibv_destroy_srq);
+
+
+    m_cqLocal.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0));
+    if (!m_cqLocal) {
+        LOG(1, "Could not allocate completion queue with '"
+                << m_nprocs << " entries" );
+        throw Exception("Could not allocate completion queue");
+    }
+    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0));
+    if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
         throw Exception("Could not allocate completion queue");
@@ -211,8 +235,10 @@ IBVerbs :: IBVerbs( Communication & comm )
         throw Exception("Could not register memory region");
     }
 
+    m_recvCounts = (int *)calloc(1024,sizeof(int));
     // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
+
 }
 
 IBVerbs :: ~IBVerbs()
@@ -229,8 +255,9 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
 
         attr.qp_type = IBV_QPT_RC; // we want reliable connection
         attr.sq_sig_all = 0; // only wait for selected messages
-        attr.send_cq = m_cq.get();
-        attr.recv_cq = m_cq.get();
+        attr.send_cq = m_cqLocal.get();
+        attr.recv_cq = m_cqRemote.get();
+        attr.srq = m_srq.get();
         attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
         attr.cap.max_recv_wr = 1; // one for the dummy
         attr.cap.max_send_sge = 1;
@@ -249,6 +276,29 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
 
         LOG(3, "Created new Queue pair for " << m_pid << " -> " << i );
     }
+}
+
+void IBVerbs :: doRemoteProgress(){
+	struct ibv_wc wcs[POLL_BATCH];
+	struct ibv_recv_wr wr;
+	struct ibv_sge sg;
+	struct ibv_recv_wr *bad_wr;
+	sg.addr = (uint64_t) NULL;
+	sg.length = 0;
+	sg.lkey = 0;
+	wr.next = NULL;
+	wr.sg_list = &sg;
+	wr.num_sge = 0;
+	wr.wr_id = 0;
+	int pollResult, totalResults = 0;
+	do {
+		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
+		for(int i = 0; i < pollResult; i++){
+			m_recvCounts[wcs[i].imm_data%1024]++;
+			ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
+		}
+		if(pollResult > 0) totalResults += pollResult;
+	} while (pollResult == POLL_BATCH && totalResults < MAX_POLLING);
 }
 
 void IBVerbs :: reconnectQPs()
@@ -421,18 +471,35 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
-    ASSERT( m_srs.max_size() > m_minNrMsgs );
-
-    if ( size > m_srs.max_size() - m_minNrMsgs )
-    {
-        LOG(2, "Could not increase message queue, because integer will overflow");
-        throw Exception("Could not increase message queue");
-    }
-
-    m_srs.reserve( size + m_minNrMsgs );
-    m_sges.reserve( size + m_minNrMsgs );
-
-    stageQPs(size);
+    m_cqSize = std::min<size_t>(size,m_maxSrs/4);
+	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
+	if (m_cqLocal) {
+		ibv_resize_cq(m_cqLocal.get(), m_cqSize);
+	}
+	if(remote_size >= m_postCount){
+		if (m_cqRemote) {
+			ibv_resize_cq(m_cqRemote.get(),  remote_size);
+		}
+	}
+	stageQPs(m_cqSize);
+	if(remote_size >= m_postCount){
+		if (m_srq) {
+			struct ibv_recv_wr wr;
+			struct ibv_sge sg;
+			struct ibv_recv_wr *bad_wr;
+			sg.addr = (uint64_t) NULL;
+			sg.length = 0;
+			sg.lkey = 0;
+			wr.next = NULL;
+			wr.sg_list = &sg;
+			wr.num_sge = 0;
+			wr.wr_id = 0;
+			for(int i = m_postCount; i < (int)remote_size; ++i){
+				ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
+				m_postCount++;
+			}
+		}
+	}
     LOG(4, "Message queue has been reallocated to size " << size );
 }
 
@@ -526,7 +593,8 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
-    std::cout << "In IBVerbs::put\n";
+    std::cout << "Rank " << m_comm.pid() << " In IBVerbs::put\n";
+    fflush(stdout);
     ASSERT( src.mr );
 
     while (size > 0 ) {
@@ -558,7 +626,9 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 
         m_srsHeads[ dstPid ] = m_srs.size();
         m_srs.push_back( sr );
+        std::cout << "Push new element to m_srs\nNew m_srs size = " << m_srs.size() << std::endl;
         m_activePeers.insert( dstPid );
+        std::cout << "Push new element to m_activePeers\nNew m_activePeers size = " << m_activePeers.size() << std::endl;
         m_nMsgsPerPeer[ dstPid ] += 1;
 
         size -= sge.length;
@@ -567,6 +637,10 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 
         LOG(4, "Enqueued put message of " << sge.length << " bytes to " << dstPid );
     }
+
+        //post_sends eagerly, make progress
+        //before sync call!
+        post_sends();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -577,6 +651,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
     ASSERT( dst.mr );
 
+    std::cout << "In IBVerbs::get\n";
     while (size > 0) {
 
         struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
@@ -668,24 +743,69 @@ void IBVerbs :: post_sends() {
 
 }
 
+
+/*
+void IBVerbs :: getRcvdMsgCount() {
+    size_t ret = 0;
+    for (size_t i=0; i<m_wcs.size(); i++) {
+        struct ibv_wc workCompletion = m_wcs[i];
+        std::cout << "Work completion " << i << " has received item count " << workCompletion.qp_num << std::endl;
+        ret += workCompletion.qp_num;
+    }
+    return ret;
+}
+*/
+void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs)
+{
+    *rcvd_msgs = m_rcvd_msg_count;
+    /*
+     * ASSERT(m_stagedQps[0]);
+    union ibv_gid myGid;
+    std::vector< uint32_t> localQpNums(m_nprocs);
+    
+    // Exchange info about the queue pairs
+    if (m_gidIdx >= 0) {
+        if (ibv_query_gid(m_device.get(), m_ibPort, m_gidIdx, &myGid)) {
+            LOG(1, "Could not get GID of Infiniband device port " << m_ibPort);
+            throw Exception( "Could not get gid for IB port");
+        }
+        LOG(3, "GID of Infiniband device was retrieved" );
+    }
+    else {
+        std::memset( &myGid, 0, sizeof(myGid) );
+        LOG(3, "GID of Infiniband device will not be used" );
+    }
+
+
+    for ( int i = 0; i < m_nprocs; ++i) {
+        localQpNums[i] = m_stagedQps[i]->qp_num;
+        std::cout << "Rank " << m_comm.pid() << " : localQpNums[" << i << "] = " << localQpNums[i] << std::endl;
+    }
+    */
+
+}
+
 void IBVerbs :: wait_completion(int& error) {
         // wait for completion
+    struct ibv_wc wcs[POLL_BATCH];
+    std::cout << "Rank " << m_comm.pid() << " IBVerbs::wait_completion\n";
         int n = m_activePeers.size();
         while (n > 0)
         {
             LOG(5, "Polling for " << n << " messages" );
-            int pollResult = ibv_poll_cq(m_cq.get(), n, m_wcs.data() );
+            int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
             if ( pollResult > 0) {
                 LOG(4, "Received " << pollResult << " acknowledgements");
                 n-= pollResult;
+                m_rcvd_msg_count += pollResult;
 
                 for (int i = 0; i < pollResult ; ++i) {
-                    if (m_wcs[i].status != IBV_WC_SUCCESS)
+                    if (wcs[i].status != IBV_WC_SUCCESS)
                     {
                         LOG( 2, "Got bad completion status from IB message."
-                                " status = 0x" << std::hex << m_wcs[i].status
+                                " status = 0x" << std::hex << wcs[i].status
                                 << ", vendor syndrome = 0x" << std::hex
-                                << m_wcs[i].vendor_err );
+                                << wcs[i].vendor_err );
                         error = 1;
                     }
                 }
@@ -700,13 +820,11 @@ void IBVerbs :: wait_completion(int& error) {
 
 void IBVerbs :: sync( bool reconnect )
 {
+    std::cout << "Rank: " << m_comm.pid() << " IBVerbs::sync\n";
     if (reconnect) reconnectQPs();
 
     int error = 0;
     while ( !m_activePeers.empty() ) {
-
-        //post_sends
-        post_sends();
 
         wait_completion(error);
 
@@ -716,14 +834,17 @@ void IBVerbs :: sync( bool reconnect )
         }
 
         for ( unsigned p = 0; p < m_peerList.size(); ++p) {
-            if (m_nMsgsPerPeer[ m_peerList[p] ] == 0 )
+            if (m_nMsgsPerPeer[ m_peerList[p] ] == 0 ) {
                 m_activePeers.erase( m_peerList[p] );
+                std::cout << "Deleted an m_activePeers element, m_activePeers.size() = " << m_activePeers.size() << std::endl;
+            }
         }
     }
 
     // clear all tables
     m_activePeers.clear();
     m_srs.clear();
+    //std::cout << "Zero'ing out m_activePeers and m_srs\n";
     std::fill( m_srsHeads.begin(), m_srsHeads.end(), 0u );
     std::fill( m_nMsgsPerPeer.begin(), m_nMsgsPerPeer.end(), 0u );
     m_sges.clear();
