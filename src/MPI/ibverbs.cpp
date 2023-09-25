@@ -22,6 +22,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <unistd.h>
 
 #define POLL_BATCH 8
 #define MAX_POLLING 128
@@ -72,7 +73,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_peerList()
     , m_sges()
-    //, m_wcs(m_nprocs)
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
@@ -236,6 +236,17 @@ IBVerbs :: IBVerbs( Communication & comm )
     }
 
     m_recvCounts = (int *)calloc(1024,sizeof(int));
+
+    int error;
+
+    auto threadFc = [&]() {
+        while(!m_stopProgress) {
+            wait_completion(error);
+            doRemoteProgress(error);
+        }
+    };
+
+    progressThread.reset(new std::thread(threadFc));
     // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
 
@@ -243,6 +254,8 @@ IBVerbs :: IBVerbs( Communication & comm )
 
 IBVerbs :: ~IBVerbs()
 {
+    m_stopProgress = 1;
+    progressThread->join();
 
 }
 
@@ -258,8 +271,8 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.send_cq = m_cqLocal.get();
         attr.recv_cq = m_cqRemote.get();
         attr.srq = m_srq.get();
-        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
-        attr.cap.max_recv_wr = 1; // one for the dummy
+        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs/4);
+        attr.cap.max_recv_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs/4);
         attr.cap.max_send_sge = 1;
         attr.cap.max_recv_sge = 1;
 
@@ -293,8 +306,12 @@ void IBVerbs :: doRemoteProgress(){
 	int pollResult, totalResults = 0;
 	do {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
+        if (pollResult > 0) {
+            std::cout << "Rank " << m_comm.pid() << " REMOTE: pollResult = " << pollResult << std::endl;
+        }
 		for(int i = 0; i < pollResult; i++){
 			m_recvCounts[wcs[i].imm_data%1024]++;
+            m_rcvd_msg_count++;
 			ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
 		}
 		if(pollResult > 0) totalResults += pollResult;
@@ -758,6 +775,7 @@ void IBVerbs :: getRcvdMsgCount() {
 void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs)
 {
     *rcvd_msgs = m_rcvd_msg_count;
+
     /*
      * ASSERT(m_stagedQps[0]);
     union ibv_gid myGid;
@@ -788,16 +806,18 @@ void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs)
 void IBVerbs :: wait_completion(int& error) {
         // wait for completion
     struct ibv_wc wcs[POLL_BATCH];
-    std::cout << "Rank " << m_comm.pid() << " IBVerbs::wait_completion\n";
+    //std::cout << "Rank " << m_comm.pid() << " IBVerbs::wait_completion\n";
         int n = m_activePeers.size();
         while (n > 0)
         {
             LOG(5, "Polling for " << n << " messages" );
             int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
+            if (pollResult > 0) {
+                std::cout << "Rank " << m_comm.pid() << " LOCAL: pollResult = " << pollResult << std::endl;
+            }
             if ( pollResult > 0) {
                 LOG(4, "Received " << pollResult << " acknowledgements");
                 n-= pollResult;
-                m_rcvd_msg_count += pollResult;
 
                 for (int i = 0; i < pollResult ; ++i) {
                     if (wcs[i].status != IBV_WC_SUCCESS)
@@ -826,7 +846,7 @@ void IBVerbs :: sync( bool reconnect )
     int error = 0;
     while ( !m_activePeers.empty() ) {
 
-        wait_completion(error);
+        //wait_completion(error);
         //doRemoteProgress();
 
 

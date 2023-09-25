@@ -259,7 +259,6 @@ static int sparse_all_to_all_pop( sparse_all_to_all_t * obj, int n,
         *interm_pid = -1;
     }
 
-    printf("In sparse_all_to_all_pop, MESSAGE: %s\n", msg);
     return error ;
 }
 
