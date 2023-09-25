@@ -698,6 +698,10 @@ public:
         return LPF_SUCCESS;
     }
 
+    lpf_err_t get_rcvd_msg_count(size_t *msgs) {
+        return LPF_SUCCESS;
+    }
+
     lpf_err_t register_local( const char * file, int line,
             void * pointer, size_t size, lpf_memslot_t * memslot )
     {

@@ -20,11 +20,12 @@
 
 #include <string>
 #include <vector>
-#if __cplusplus >= 201103L    
-  #include <memory>
-#else
-  #include <tr1/memory>
-#endif
+#include <memory>
+//#if __cplusplus >= 201103L    
+//  #include <memory>
+//#else
+//  #include <tr1/memory>
+//#endif
 
 #include <infiniband/verbs.h>
 
@@ -69,10 +70,13 @@ public:
               SlotID dstSlot, size_t dstOffset, size_t size );
 
 
+    void doRemoteProgress();
+
     // Do the communication and synchronize
     // 'Reconnect' must be a globally replicated value
     void sync( bool reconnect);
 
+    void get_rcvd_msg_count(size_t * rcvd);
 private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
@@ -95,6 +99,7 @@ private:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
+    size_t m_rcvd_msg_count; // HiCR variable 
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
 
@@ -106,12 +111,18 @@ private:
     struct ibv_device_attr m_deviceAttr;
     size_t       m_maxRegSize;
     size_t       m_maxMsgSize; 
+    size_t		m_cqSize;
     size_t       m_minNrMsgs;
     size_t       m_maxSrs; // maximum number of sends requests per QP  
+    size_t m_postCount;
+    size_t m_recvCount;
 
+    int *m_recvCounts;
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
-    shared_ptr< struct ibv_cq >      m_cq;     // complation queue
+   	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
+	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
+    shared_ptr< struct ibv_srq >		 m_srq;	 	// shared receive queue
 
     // Disconnected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_stagedQps; 
@@ -127,7 +138,7 @@ private:
     std::vector< pid_t >         m_peerList;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
-    std::vector< struct ibv_wc > m_wcs; // array of work completions
+    //std::vector< struct ibv_wc > m_wcs; // array of work completions
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
