@@ -376,10 +376,10 @@ void IBVerbs :: reconnectQPs()
             rr.sg_list = &sge;
             rr.num_sge = 1;
 
-            if (ibv_post_recv(m_stagedQps[i].get(), &rr, &bad_wr)) {
-                LOG(1, "Cannot post a single receive request to QP " << i );
-                throw Exception("Could not post dummy receive request");
-            }
+            //if (ibv_post_recv(m_stagedQps[i].get(), &rr, &bad_wr)) {
+            //    LOG(1, "Cannot post a single receive request to QP " << i );
+            //    throw Exception("Could not post dummy receive request");
+            //}
 
             // Bring QP to RTR
             std::memset(&attr, 0, sizeof(attr));
@@ -827,6 +827,8 @@ void IBVerbs :: sync( bool reconnect )
     while ( !m_activePeers.empty() ) {
 
         wait_completion(error);
+        //doRemoteProgress();
+
 
 
         if (error) {
