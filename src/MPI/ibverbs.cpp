@@ -58,6 +58,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_gidIdx( Config::instance().getIBGidIndex() )
     , m_mtu( getMTU( Config::instance().getIBMTU() ))
     , m_maxRegSize(0)
+    , m_stopProgress(0)
     , m_maxMsgSize(0)
     , m_minNrMsgs(0)
     , m_maxSrs(0)
@@ -211,7 +212,7 @@ IBVerbs :: IBVerbs( Communication & comm )
                 << m_nprocs << " entries" );
         throw Exception("Could not allocate completion queue");
     }
-    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0));
+    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize * m_nprocs, NULL, NULL, 0));
     if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
@@ -242,7 +243,16 @@ IBVerbs :: IBVerbs( Communication & comm )
     auto threadFc = [&]() {
         while(!m_stopProgress) {
             wait_completion(error);
-            doRemoteProgress(error);
+            doRemoteProgress();
+            /*
+             * IMPORTANT:
+             * If you enable sleep periods here, you are
+             * very likely to miss out on events when you need
+             * them. The events will be polled much after you might
+             * need them. So only enable this if you know what
+             * you are doing !!!
+             */
+            //std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
     };
 
@@ -307,7 +317,7 @@ void IBVerbs :: doRemoteProgress(){
 	do {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
-            std::cout << "Rank " << m_comm.pid() << " REMOTE: pollResult = " << pollResult << std::endl;
+            LOG(3, "Process " << m_pid << "received a message");
         }
 		for(int i = 0; i < pollResult; i++){
 			m_recvCounts[wcs[i].imm_data%1024]++;
@@ -373,7 +383,7 @@ void IBVerbs :: reconnectQPs()
             attr.qp_state = IBV_QPS_INIT;
             attr.port_num = m_ibPort;
             attr.pkey_index = 0;
-            attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
+            attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC;
             flags = IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
             if ( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
                 LOG(1, "Cannot bring state of QP " << i << " to INIT");
@@ -610,8 +620,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
-    std::cout << "Rank " << m_comm.pid() << " In IBVerbs::put\n";
-    fflush(stdout);
     ASSERT( src.mr );
 
     while (size > 0 ) {
@@ -637,15 +645,13 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sr.wr_id = 0; // don't need an identifier
         sr.sg_list = &m_sges.back();
         sr.num_sge = 1;
-        sr.opcode = IBV_WR_RDMA_WRITE;
+        sr.opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
         sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
         sr.wr.rdma.rkey = dst.glob[dstPid].rkey;
 
         m_srsHeads[ dstPid ] = m_srs.size();
         m_srs.push_back( sr );
-        std::cout << "Push new element to m_srs\nNew m_srs size = " << m_srs.size() << std::endl;
         m_activePeers.insert( dstPid );
-        std::cout << "Push new element to m_activePeers\nNew m_activePeers size = " << m_activePeers.size() << std::endl;
         m_nMsgsPerPeer[ dstPid ] += 1;
 
         size -= sge.length;
@@ -668,7 +674,6 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
     ASSERT( dst.mr );
 
-    std::cout << "In IBVerbs::get\n";
     while (size > 0) {
 
         struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
@@ -761,46 +766,9 @@ void IBVerbs :: post_sends() {
 }
 
 
-/*
-void IBVerbs :: getRcvdMsgCount() {
-    size_t ret = 0;
-    for (size_t i=0; i<m_wcs.size(); i++) {
-        struct ibv_wc workCompletion = m_wcs[i];
-        std::cout << "Work completion " << i << " has received item count " << workCompletion.qp_num << std::endl;
-        ret += workCompletion.qp_num;
-    }
-    return ret;
-}
-*/
 void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs)
 {
     *rcvd_msgs = m_rcvd_msg_count;
-
-    /*
-     * ASSERT(m_stagedQps[0]);
-    union ibv_gid myGid;
-    std::vector< uint32_t> localQpNums(m_nprocs);
-    
-    // Exchange info about the queue pairs
-    if (m_gidIdx >= 0) {
-        if (ibv_query_gid(m_device.get(), m_ibPort, m_gidIdx, &myGid)) {
-            LOG(1, "Could not get GID of Infiniband device port " << m_ibPort);
-            throw Exception( "Could not get gid for IB port");
-        }
-        LOG(3, "GID of Infiniband device was retrieved" );
-    }
-    else {
-        std::memset( &myGid, 0, sizeof(myGid) );
-        LOG(3, "GID of Infiniband device will not be used" );
-    }
-
-
-    for ( int i = 0; i < m_nprocs; ++i) {
-        localQpNums[i] = m_stagedQps[i]->qp_num;
-        std::cout << "Rank " << m_comm.pid() << " : localQpNums[" << i << "] = " << localQpNums[i] << std::endl;
-    }
-    */
-
 }
 
 void IBVerbs :: wait_completion(int& error) {
@@ -812,9 +780,6 @@ void IBVerbs :: wait_completion(int& error) {
         {
             LOG(5, "Polling for " << n << " messages" );
             int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
-            if (pollResult > 0) {
-                std::cout << "Rank " << m_comm.pid() << " LOCAL: pollResult = " << pollResult << std::endl;
-            }
             if ( pollResult > 0) {
                 LOG(4, "Received " << pollResult << " acknowledgements");
                 n-= pollResult;
@@ -840,14 +805,10 @@ void IBVerbs :: wait_completion(int& error) {
 
 void IBVerbs :: sync( bool reconnect )
 {
-    std::cout << "Rank: " << m_comm.pid() << " IBVerbs::sync\n";
     if (reconnect) reconnectQPs();
 
     int error = 0;
     while ( !m_activePeers.empty() ) {
-
-        //wait_completion(error);
-        //doRemoteProgress();
 
 
 
@@ -858,7 +819,6 @@ void IBVerbs :: sync( bool reconnect )
         for ( unsigned p = 0; p < m_peerList.size(); ++p) {
             if (m_nMsgsPerPeer[ m_peerList[p] ] == 0 ) {
                 m_activePeers.erase( m_peerList[p] );
-                std::cout << "Deleted an m_activePeers element, m_activePeers.size() = " << m_activePeers.size() << std::endl;
             }
         }
     }
@@ -866,13 +826,13 @@ void IBVerbs :: sync( bool reconnect )
     // clear all tables
     m_activePeers.clear();
     m_srs.clear();
-    //std::cout << "Zero'ing out m_activePeers and m_srs\n";
     std::fill( m_srsHeads.begin(), m_srsHeads.end(), 0u );
     std::fill( m_nMsgsPerPeer.begin(), m_nMsgsPerPeer.end(), 0u );
     m_sges.clear();
 
     // synchronize
     m_comm.barrier();
+
 }
 
 
