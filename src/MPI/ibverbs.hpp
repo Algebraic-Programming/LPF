@@ -102,7 +102,7 @@ private:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
-    size_t m_rcvd_msg_count; // HiCR variable 
+    std::atomic_size_t m_rcvd_msg_count; // HiCR variable 
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
 
