@@ -2319,7 +2319,7 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
  * Extension for HiCR project
  */
 extern _LPFLIB_API
-lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs );
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs, lpf_memslot_t slot);
 
 #ifdef __cplusplus
 }

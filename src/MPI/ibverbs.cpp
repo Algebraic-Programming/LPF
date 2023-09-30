@@ -79,7 +79,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_dummyBuffer()
     , m_comm( comm )
     , m_cqSize(1)
-    , m_rcvd_msg_count(0)
     , m_postCount(0)
     , m_recvCount(0)
 {
@@ -238,25 +237,25 @@ IBVerbs :: IBVerbs( Communication & comm )
 
     m_recvCounts = (int *)calloc(1024,sizeof(int));
 
-    int error;
+    //int error;
 
-    auto threadFc = [&]() {
-        while(!m_stopProgress) {
-            wait_completion(error);
-            doRemoteProgress();
-            /*
-             * IMPORTANT:
-             * If you enable sleep periods here, you are
-             * very likely to miss out on events when you need
-             * them. The events will be polled much after you might
-             * need them. So only enable this if you know what
-             * you are doing !!!
-             */
-            //std::this_thread::sleep_for(std::chrono::microseconds(100));
-        }
-    };
+   // auto threadFc = [&]() {
+   //     while(!m_stopProgress) {
+   //         wait_completion(error);
+   //         //doRemoteProgress();
+   //         /*
+   //          * IMPORTANT:
+   //          * If you enable sleep periods here, you are
+   //          * very likely to miss out on events when you need
+   //          * them. The events will be polled much after you might
+   //          * need them. So only enable this if you know what
+   //          * you are doing !!!
+   //          */
+   //         //std::this_thread::sleep_for(std::chrono::microseconds(100));
+   //     }
+   // };
 
-    progressThread.reset(new std::thread(threadFc));
+    //progressThread.reset(new std::thread(threadFc));
     // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
 
@@ -264,8 +263,8 @@ IBVerbs :: IBVerbs( Communication & comm )
 
 IBVerbs :: ~IBVerbs()
 {
-    m_stopProgress = 1;
-    progressThread->join();
+    //m_stopProgress = 1;
+    //progressThread->join();
 
 }
 
@@ -312,16 +311,36 @@ void IBVerbs :: doRemoteProgress(){
 	wr.next = NULL;
 	wr.sg_list = &sg;
 	wr.num_sge = 0;
-	wr.wr_id = 0;
+	wr.wr_id = 66;
 	int pollResult, totalResults = 0;
 	do {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
-            LOG(3, "Process " << m_pid << "received a message");
-        }
-		for(int i = 0; i < pollResult; i++){
-			m_recvCounts[wcs[i].imm_data%1024]++;
-            m_rcvd_msg_count++;
+            LOG(3, "Process " << m_pid << " signals: I received a message in doRemoteProgress");
+        } 
+		for(int i = 0; i < pollResult; i++) {
+            LOG(3, "Process " << m_pid << " : slid = " << wcs[i].slid);
+            //LOG(3, "Process " << m_pid << " : mr = " << wcs[i].wr_id);
+            uint64_t key = wcs[i].wr_id;
+            LOG(3, "Process " << m_pid << " : mr lkey = " << key);
+            LOG(3, "Process " << m_pid << " : opcode = " << wcs[i].opcode);
+            LOG(3, "Process " << m_pid << " : imm_data = " << wcs[i].imm_data);
+
+            /**
+             * Here is a trick:
+             * The sender sends relatively generic LPF memslot ID.
+             * But for IB Verbs, we need to translate that into
+             * an IB Verbs slot via @getVerbID -- or there will be
+             * a mismatch when IB Verbs looks up the slot ID
+             */
+            SlotID slot = wcs[i].imm_data;
+			//m_recvCounts[wcs[i].imm_data%1024]++;
+            if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
+                LOG(3, " Increment to 1 for LPF slot " << slot);
+                rcvdMsgCount[slot] = 1;
+            }
+            else 
+                rcvdMsgCount[slot]++;
 			ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
 		}
 		if(pollResult > 0) totalResults += pollResult;
@@ -399,7 +418,7 @@ void IBVerbs :: reconnectQPs()
             sge.length = m_dummyBuffer.size();
             sge.lkey = m_dummyMemReg->lkey;
             rr.next = NULL;
-            rr.wr_id = 0;
+            rr.wr_id = 46;
             rr.sg_list = &sge;
             rr.num_sge = 1;
 
@@ -498,6 +517,7 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
+
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
 	if (m_cqLocal) {
@@ -520,7 +540,7 @@ void IBVerbs :: resizeMesgq( size_t size )
 			wr.next = NULL;
 			wr.sg_list = &sg;
 			wr.num_sge = 0;
-			wr.wr_id = 0;
+			wr.wr_id = m_pid;
 			for(int i = m_postCount; i < (int)remote_size; ++i){
 				ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
 				m_postCount++;
@@ -641,8 +661,20 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         // since reliable connection guarantees keeps packets in order,
         // we only need a signal from the last message in the queue
         sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+        // For HiCR, we need additional information
+        // related to memory slots
+        // at the receiver end
+        //struct UserContext uc;
+        //uc.lkey = 6;
+        sr.wr_id = 43;
 
-        sr.wr_id = 0; // don't need an identifier
+        /*
+         * In HiCR, we need to know at receiver end which slot 
+         * has received the message. But here is a trick:
+         */
+
+        sr.imm_data = dstSlot;
+
         sr.sg_list = &m_sges.back();
         sr.num_sge = 1;
         sr.opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
@@ -663,7 +695,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 
         //post_sends eagerly, make progress
         //before sync call!
-        post_sends();
+        //post_sends();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -695,7 +727,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         // we only need a signal from the last message in the queue
         sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
 
-        sr.wr_id = 0; // don't need an identifier
+        sr.wr_id = 333; // don't need an identifier
         sr.sg_list = &m_sges.back();
         sr.num_sge = 1;
         sr.opcode = IBV_WR_RDMA_READ;
@@ -766,15 +798,19 @@ void IBVerbs :: post_sends() {
 }
 
 
-void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs)
+void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs, SlotID slot)
 {
-    *rcvd_msgs = m_rcvd_msg_count;
+    // the doRemoteProgress polls for
+    // all receives and updates the receive counters
+    doRemoteProgress();
+    // now that the updates of receive counters are there,
+    // read the right one
+    *rcvd_msgs = rcvdMsgCount[slot];
 }
 
 void IBVerbs :: wait_completion(int& error) {
         // wait for completion
     struct ibv_wc wcs[POLL_BATCH];
-    //std::cout << "Rank " << m_comm.pid() << " IBVerbs::wait_completion\n";
         int n = m_activePeers.size();
         while (n > 0)
         {
@@ -811,6 +847,8 @@ void IBVerbs :: sync( bool reconnect )
     while ( !m_activePeers.empty() ) {
 
 
+        post_sends();
+        wait_completion(error);
 
         if (error) {
             throw Exception("Error occurred during polling");

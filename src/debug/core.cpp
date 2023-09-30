@@ -699,7 +699,7 @@ public:
         return LPF_SUCCESS;
     }
 
-    lpf_err_t get_rcvd_msg_count(size_t *msgs) {
+    lpf_err_t get_rcvd_msg_count(size_t *msgs, lpf_memslot_t slot) {
         return LPF_SUCCESS;
     }
 
