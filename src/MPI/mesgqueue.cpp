@@ -832,35 +832,20 @@ int MessageQueue :: sync( bool abort )
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
         ASSERT( ! m_memreg.isLocalSlot( e.dstSlot ) ) ;
-        /*
+
         if (e.canWriteHead) {
             m_ibverbs.put( m_memreg.getVerbID( e.srcSlot), e.srcOffset,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
-                    e.bufOffset, headSize );
+                    e.bufOffset, headSize, m_memreg.getVerbID(e.dstSlot) );
         }
 
         if (e.canWriteTail) {
             m_ibverbs.put( m_memreg.getVerbID( e.srcSlot),
                     e.srcOffset + tailOffset ,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
-                    e.bufOffset + (e.canWriteHead?headSize:0), tailSize);
-                    */
-        /**
-         * K. Dichev: This version uses dstSlot, otherwise the m_edgeBufferSlot is 0 --
-         * surely this is wrong?
-         */
-        if (e.canWriteHead) {
-            m_ibverbs.put( m_memreg.getVerbID( e.srcSlot), e.srcOffset,
-                    e.dstPid, m_memreg.getVerbID( e.dstSlot),
-                    e.bufOffset, headSize );
+                    e.bufOffset + (e.canWriteHead?headSize:0), tailSize, m_memreg.getVerbID(e.dstSlot));
         }
 
-        if (e.canWriteTail) {
-            m_ibverbs.put( m_memreg.getVerbID( e.srcSlot),
-                    e.srcOffset + tailOffset ,
-                    e.dstPid, m_memreg.getVerbID(e.dstSlot),
-                    e.bufOffset + (e.canWriteHead?headSize:0), tailSize);
-    }
 #endif
 #ifdef LPF_CORE_MPI_USES_mpimsg
         if (e.canWriteHead)
@@ -929,7 +914,8 @@ int MessageQueue :: sync( bool abort )
             r.dstPid,
             m_memreg.getVerbID( r.dstSlot),
             r.roundedDstOffset,
-            r.roundedSize );
+            r.roundedSize, 
+           m_memreg.getVerbID(r.dstSlot) );
 #endif
 #ifdef LPF_CORE_MPI_USES_mpimsg
         ASSERT( r.tag < maxInt );
