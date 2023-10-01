@@ -67,7 +67,7 @@ public:
     void dereg( SlotID id );
 
     void put( SlotID srcSlot, size_t srcOffset, 
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, SlotID firstDstSlot);
 
     void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
               SlotID dstSlot, size_t dstOffset, size_t size );
