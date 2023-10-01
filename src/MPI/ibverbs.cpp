@@ -635,7 +635,7 @@ void IBVerbs :: dereg( SlotID id )
 }
 
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size )
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, SlotID firstDstSlot)
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
@@ -673,7 +673,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
          * has received the message. But here is a trick:
          */
 
-        sr.imm_data = dstSlot;
+        sr.imm_data = firstDstSlot;
 
         sr.sg_list = &m_sges.back();
         sr.num_sge = 1;
