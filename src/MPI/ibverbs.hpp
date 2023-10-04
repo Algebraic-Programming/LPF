@@ -109,6 +109,8 @@ private:
 
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
+    std::atomic_size_t m_numMsgs;
+    std::atomic_size_t m_sentMsgs;
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with
