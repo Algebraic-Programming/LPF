@@ -71,7 +71,7 @@ public:
     }
 
     void put( SlotID srcSlot, size_t srcOffset, 
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, SlotID firstDstSlot);
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size);
 
     void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
               SlotID dstSlot, size_t dstOffset, size_t size );
@@ -91,7 +91,6 @@ private:
     void stageQPs(size_t maxMsgs ); 
     void reconnectQPs(); 
 
-    void post_sends();
     void wait_completion(int& error);
     void doProgress();
 

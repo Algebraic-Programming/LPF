@@ -289,7 +289,7 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             dstPid,
             m_memreg.getVerbID( dstSlot),
             dstOffset,
-            size, m_memreg.getVerbID(dstSlot) );
+            size);
 #endif
 
 }
