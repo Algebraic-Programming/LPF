@@ -81,6 +81,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_cqSize(1)
     , m_postCount(0)
     , m_recvCount(0)
+    , m_numMsgs(0)
+    , m_sentMsgs(0)
 {
     m_peerList.reserve( m_nprocs );
 
@@ -336,11 +338,12 @@ void IBVerbs :: doRemoteProgress(){
             SlotID slot = wcs[i].imm_data;
 			//m_recvCounts[wcs[i].imm_data%1024]++;
             if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
-                LOG(3, " Increment to 1 for LPF slot " << slot);
                 rcvdMsgCount[slot] = 1;
             }
-            else 
+            else {
                 rcvdMsgCount[slot]++;
+            }
+            LOG(3, "Rank " << m_pid << " Increment to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
 			ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
 		}
 		if(pollResult > 0) totalResults += pollResult;
@@ -642,108 +645,144 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 
     ASSERT( src.mr );
 
-    while (size > 0 ) {
-        struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
-        struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
+    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
+    if (size == 0) numMsgs = 1;
 
+    struct ibv_sge	   sges[numMsgs];
+    struct ibv_send_wr srs[numMsgs];
+    struct ibv_sge	   *sge;
+    struct ibv_send_wr *sr;
+    for (int i=0; i < numMsgs; i++) {
+        sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
+		sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
         const char * localAddr
             = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
         const char * remoteAddr
             = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
 
-        sge.addr = reinterpret_cast<uintptr_t>( localAddr );
-        sge.length = std::min<size_t>(size, m_maxMsgSize );
-        sge.lkey = src.mr->lkey;
-        m_sges.push_back( sge );
+        sge->addr = reinterpret_cast<uintptr_t>( localAddr );
+        sge->length =  std::min<size_t>(size, m_maxMsgSize );
+        sge->lkey = src.mr->lkey;
 
-        bool lastMsg = ! m_activePeers.contains( dstPid );
-        sr.next = lastMsg ? NULL : &m_srs[ m_srsHeads[ dstPid ] ];
+        bool lastMsg = (i == numMsgs-1);
+        sr->next = lastMsg ? NULL : &m_srs[ i+1];
         // since reliable connection guarantees keeps packets in order,
         // we only need a signal from the last message in the queue
-        sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+        sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+        sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
         // For HiCR, we need additional information
         // related to memory slots
         // at the receiver end
         //struct UserContext uc;
         //uc.lkey = 6;
-        sr.wr_id = 43;
+        sr->wr_id = 0;
 
         /*
          * In HiCR, we need to know at receiver end which slot 
          * has received the message. But here is a trick:
          */
 
-        sr.imm_data = firstDstSlot;
+        sr->imm_data = firstDstSlot;
 
-        sr.sg_list = &m_sges.back();
-        sr.num_sge = 1;
-        sr.opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
-        sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = dst.glob[dstPid].rkey;
+        sr->sg_list = sge;
+        sr->num_sge = 1;
+        sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+        sr->wr.rdma.rkey = dst.glob[dstPid].rkey;
 
-        m_srsHeads[ dstPid ] = m_srs.size();
-        m_srs.push_back( sr );
-        m_activePeers.insert( dstPid );
-        m_nMsgsPerPeer[ dstPid ] += 1;
+        size -= sge->length;
+        srcOffset += sge->length;
+        dstOffset += sge->length;
 
-        size -= sge.length;
-        srcOffset += sge.length;
-        dstOffset += sge.length;
+        LOG(4, "Enqueued put message of " << sge->length << " bytes to " << dstPid );
 
-        LOG(4, "Enqueued put message of " << sge.length << " bytes to " << dstPid );
+    }
+    struct ibv_send_wr *bad_wr;
+    m_numMsgs++; // should be atomic
+    if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[0], &bad_wr ))
+    {
+        LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+        throw Exception("Error while posting RDMA requests");
     }
 
-        //post_sends eagerly, make progress
-        //before sync call!
-        //post_sends();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size )
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
-    const MemorySlot & dst = m_memreg.lookup( dstSlot );
+	const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
-    ASSERT( dst.mr );
+	ASSERT( dst.mr );
 
-    while (size > 0) {
+	int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
 
-        struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
-        struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
+	struct ibv_sge	   sges[numMsgs+1];
+	struct ibv_send_wr srs[numMsgs+1];
+	struct ibv_sge	   *sge;
+	struct ibv_send_wr *sr;
 
-        const char * localAddr
-            = static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
-        const char * remoteAddr
-            = static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
 
-        sge.addr = reinterpret_cast<uintptr_t>( localAddr );
-        sge.length = std::min<size_t>(size, m_maxMsgSize );
-        sge.lkey = dst.mr->lkey;
-        m_sges.push_back( sge );
+	for(int i = 0; i< numMsgs; i++){
+		sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
+		sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
 
-        bool lastMsg = ! m_activePeers.contains( srcPid );
-        sr.next = lastMsg ? NULL : &m_srs[ m_srsHeads[ srcPid ] ];
-        // since reliable connection guarantees keeps packets in order,
-        // we only need a signal from the last message in the queue
-        sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+		const char * localAddr
+			= static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
+		const char * remoteAddr
+			= static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
 
-        sr.wr_id = 333; // don't need an identifier
-        sr.sg_list = &m_sges.back();
-        sr.num_sge = 1;
-        sr.opcode = IBV_WR_RDMA_READ;
-        sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = src.glob[srcPid].rkey;
+		sge->addr = reinterpret_cast<uintptr_t>( localAddr );
+		sge->length = std::min<size_t>(size, m_maxMsgSize );
+		sge->lkey = dst.mr->lkey;
 
-        m_srsHeads[ srcPid ] = m_srs.size();
-        m_srs.push_back( sr );
-        m_activePeers.insert( srcPid );
-        m_nMsgsPerPeer[ srcPid ] += 1;
+		sr->next = &srs[i+1];
+		sr->send_flags = 0;
 
-        size -= sge.length;
-        srcOffset += sge.length;
-        dstOffset += sge.length;
-        LOG(4, "Enqueued get message of " << sge.length << " bytes from " << srcPid );
-    }
+		sr->wr_id = m_pid;
+
+		sr->sg_list = sge;
+		sr->num_sge = 1;
+		sr->opcode = IBV_WR_RDMA_READ;
+		sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+		sr->wr.rdma.rkey = src.glob[srcPid].rkey;
+
+		size -= sge->length;
+		srcOffset += sge->length;
+		dstOffset += sge->length;
+	}
+
+	// add extra "message" to do the local and remote completion
+	sge = &sges[numMsgs]; std::memset(sge, 0, sizeof(ibv_sge));
+	sr = &srs[numMsgs]; std::memset(sr, 0, sizeof(ibv_send_wr));
+
+	const char * localAddr = static_cast<const char *>(dst.glob[m_pid].addr);
+	const char * remoteAddr = static_cast<const char *>(src.glob[srcPid].addr);
+
+	sge->addr = reinterpret_cast<uintptr_t>( localAddr );
+	sge->length = 0;
+	sge->lkey = dst.mr->lkey;
+
+	sr->next = NULL;
+	// since reliable connection guarantees keeps packets in order,
+	// we only need a signal from the last message in the queue
+	sr->send_flags = IBV_SEND_SIGNALED;
+	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM; // There is no READ_WITH_IMM
+	sr->sg_list = sge;
+	sr->num_sge = 0;
+	sr->imm_data = 0;
+	sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+	sr->wr.rdma.rkey = src.glob[srcPid].rkey;
+
+	//Send
+	struct ibv_send_wr *bad_wr = NULL;
+    m_numMsgs++;
+	if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
+	{
+
+		LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+		throw Exception("Error while posting RDMA requests");
+	}
+
 }
 
 void IBVerbs :: post_sends() {
@@ -809,66 +848,55 @@ void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs, SlotID slot)
 }
 
 void IBVerbs :: wait_completion(int& error) {
-        // wait for completion
-    struct ibv_wc wcs[POLL_BATCH];
-        int n = m_activePeers.size();
-        while (n > 0)
-        {
-            LOG(5, "Polling for " << n << " messages" );
-            int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
-            if ( pollResult > 0) {
-                LOG(4, "Received " << pollResult << " acknowledgements");
-                n-= pollResult;
 
-                for (int i = 0; i < pollResult ; ++i) {
-                    if (wcs[i].status != IBV_WC_SUCCESS)
-                    {
-                        LOG( 2, "Got bad completion status from IB message."
-                                " status = 0x" << std::hex << wcs[i].status
-                                << ", vendor syndrome = 0x" << std::hex
-                                << wcs[i].vendor_err );
-                        error = 1;
-                    }
-                }
-            }
-            else if (pollResult < 0)
+    struct ibv_wc wcs[POLL_BATCH];
+    LOG(5, "Polling for messages" );
+    int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
+    if ( pollResult > 0) {
+        LOG(4, "Received " << pollResult << " acknowledgements");
+        m_sentMsgs += pollResult;
+
+        for (int i = 0; i < pollResult ; ++i) {
+            if (wcs[i].status != IBV_WC_SUCCESS)
             {
-                LOG( 1, "Failed to poll IB completion queue" );
-                throw Exception("Poll CQ failure");
+                LOG( 2, "Got bad completion status from IB message."
+                        " status = 0x" << std::hex << wcs[i].status
+                        << ", vendor syndrome = 0x" << std::hex
+                        << wcs[i].vendor_err );
+                error = 1;
             }
         }
+    }
+    else if (pollResult < 0)
+    {
+        LOG( 1, "Failed to poll IB completion queue" );
+        throw Exception("Poll CQ failure");
+    }
 }
 
 void IBVerbs :: sync( bool reconnect )
 {
     if (reconnect) reconnectQPs();
-
     int error = 0;
-    while ( !m_activePeers.empty() ) {
 
+    while (m_numMsgs > m_sentMsgs) {
+        LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
 
-        post_sends();
         wait_completion(error);
-
         if (error) {
-            throw Exception("Error occurred during polling");
+            LOG(1, "Error in wait_completion");
+            std::abort();
         }
 
-        for ( unsigned p = 0; p < m_peerList.size(); ++p) {
-            if (m_nMsgsPerPeer[ m_peerList[p] ] == 0 ) {
-                m_activePeers.erase( m_peerList[p] );
-            }
-        }
+    }
+    if (m_numMsgs < m_sentMsgs) {
+
+        LOG(1, "Weird, m_numMsgs = " << m_numMsgs << " and m_sentMsgs = " << m_sentMsgs);
+        std::abort();
     }
 
-    // clear all tables
-    m_activePeers.clear();
-    m_srs.clear();
-    std::fill( m_srsHeads.begin(), m_srsHeads.end(), 0u );
-    std::fill( m_nMsgsPerPeer.begin(), m_nMsgsPerPeer.end(), 0u );
-    m_sges.clear();
-
-    // synchronize
+    m_numMsgs = 0;
+    m_sentMsgs = 0;
     m_comm.barrier();
 
 }
