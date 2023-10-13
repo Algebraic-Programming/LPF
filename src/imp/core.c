@@ -181,6 +181,15 @@ lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
 
 lpf_err_t lpf_abort( lpf_t lpf)
 {
+}
+
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t lpf, size_t * rcvd_msgs, lpf_memslot_t slot) {
+    (void) lpf;
+    *rcvd_msgs = 0;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t lpf, size_t * rcvd_msgs) {
     (void) lpf;
     return LPF_SUCCESS;
 }

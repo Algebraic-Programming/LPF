@@ -383,7 +383,23 @@ _LPFLIB_API lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
         return LPF_SUCCESS;
 }
 
-_LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx)
+_LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx) 
+{
+}
+
+_LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
+{
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS)
+        return LPF_SUCCESS;
+    ThreadState * t = realContext(ctx);
+    if (!t->error())
+        return t->getRcvdMsgCount(rcvd_msgs);
+    else
+        return LPF_SUCCESS;
+}
+
+_LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot )
 {
     using namespace lpf::hybrid;
     ThreadState * t = realContext(ctx);

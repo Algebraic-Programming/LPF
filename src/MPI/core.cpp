@@ -262,11 +262,20 @@ lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
     return realContext(ctx)->sync();
 }
 
-lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs, size_t slot)
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, size_t slot)
 {
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted()) {
-        i->getRcvdMsgCount(rcvd_msgs, slot);
+        i->getRcvdMsgCountPerSlot(rcvd_msgs, slot);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getRcvdMsgCount(rcvd_msgs);
     }
     return LPF_SUCCESS;
 }

@@ -2317,6 +2317,14 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
 
 extern _LPFLIB_API 
 lpf_err_t lpf_abort(lpf_t ctx);
+/**
+ * Extension for HiCR project
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t *rcvd_msgs, lpf_memslot_t slot);
+
+extern _LPFLIB_API
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
 
 #ifdef __cplusplus
 }

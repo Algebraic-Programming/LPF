@@ -384,6 +384,21 @@ lpf_err_t lpf_abort(lpf_t ctx) {
     // Therefore, use exit(6) instead
     //std::abort(); 
     std::exit(6);
+}
+
+lpf_err_t lpf_get_rcvd_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
+    *msgs = 0;
+    lpf::ThreadLocalData * t = realCtx(ctx);
+    if (t->isAborted())
+        return LPF_SUCCESS;
     return LPF_SUCCESS;
 }
 
+
+lpf_err_t lpf_get_rcvd_msg_count(lpf_t ctx, size_t * msgs) {
+    *msgs = 0;
+    lpf::ThreadLocalData * t = realCtx(ctx);
+    if (t->isAborted())
+        return LPF_SUCCESS;
+    return LPF_SUCCESS;
+}
