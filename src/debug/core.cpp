@@ -30,6 +30,8 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
+#undef lpf_get_rcvd_msg_count
+#undef lpf_get_rcvd_msg_count_per_slot
 
 #undef lpf_init_t
 #undef lpf_pid_t
@@ -718,7 +720,11 @@ public:
         return LPF_SUCCESS;
     }
 
-    lpf_err_t get_rcvd_msg_count(size_t *msgs, lpf_memslot_t slot) {
+    lpf_err_t get_rcvd_msg_count_per_slot(size_t *msgs, lpf_memslot_t slot) {
+        return LPF_SUCCESS;
+    }
+
+    lpf_err_t get_rcvd_msg_count(size_t *msgs) {
         return LPF_SUCCESS;
     }
 

@@ -407,7 +407,12 @@ public:
 
     lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs, lpf_memslot_t slot) {
 
-        return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs, slot);
+        return m_nodeState.mpi().get_rcvd_msg_count_per_slot(rcvd_msgs, slot);
+    }
+
+    lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs) {
+
+        return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs);
     }
 
 private:
