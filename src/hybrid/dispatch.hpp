@@ -112,9 +112,11 @@ namespace lpf { namespace hybrid {
         err_t deregister( memslot_t memslot) 
         { return USE_THREAD( deregister)(m_ctx, memslot); }
 
-        err_t get_rcvd_msg_count( size_t * rcvd_msgs, lpf_memslot_t slot) 
-        { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs, slot); }
-        //{ return get_rcvd_msg_count(m_ctx, rcvd_msgs); }
+        err_t get_rcvd_msg_count_per_slot( size_t * rcvd_msgs, lpf_memslot_t slot) 
+        { return USE_THREAD( get_rcvd_msg_count_per_slot)(m_ctx, rcvd_msgs, slot); }
+
+        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
+        { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 
@@ -206,9 +208,11 @@ namespace lpf { namespace hybrid {
         err_t deregister( memslot_t memslot) 
         { return USE_MPI( deregister)(m_ctx, memslot); }
 
-        err_t get_rcvd_msg_count(size_t *rcvd_msgs, lpf_memslot_t slot) 
-        { return USE_MPI( get_rcvd_msg_count)( m_ctx, rcvd_msgs, slot); }
-        //{ return get_rcvd_msg_count(m_ctx, rcvd_msgs); }
+        err_t get_rcvd_msg_count_per_slot(size_t *rcvd_msgs, lpf_memslot_t slot) 
+        { return USE_MPI( get_rcvd_msg_count_per_slot)( m_ctx, rcvd_msgs, slot); }
+
+        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
+        { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 

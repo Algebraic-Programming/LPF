@@ -83,6 +83,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_recvCount(0)
     , m_numMsgs(0)
     , m_sentMsgs(0)
+    , m_recvdMsgs(0)
 {
     m_peerList.reserve( m_nprocs );
 
@@ -320,6 +321,12 @@ void IBVerbs :: doRemoteProgress(){
         if (pollResult > 0) {
             LOG(3, "Process " << m_pid << " signals: I received a message in doRemoteProgress");
         } 
+        else if (pollResult < 0)
+        {
+            LOG( 1, "Failed to poll IB completion queue" );
+            throw Exception("Poll CQ failure");
+        }
+        m_recvdMsgs += pollResult;
 		for(int i = 0; i < pollResult; i++) {
             LOG(3, "Process " << m_pid << " : slid = " << wcs[i].slid);
             //LOG(3, "Process " << m_pid << " : mr = " << wcs[i].wr_id);
@@ -704,6 +711,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
 
+    flush_send_sync();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -785,7 +793,12 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
 }
 
-void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs, SlotID slot)
+void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs) {
+    doRemoteProgress();
+    *rcvd_msgs = m_recvdMsgs;
+}
+
+void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 {
     // the doRemoteProgress polls for
     // all receives and updates the receive counters
@@ -820,6 +833,39 @@ void IBVerbs :: wait_completion(int& error) {
         LOG( 1, "Failed to poll IB completion queue" );
         throw Exception("Poll CQ failure");
     }
+}
+
+void IBVerbs :: sync(bool reconnect, size_t expected_msgs) {
+
+    sync(reconnect);
+    while (expected_msgs > m_recvdMsgs) {
+        doRemoteProgress();
+    }
+}
+
+void IBVerbs :: flush_send_sync()
+{
+    int error = 0;
+
+    while (m_numMsgs > m_sentMsgs) {
+        LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
+
+        wait_completion(error);
+        if (error) {
+            LOG(1, "Error in wait_completion");
+            std::abort();
+        }
+
+    }
+    if (m_numMsgs < m_sentMsgs) {
+
+        LOG(1, "Weird, m_numMsgs = " << m_numMsgs << " and m_sentMsgs = " << m_sentMsgs);
+        std::abort();
+    }
+
+    m_numMsgs = 0;
+    m_sentMsgs = 0;
+
 }
 
 void IBVerbs :: sync( bool reconnect )

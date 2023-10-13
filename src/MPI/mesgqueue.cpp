@@ -308,11 +308,19 @@ int MessageQueue :: sync( bool abort )
 }
 
 
-void MessageQueue :: getRcvdMsgCount(size_t * msgs, SlotID slot)
+void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot)
 {
     *msgs = 0;
 #ifdef LPF_CORE_MPI_USES_ibverbs
-        m_ibverbs.get_rcvd_msg_count(msgs, slot);
+        m_ibverbs.get_rcvd_msg_count_per_slot(msgs, slot);
+#endif
+}
+
+void MessageQueue :: getRcvdMsgCount(size_t * msgs)
+{
+    *msgs = 0;
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        m_ibverbs.get_rcvd_msg_count(msgs);
 #endif
 }
 

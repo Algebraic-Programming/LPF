@@ -84,7 +84,6 @@ void GlobalState :: put( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
             size_t size )
 {
-    std::cout << "Enter GlobalState::put\n";
     m_msgQueue.push( srcPid, srcPid,srcSlot, srcOffset, 
             dstPid, dstSlot, dstOffset, size, m_register );
 }

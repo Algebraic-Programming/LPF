@@ -77,9 +77,12 @@ public:
 
     // Do the communication and synchronize
     // 'Reconnect' must be a globally replicated value
+    void sync( bool reconnect, size_t expected_msgs);
     void sync( bool reconnect);
+    void flush_send_sync();
 
-    void get_rcvd_msg_count(size_t * rcvd_msgs, SlotID slot);
+    void get_rcvd_msg_count(size_t * rcvd_msgs);
+    void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
 private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
@@ -110,6 +113,7 @@ private:
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
     std::atomic_size_t m_sentMsgs;
+    std::atomic_size_t m_recvdMsgs;
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with
