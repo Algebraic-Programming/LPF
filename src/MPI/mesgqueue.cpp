@@ -290,6 +290,9 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             m_memreg.getVerbID( dstSlot),
             dstOffset,
             size);
+#else
+    std::cerr << "Only IBVerbs::put available in this backend, abort\n";
+    std::abort();
 #endif
 
 }
