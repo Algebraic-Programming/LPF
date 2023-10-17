@@ -402,10 +402,6 @@ lpf_err_t lpf_allgatherv(
 	ASSERT( coll.P > 0 );
 	ASSERT( coll.s < coll.P );
 
-    printf(" I am given sizes:\n");
-    for (size_t i=0; i<coll.P; i++) {
-        printf("Size => %lu\n",sizes[i]);
-    }
     size_t allgatherv_start_addresses[coll.P];
 
     for (size_t i=0; i<coll.P; i++) allgatherv_start_addresses[i] = 0;
