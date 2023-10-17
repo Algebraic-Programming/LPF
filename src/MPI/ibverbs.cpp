@@ -328,12 +328,12 @@ void IBVerbs :: doRemoteProgress(){
         }
         m_recvdMsgs += pollResult;
 		for(int i = 0; i < pollResult; i++) {
-            LOG(3, "Process " << m_pid << " : slid = " << wcs[i].slid);
-            //LOG(3, "Process " << m_pid << " : mr = " << wcs[i].wr_id);
-            uint64_t key = wcs[i].wr_id;
-            LOG(3, "Process " << m_pid << " : mr lkey = " << key);
-            LOG(3, "Process " << m_pid << " : opcode = " << wcs[i].opcode);
-            LOG(3, "Process " << m_pid << " : imm_data = " << wcs[i].imm_data);
+            if (wcs[i].status != IBV_WC_SUCCESS) {
+                LOG( 2, "Got bad completion status from IB message."
+                        " status = 0x" << std::hex << wcs[i].status
+                        << ", vendor syndrome = 0x" << std::hex
+                        << wcs[i].vendor_err );
+            }
 
             /**
              * Here is a trick:
@@ -343,7 +343,6 @@ void IBVerbs :: doRemoteProgress(){
              * a mismatch when IB Verbs looks up the slot ID
              */
             SlotID slot = wcs[i].imm_data;
-			//m_recvCounts[wcs[i].imm_data%1024]++;
             if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
                 rcvdMsgCount[slot] = 1;
             }
@@ -431,11 +430,6 @@ void IBVerbs :: reconnectQPs()
             rr.wr_id = 46;
             rr.sg_list = &sge;
             rr.num_sge = 1;
-
-            //if (ibv_post_recv(m_stagedQps[i].get(), &rr, &bad_wr)) {
-            //    LOG(1, "Cannot post a single receive request to QP " << i );
-            //    throw Exception("Could not post dummy receive request");
-            //}
 
             // Bring QP to RTR
             std::memset(&attr, 0, sizeof(attr));
@@ -677,18 +671,11 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         // we only need a signal from the last message in the queue
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
-        // For HiCR, we need additional information
-        // related to memory slots
-        // at the receiver end
-        //struct UserContext uc;
-        //uc.lkey = 6;
         sr->wr_id = 0;
-
         /*
          * In HiCR, we need to know at receiver end which slot 
          * has received the message. But here is a trick:
          */
-
         sr->imm_data = dstSlot;
 
         sr->sg_list = sge;
@@ -711,7 +698,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
 
-    flush_send_sync();
+    //flush_send_sync();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -870,8 +857,10 @@ void IBVerbs :: flush_send_sync()
 
 void IBVerbs :: sync( bool reconnect )
 {
+
     if (reconnect) reconnectQPs();
     int error = 0;
+
 
     while (m_numMsgs > m_sentMsgs) {
         LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
@@ -892,6 +881,8 @@ void IBVerbs :: sync( bool reconnect )
     m_numMsgs = 0;
     m_sentMsgs = 0;
     m_comm.barrier();
+    // at least once in a while the received queues have to be polled for!
+    doRemoteProgress();
 
 }
 
