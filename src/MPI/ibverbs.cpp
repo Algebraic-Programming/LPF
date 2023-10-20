@@ -690,15 +690,14 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         LOG(4, "Enqueued put message of " << sge->length << " bytes to " << dstPid );
 
     }
-    struct ibv_send_wr *bad_wr;
-    m_numMsgs++; // should be atomic
+    struct ibv_send_wr *bad_wr = NULL;
+    m_numMsgs++; 
     if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[0], &bad_wr ))
     {
         LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
         throw Exception("Error while posting RDMA requests");
     }
 
-    //flush_send_sync();
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -761,10 +760,10 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 	// since reliable connection guarantees keeps packets in order,
 	// we only need a signal from the last message in the queue
 	sr->send_flags = IBV_SEND_SIGNALED;
-	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM; // There is no READ_WITH_IMM
+	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
 	sr->sg_list = sge;
 	sr->num_sge = 0;
-	sr->imm_data = 0;
+	sr->imm_data = dstSlot;
 	sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
 	sr->wr.rdma.rkey = src.glob[srcPid].rkey;
 
@@ -775,6 +774,9 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 	{
 
 		LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+        if (err == ENOMEM) {
+            LOG(1, "Specific error code: ENOMEM (send queue is full or no resources)");
+        }
 		throw Exception("Error while posting RDMA requests");
 	}
 
@@ -811,6 +813,9 @@ void IBVerbs :: wait_completion(int& error) {
                         " status = 0x" << std::hex << wcs[i].status
                         << ", vendor syndrome = 0x" << std::hex
                         << wcs[i].vendor_err );
+                const char * status_descr;
+                status_descr = ibv_wc_status_str(wcs[i].status);
+                LOG( 2, "The work completion status string: " << status_descr);
                 error = 1;
             }
         }
@@ -822,43 +827,19 @@ void IBVerbs :: wait_completion(int& error) {
     }
 }
 
-void IBVerbs :: sync(bool reconnect, size_t expected_msgs) {
-
-    sync(reconnect);
-    while (expected_msgs > m_recvdMsgs) {
-        doRemoteProgress();
-    }
-}
-
-void IBVerbs :: flush_send_sync()
+void IBVerbs :: sync(int * vote)
 {
-    int error = 0;
-
-    while (m_numMsgs > m_sentMsgs) {
-        LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
-
-        wait_completion(error);
-        if (error) {
-            LOG(1, "Error in wait_completion");
-            std::abort();
-        }
-
-    }
-    if (m_numMsgs < m_sentMsgs) {
-
-        LOG(1, "Weird, m_numMsgs = " << m_numMsgs << " and m_sentMsgs = " << m_sentMsgs);
-        std::abort();
+    int voted[2];
+    m_comm.allreduceSum(vote, voted, 2);
+    // are we supposed to abort right now?
+    if (voted[0] != 0) {
+        vote[0] = voted[0];
+        return;
     }
 
-    m_numMsgs = 0;
-    m_sentMsgs = 0;
 
-}
-
-void IBVerbs :: sync( bool reconnect )
-{
-
-    if (reconnect) reconnectQPs();
+    
+    if (voted[1] > 0) reconnectQPs();
     int error = 0;
 
 
