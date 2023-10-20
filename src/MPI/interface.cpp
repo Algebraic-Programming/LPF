@@ -147,6 +147,7 @@ void Interface :: abort()
     ASSERT( 0 == m_aborted );
     // signal all other processes at the start of the next 'sync' that
     // this process aborted.
+    std::cout << " Process calls abort\n";
     m_aborted = m_mesgQueue.sync( true );
 }
 
