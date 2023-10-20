@@ -829,17 +829,8 @@ void IBVerbs :: wait_completion(int& error) {
 
 void IBVerbs :: sync(int * vote)
 {
-    int voted[2];
-    m_comm.allreduceSum(vote, voted, 2);
-    // are we supposed to abort right now?
-    if (voted[0] != 0) {
-        vote[0] = voted[0];
-        return;
-    }
-
-
     
-    if (voted[1] > 0) reconnectQPs();
+    if (vote[1] > 0) reconnectQPs();
     int error = 0;
 
 
