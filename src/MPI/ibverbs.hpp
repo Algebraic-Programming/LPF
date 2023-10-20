@@ -76,8 +76,7 @@ public:
     void doRemoteProgress();
 
     // Do the communication and synchronize
-    // 'Reconnect' must be a globally replicated value
-    void sync( int * vote);
+    void sync(bool resized);
 
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);

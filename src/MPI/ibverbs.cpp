@@ -827,12 +827,12 @@ void IBVerbs :: wait_completion(int& error) {
     }
 }
 
-void IBVerbs :: sync(int * vote)
+void IBVerbs :: sync(bool resized)
 {
     
-    if (vote[1] > 0) reconnectQPs();
-    int error = 0;
+    if (resized) reconnectQPs();
 
+    int error = 0;
 
     while (m_numMsgs > m_sentMsgs) {
         LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
