@@ -297,15 +297,26 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 
 }
 
-int MessageQueue :: sync( bool abort )
+int MessageQueue :: sync(bool abort)
 {
+
+    // should we abort this run?
+    m_vote[0] = abort?1:0;
+    m_vote[1] = m_resized?1:0;
+	m_resized = (m_vote[1] > 0);
+
+
+    // if not, deal with normal sync
     m_memreg.sync();
-
 #ifdef LPF_CORE_MPI_USES_ibverbs
-	m_ibverbs.sync( m_resized);
+	m_ibverbs.sync( m_vote.data());
 #endif
+    if (m_vote[0] != 0) {
+        return m_vote[0];
+    }
 
-	m_resized = false;
+
+    m_resized = false;
 
 	return 0;
 }

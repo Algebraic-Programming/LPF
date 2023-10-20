@@ -66,7 +66,7 @@ public:
     void getRcvdMsgCount(size_t * msgs);
 
     // returns how many processes have entered in an aborted state
-    int sync( bool abort );
+    int sync(bool abort);
 
 private:
     enum Msgs { BufPut , 
