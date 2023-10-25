@@ -330,6 +330,13 @@ void MessageQueue :: getRcvdMsgCount(size_t * msgs)
 #endif
 }
 
+void MessageQueue :: flush()
+{
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        m_ibverbs.flush();
+#endif
+}
+
 
 } // namespace lpf
 

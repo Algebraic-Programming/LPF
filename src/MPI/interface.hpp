@@ -73,6 +73,7 @@ public:
     typedef size_t SlotID;
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
     void getRcvdMsgCount(size_t * msgs);
+    void flush();
 
     err_t rehook( spmd_t spmd, args_t args);
 

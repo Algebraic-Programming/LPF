@@ -415,6 +415,10 @@ public:
         return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs);
     }
 
+    lpf_pid_t flush() {
+        return m_nodeState.mpi().flush();
+    }
+
 private:
 
     bool      m_error;

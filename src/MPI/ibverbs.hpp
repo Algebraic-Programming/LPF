@@ -76,6 +76,7 @@ public:
     void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
               SlotID dstSlot, size_t dstOffset, size_t size );
 
+    void flush();
 
     void doRemoteProgress();
 
