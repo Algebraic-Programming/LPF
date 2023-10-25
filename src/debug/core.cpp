@@ -32,7 +32,7 @@
 #undef lpf_abort
 #undef lpf_get_rcvd_msg_count
 #undef lpf_get_rcvd_msg_count_per_slot
->>>>>>> cd4febc (Main changes here: 1) Implemented a round-robin put-based allgatherv within LPF as I need it. 2) Add get_rcvd_msg_cnt_per_slot besides the more general get_rcvd_msg_cnt, as the counts should be per memory slot. 3) Add a flush_send_sync function, which checks only on sender side that messages are not just posted, but also polled for. But I think this functionality is probably going away again.)
+#undef lpf_flush
 
 #undef lpf_init_t
 #undef lpf_pid_t

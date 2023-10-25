@@ -193,3 +193,9 @@ lpf_err_t lpf_get_rcvd_msg_count( lpf_t lpf, size_t * rcvd_msgs) {
     (void) lpf;
     return LPF_SUCCESS;
 }
+
+lpf_err_t lpf_flush( lpf_t lpf) {
+    (void) lpf;
+    return LPF_SUCCESS;
+}
+

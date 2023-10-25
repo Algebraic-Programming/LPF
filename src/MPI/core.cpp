@@ -280,6 +280,15 @@ lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_flush( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flush();
+    }
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )
 {
     lpf::Interface * i = realContext(ctx);

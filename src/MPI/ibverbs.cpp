@@ -827,6 +827,31 @@ void IBVerbs :: wait_completion(int& error) {
     }
 }
 
+void IBVerbs :: flush()
+{
+    int error = 0;
+
+    while (m_numMsgs > m_sentMsgs) {
+        LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
+
+        wait_completion(error);
+        if (error) {
+            LOG(1, "Error in wait_completion");
+            std::abort();
+        }
+
+    }
+    if (m_numMsgs < m_sentMsgs) {
+
+        LOG(1, "Weird, m_numMsgs = " << m_numMsgs << " and m_sentMsgs = " << m_sentMsgs);
+        std::abort();
+    }
+
+    m_numMsgs = 0;
+    m_sentMsgs = 0;
+
+}
+
 void IBVerbs :: sync(bool resized)
 {
     
