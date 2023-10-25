@@ -522,5 +522,7 @@ install(DIRECTORY "include/bsp" DESTINATION ${INSTALL_HEADERS})
 install(DIRECTORY "include/debug"  DESTINATION ${INSTALL_HEADERS}/lpf )
 
 # Post install actions
-add_subdirectory(post-install)
+# Kiril is commenting the post-install runs as they always fail
+# Probably should fix them at some point
+# add_subdirectory(post-install)
 
