@@ -44,6 +44,7 @@
 #undef lpf_get_rcvd_msg_count
 #undef lpf_get_rcvd_msg_count_per_slot
 #undef lpf_register_global
+#undef lpf_flush
 #undef lpf_deregister
 #undef lpf_probe
 #undef lpf_resize_memory_register
@@ -88,6 +89,7 @@
 #define lpf_register_local  LPF_FUNC(register_local)
 #define lpf_get_rcvd_msg_count LPF_FUNC(get_rcvd_msg_count)
 #define lpf_get_rcvd_msg_count_per_slot LPF_FUNC(get_rcvd_msg_count_per_slot)
+#define lpf_flush LPF_FUNC(flush)
 #define lpf_register_global LPF_FUNC(register_global)
 #define lpf_deregister      LPF_FUNC(deregister)
 #define lpf_probe           LPF_FUNC(probe)

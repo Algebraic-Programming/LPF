@@ -2324,6 +2324,9 @@ lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t *rcvd_msgs, lpf_mem
 extern _LPFLIB_API
 lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
 
+extern _LPFLIB_API
+lpf_err_t lpf_flush( lpf_t ctx);
+
 #ifdef __cplusplus
 }
 #endif
