@@ -299,7 +299,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
             throw std::bad_alloc();
         }
 
-        LOG(3, "Created new Queue pair for " << m_pid << " -> " << i );
+        LOG(3, "Created new Queue pair for " << m_pid << " -> " << i << " with qp_num = " << ibv_new_qp_p->qp_num);
     }
 }
 
@@ -334,24 +334,31 @@ void IBVerbs :: doRemoteProgress(){
                         << ", vendor syndrome = 0x" << std::hex
                         << wcs[i].vendor_err );
             }
-
-            /**
-             * Here is a trick:
-             * The sender sends relatively generic LPF memslot ID.
-             * But for IB Verbs, we need to translate that into
-             * an IB Verbs slot via @getVerbID -- or there will be
-             * a mismatch when IB Verbs looks up the slot ID
-             */
-            SlotID slot = wcs[i].imm_data;
-            if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
-                rcvdMsgCount[slot] = 1;
-            }
             else {
-                rcvdMsgCount[slot]++;
+                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
+
+                /**
+                 * Here is a trick:
+                 * The sender sends relatively generic LPF memslot ID.
+                 * But for IB Verbs, we need to translate that into
+                 * an IB Verbs slot via @getVerbID -- or there will be
+                 * a mismatch when IB Verbs looks up the slot ID
+                 */
+                SlotID slot = wcs[i].imm_data;
+                if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
+                    rcvdMsgCount[slot] = 1;
+                }
+                else {
+                    rcvdMsgCount[slot]++;
+                }
+                LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
             }
-            LOG(3, "Rank " << m_pid << " Increment to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
-			ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
-		}
+        }
 		if(pollResult > 0) totalResults += pollResult;
 	} while (pollResult == POLL_BATCH && totalResults < MAX_POLLING);
 }
@@ -671,7 +678,8 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         // we only need a signal from the last message in the queue
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
-        sr->wr_id = 0;
+        /* use wr_id to later demultiplex srcSlot */
+        sr->wr_id = srcSlot; 
         /*
          * In HiCR, we need to know at receiver end which slot 
          * has received the message. But here is a trick:
@@ -797,8 +805,24 @@ void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
     *rcvd_msgs = rcvdMsgCount[slot];
 }
 
+void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
+{
+    // the wait_completion polls for
+    // all sends and updates the sent counters
+    int error;
+    wait_completion(error);
+    if (error) {
+        LOG(1, "Error in wait_completion");
+        std::abort();
+    }
+    // now that the updates of sent counters are there,
+    // read the right one
+    *sent_msgs = sentMsgCount[slot];
+}
+
 void IBVerbs :: wait_completion(int& error) {
 
+    error = 0;
     struct ibv_wc wcs[POLL_BATCH];
     LOG(5, "Polling for messages" );
     int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
@@ -818,6 +842,21 @@ void IBVerbs :: wait_completion(int& error) {
                 LOG( 2, "The work completion status string: " << status_descr);
                 error = 1;
             }
+            else {
+                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+            }
+
+            SlotID slot = wcs[i].wr_id;
+            if (sentMsgCount.find(slot) == sentMsgCount.end()) {
+                sentMsgCount[slot] = 1;
+            }
+            else {
+                sentMsgCount[slot]++;
+            }
+            LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
         }
     }
     else if (pollResult < 0)
@@ -849,6 +888,24 @@ void IBVerbs :: flush()
 
     m_numMsgs = 0;
     m_sentMsgs = 0;
+
+}
+
+void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSent, size_t expectedRecvd) {
+
+    if (resized) reconnectQPs();
+    size_t actualRecvd;
+    size_t actualSent;
+    do {
+        // this call triggers doRemoteProgress
+        get_rcvd_msg_count_per_slot(&actualRecvd, slot);
+        // this call triggers wait_completion 
+        get_sent_msg_count_per_slot(&actualSent, slot);
+    } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
+    sentMsgCount[slot] -= expectedSent;
+    rcvdMsgCount[slot] -= expectedRecvd;
+
+    // update sync
 
 }
 

@@ -104,6 +104,10 @@ void Interface :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot) {
     m_mesgQueue.getRcvdMsgCountPerSlot(msgs, slot);
 }
 
+void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
+    m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
+}
+
 void Interface :: flush() {
     m_mesgQueue.flush();
 }
@@ -166,11 +170,20 @@ err_t Interface ::  sync()
 {
     if ( 0 == m_aborted )
     {
-        m_aborted = m_mesgQueue.sync( false );
+        m_aborted = m_mesgQueue.sync();
+        return LPF_SUCCESS;
     }
-    
+    else
+    {
+        return LPF_ERR_FATAL;
+    }
+}
+
+err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
     if ( 0 == m_aborted )
     {
+        m_aborted = m_mesgQueue.countingSyncPerSlot(slot, expected_sent, expected_rcvd);
         return LPF_SUCCESS;
     }
     else

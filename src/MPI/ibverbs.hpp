@@ -76,11 +76,14 @@ public:
 
     void doRemoteProgress();
 
+    void countingSyncPerSlot(bool resized, SlotID tag, size_t sent, size_t recvd);
+
     // Do the communication and synchronize
     void sync(bool resized);
 
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
+    void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
 private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
@@ -149,6 +152,7 @@ private:
     std::vector< pid_t >         m_peerList;
     shared_ptr<std::thread> progressThread;
     std::map<SlotID, std::atomic_size_t> rcvdMsgCount;
+    std::map<SlotID, std::atomic_size_t> sentMsgCount;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     //std::vector< struct ibv_wc > m_wcs; // array of work completions

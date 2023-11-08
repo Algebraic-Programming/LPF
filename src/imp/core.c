@@ -137,6 +137,13 @@ lpf_err_t lpf_sync( lpf_t lpf, lpf_sync_attr_t attr )
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_counting_sync_per_slot( lpf_t lpf, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+    (void) lpf;
+    (void) attr; 
+    return LPF_SUCCESS;
+}
+
 static double messageGap( lpf_pid_t p, size_t min_msg_size, lpf_sync_attr_t attr)
 { 
     (void) p;
@@ -188,6 +195,12 @@ lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t lpf, size_t * rcvd_msgs, lpf_me
 lpf_err_t lpf_get_rcvd_msg_count( lpf_t lpf, size_t * rcvd_msgs) {
     (void) lpf;
     *rcvd_msgs = 0;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t lpf, size_t * sent_msgs, lpf_memslot_t slot) {
+    (void) lpf;
+    *sent_msgs = 0;
     return LPF_SUCCESS;
 }
 

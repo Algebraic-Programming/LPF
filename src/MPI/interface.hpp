@@ -65,6 +65,7 @@ public:
     pid_t isAborted() const ;
  
     err_t sync(); // nothrow
+    err_t countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd); // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 
@@ -72,6 +73,7 @@ public:
 
     typedef size_t SlotID;
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
+    void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
     void getRcvdMsgCount(size_t * msgs);
     void flush();
 

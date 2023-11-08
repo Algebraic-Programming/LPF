@@ -111,6 +111,13 @@ public:
         return m_mpi.sync();
     }
 
+//    MPI::err_t counting_sync_per_slot(lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) 
+//    {
+//        m_memreg.flush( m_mpi );
+//        m_msgQueue.flush( m_mpi, m_memreg );
+//        return m_mpi.counting_sync_per_slot(slot, expected_sent, expected_rcvd);
+//    }
+
     static double messageGap( lpf_pid_t nprocs, size_t minMsgSize, lpf_sync_attr_t attr)
     {
         (void) nprocs;
@@ -367,6 +374,11 @@ public:
         return LPF_SUCCESS;
     }
 
+    lpf_err_t countingSyncPerSlot(lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) 
+    { 
+        return m_nodeState.mpi().counting_sync_per_slot(slot, expected_sent, expected_rcvd);
+    }
+
     ThreadState( NodeState * nodeState, Thread thread )
         : m_error(false)
         , m_threadId( thread.pid() )
@@ -408,6 +420,11 @@ public:
     lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs, lpf_memslot_t slot) {
 
         return m_nodeState.mpi().get_rcvd_msg_count_per_slot(rcvd_msgs, slot);
+    }
+
+    lpf_pid_t getSentMsgCount(size_t * sent_msgs, lpf_memslot_t slot) {
+
+        return m_nodeState.mpi().get_sent_msg_count_per_slot(sent_msgs, slot);
     }
 
     lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs) {

@@ -65,10 +65,13 @@ public:
 
     void getRcvdMsgCount(size_t * msgs);
 
+    void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
+
     void flush();
 
     // returns how many processes have entered in an aborted state
-    int sync(bool abort);
+    int sync();
+    int countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd);
 
 private:
     enum Msgs { BufPut , 
