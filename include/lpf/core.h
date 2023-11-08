@@ -2058,6 +2058,9 @@ lpf_err_t lpf_get(
 extern _LPFLIB_API
 lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
 
+extern _LPFLIB_API
+lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd);
+
 /**
  * This primitive allows a user to inspect the machine that this LPF program
  * has been assigned. All resources reported in the #lpf_machine_t struct are
@@ -2325,6 +2328,9 @@ lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t *rcvd_msgs, lpf_mem
 
 extern _LPFLIB_API
 lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
+
+extern _LPFLIB_API
+lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_memslot_t slot);
 
 extern _LPFLIB_API
 lpf_err_t lpf_flush( lpf_t ctx);

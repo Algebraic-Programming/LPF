@@ -297,7 +297,22 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 
 }
 
-int MessageQueue :: sync(bool abort)
+int MessageQueue :: sync()
+{
+
+    // if not, deal with normal sync
+    m_memreg.sync();
+
+#ifdef LPF_CORE_MPI_USES_ibverbs
+	m_ibverbs.sync(m_resized);
+#endif
+
+    m_resized = false;
+
+	return 0;
+}
+
+int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd)
 {
 
 
@@ -305,7 +320,7 @@ int MessageQueue :: sync(bool abort)
     m_memreg.sync();
 
 #ifdef LPF_CORE_MPI_USES_ibverbs
-	m_ibverbs.sync(m_resized);
+	m_ibverbs.countingSyncPerSlot(m_resized, slot, expected_sent, expected_rcvd);
 #endif
 
     m_resized = false;
@@ -327,6 +342,14 @@ void MessageQueue :: getRcvdMsgCount(size_t * msgs)
     *msgs = 0;
 #ifdef LPF_CORE_MPI_USES_ibverbs
         m_ibverbs.get_rcvd_msg_count(msgs);
+#endif
+}
+
+void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot)
+{
+    *msgs = 0;
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        m_ibverbs.get_sent_msg_count_per_slot(msgs, slot);
 #endif
 }
 
