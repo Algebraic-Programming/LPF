@@ -121,6 +121,9 @@ namespace lpf { namespace hybrid {
         err_t get_rcvd_msg_count_per_slot( size_t * rcvd_msgs, lpf_memslot_t slot) 
         { return USE_THREAD( get_rcvd_msg_count_per_slot)(m_ctx, rcvd_msgs, slot); }
 
+        err_t get_sent_msg_count_per_slot( size_t * sent_msgs, lpf_memslot_t slot) 
+        { return USE_THREAD( get_sent_msg_count_per_slot)(m_ctx, sent_msgs, slot); }
+
         err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
         { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
@@ -141,6 +144,9 @@ namespace lpf { namespace hybrid {
 
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_THREAD(sync)( m_ctx, attr ); }
+
+        err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
+        { return USE_THREAD(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }
 
         err_t probe( machine_t * params )
         { return USE_THREAD(probe)(m_ctx, params ); }
@@ -220,6 +226,9 @@ namespace lpf { namespace hybrid {
         err_t get_rcvd_msg_count_per_slot(size_t *rcvd_msgs, lpf_memslot_t slot) 
         { return USE_MPI( get_rcvd_msg_count_per_slot)( m_ctx, rcvd_msgs, slot); }
 
+        err_t get_sent_msg_count_per_slot(size_t *sent_msgs, lpf_memslot_t slot) 
+        { return USE_MPI( get_sent_msg_count_per_slot)( m_ctx, sent_msgs, slot); }
+
         err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
         { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
@@ -240,6 +249,9 @@ namespace lpf { namespace hybrid {
 
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_MPI(sync)( m_ctx, attr ); }
+
+        err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
+        { return USE_MPI(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }
 
         err_t probe( machine_t * params )
         { return USE_MPI(probe)(m_ctx, params ); }

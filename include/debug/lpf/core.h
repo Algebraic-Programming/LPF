@@ -64,6 +64,9 @@ extern "C" {
 #define lpf_sync( ctx, attrs ) \
     lpf_debug_sync( __FILE__, __LINE__, (ctx), (attrs) )
 
+#define lpf_counting_sync_per_tag( ctx, attrs, slot, expected_sends, expected_rcvs ) \
+    lpf_debug_counting_sync_per_tag( __FILE__, __LINE__, (ctx), (attrs), (slot), (expected_sends), (expected_rcvs) )
+
 #define lpf_resize_memory_register( ctx, size ) \
     lpf_debug_resize_memory_register( __FILE__, __LINE__, (ctx), (size) )
 
@@ -127,6 +130,9 @@ lpf_err_t lpf_debug_probe( const char * file, int line,
 extern _LPFLIB_API 
 lpf_err_t lpf_debug_sync( const char * file, int line, 
         lpf_t ctx, lpf_sync_attr_t attr );
+
+lpf_err_t lpf_debug_counting_sync_per_tag( const char * file, int line, 
+        lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sends, size_t expected_rcvs);
 
 extern _LPFLIB_API 
 lpf_err_t lpf_debug_resize_memory_register( const char * file, int line,
