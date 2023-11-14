@@ -85,7 +85,7 @@ lpf_err_t lpf_collectives_init(
 	size_t max_byte_size,
 	lpf_coll_t * coll
 ) {
-	(void)max_calls;
+	(void) max_calls;
 
 	coll->inv_translate = coll->translate = NULL;
 
@@ -108,8 +108,8 @@ lpf_err_t lpf_collectives_init_strided(
 	size_t max_byte_size,
 	lpf_coll_t * coll
 ) {
-    (void)ctx;
-	(void)max_calls;
+	(void) ctx;
+	(void) max_calls;
 
 	coll->P = 0;
 	coll->s = LPF_MAX_P;
