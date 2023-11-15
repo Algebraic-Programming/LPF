@@ -37,6 +37,17 @@
 #include "sparseset.hpp"
 #include "memreg.hpp"
 
+typedef enum Op {
+    SEND,
+    RECV
+} Op;
+
+typedef enum Phase {
+    INIT,
+    PRE,
+    POST
+} Phase;
+
 namespace lpf {
     
     class Communication;
@@ -77,6 +88,14 @@ public:
     void doRemoteProgress();
 
     void countingSyncPerSlot(bool resized, SlotID tag, size_t sent, size_t recvd);
+    /**
+     * @syncPerSlot only guarantees that all already scheduled sends (via put), 
+     * or receives (via get) associated with a slot are completed. It does 
+     * not guarantee that not scheduled operations will be scheduled (e.g.
+     * no guarantee that a remote process will wait til data is put into its 
+     * memory, as it does schedule the operation (one-sided).
+     */
+    void syncPerSlot(bool resized, SlotID slot);
 
     // Do the communication and synchronize
     void sync(bool resized);
@@ -93,6 +112,7 @@ private:
 
     void wait_completion(int& error);
     void doProgress();
+    void tryIncrement(Op op, Phase phase, SlotID slot);
 
     struct MemoryRegistration {
         void *   addr;
@@ -115,6 +135,8 @@ private:
     std::atomic_size_t m_numMsgs;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
+    std::map<SlotID, std::atomic_size_t> m_recvInitMsgCount;
+    std::map<SlotID, std::atomic_size_t> m_sendInitMsgCount;
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with

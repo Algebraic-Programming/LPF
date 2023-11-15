@@ -2061,6 +2061,9 @@ lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
 extern _LPFLIB_API
 lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd);
 
+extern _LPFLIB_API
+lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot);
+
 /**
  * This primitive allows a user to inspect the machine that this LPF program
  * has been assigned. All resources reported in the #lpf_machine_t struct are

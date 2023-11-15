@@ -348,6 +348,15 @@ _LPFLIB_API lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t att
     return realContext(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
 }
 
+_LPFLIB_API lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot)
+{
+    (void) attr;
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS) 
+        return LPF_SUCCESS;
+    return realContext(ctx)->syncPerSlot(slot);
+}
+
 _LPFLIB_API lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )
 {
     using namespace lpf::hybrid;

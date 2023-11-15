@@ -139,6 +139,9 @@ namespace lpf { namespace hybrid {
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_THREAD(sync)( m_ctx, attr ); }
 
+        err_t sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, memslot_t slot = LPF_INVALID_MEMSLOT)
+        { return USE_THREAD(sync_per_slot)( m_ctx, attr, slot); }
+
         err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
         { return USE_THREAD(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }
 
@@ -243,6 +246,9 @@ namespace lpf { namespace hybrid {
 
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_MPI(sync)( m_ctx, attr ); }
+
+        err_t sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT )
+        { return USE_MPI(sync_per_slot)( m_ctx, attr, slot); }
 
         err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
         { return USE_MPI(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }

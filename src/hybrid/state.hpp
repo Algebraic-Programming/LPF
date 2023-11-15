@@ -379,6 +379,11 @@ public:
         return m_nodeState.mpi().counting_sync_per_slot(slot, expected_sent, expected_rcvd);
     }
 
+    lpf_err_t syncPerSlot(lpf_memslot_t slot) 
+    { 
+        return m_nodeState.mpi().sync_per_slot(slot);
+    }
+
     ThreadState( NodeState * nodeState, Thread thread )
         : m_error(false)
         , m_threadId( thread.pid() )
