@@ -918,7 +918,6 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
         get_rcvd_msg_count_per_slot(&actualRecvd, slot);
         // this call triggers wait_completion 
         get_sent_msg_count_per_slot(&actualSent, slot);
-        std::cout << "Rank " << m_pid << " slot = " << slot << " Expected sent = " << expectedSent << " actualSent = " << actualSent << " expected recv = " << expectedRecvd << " actualRecvd = " << actualRecvd << std::endl;
     } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
 
     // update sync
