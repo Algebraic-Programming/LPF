@@ -328,6 +328,22 @@ int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_
 	return 0;
 }
 
+int MessageQueue :: syncPerSlot(SlotID slot)
+{
+
+
+    // if not, deal with normal sync
+    m_memreg.sync();
+
+#ifdef LPF_CORE_MPI_USES_ibverbs
+	m_ibverbs.syncPerSlot(m_resized, slot);
+#endif
+
+    m_resized = false;
+
+	return 0;
+}
+
 
 void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot)
 {

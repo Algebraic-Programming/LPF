@@ -192,6 +192,19 @@ err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, siz
     }
 }
 
+err_t Interface :: syncPerSlot(memslot_t slot)
+{
+    if ( 0 == m_aborted )
+    {
+        m_aborted = m_mesgQueue.syncPerSlot(slot);
+        return LPF_SUCCESS;
+    }
+    else
+    {
+        return LPF_ERR_FATAL;
+    }
+}
+
 err_t Interface :: exec( pid_t P, spmd_t spmd, args_t args ) 
 {
     return m_subprocess.exec( P, spmd, args );

@@ -67,6 +67,9 @@ extern "C" {
 #define lpf_counting_sync_per_tag( ctx, attrs, slot, expected_sends, expected_rcvs ) \
     lpf_debug_counting_sync_per_tag( __FILE__, __LINE__, (ctx), (attrs), (slot), (expected_sends), (expected_rcvs) )
 
+#define lpf_sync_per_tag( ctx, attrs, slot) \
+    lpf_debug_sync_per_tag( __FILE__, __LINE__, (ctx), (attrs), (slot))
+
 #define lpf_resize_memory_register( ctx, size ) \
     lpf_debug_resize_memory_register( __FILE__, __LINE__, (ctx), (size) )
 
