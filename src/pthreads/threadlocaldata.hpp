@@ -106,6 +106,7 @@ public:
  
     err_t sync( bool expectExit = false ); // nothrow
     err_t countingSyncPerSlot( bool expectExit = false, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_rcvd = 0); // nothrow
+    err_t syncPerSlot( bool expectExit = false, lpf_memslot_t slot = LPF_INVALID_MEMSLOT); // nothrow
        
 private:
     ThreadLocalData( const ThreadLocalData & ) ; // prohibit copying

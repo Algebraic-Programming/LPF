@@ -271,6 +271,30 @@ IBVerbs :: ~IBVerbs()
 
 }
 
+
+void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
+    switch (phase) {
+        case Phase::INIT:
+            rcvdMsgCount[slot] = 0;
+            m_recvInitMsgCount[slot] = 0;
+            sentMsgCount[slot] = 0;
+            m_sendInitMsgCount[slot] = 0;
+            break;
+        case Phase::PRE:
+            if (op == Op::SEND) 
+                m_sendInitMsgCount[slot]++;
+            if (op == Op::RECV)
+                m_recvInitMsgCount[slot]++;
+            break;
+        case Phase::POST:
+            if (op == Op::RECV)
+                rcvdMsgCount[slot]++;
+            if (op == Op::SEND)
+                sentMsgCount[slot]++;
+            break;
+    }
+}
+
 void IBVerbs :: stageQPs( size_t maxMsgs )
 {
     // create the queue pairs
@@ -303,7 +327,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
     }
 }
 
-void IBVerbs :: doRemoteProgress(){
+void IBVerbs :: doRemoteProgress() {
 	struct ibv_wc wcs[POLL_BATCH];
 	struct ibv_recv_wr wr;
 	struct ibv_sge sg;
@@ -349,12 +373,7 @@ void IBVerbs :: doRemoteProgress(){
                  * a mismatch when IB Verbs looks up the slot ID
                  */
                 SlotID slot = wcs[i].imm_data;
-                if (rcvdMsgCount.find(slot) == rcvdMsgCount.end()) {
-                    rcvdMsgCount[slot] = 1;
-                }
-                else {
-                    rcvdMsgCount[slot]++;
-                }
+                tryIncrement(Op::RECV, Phase::POST, slot);
                 LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
             }
@@ -622,6 +641,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
         throw Exception("Another process could not register memory area");
 
     SlotID id = m_memreg.addGlobalReg( slot );
+    tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
     MemorySlot & ref = m_memreg.update(id);
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
@@ -644,6 +664,7 @@ void IBVerbs :: dereg( SlotID id )
     m_memreg.removeReg( id );
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
+
 
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
@@ -699,13 +720,13 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 
     }
     struct ibv_send_wr *bad_wr = NULL;
-    m_numMsgs++; 
     if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[0], &bad_wr ))
     {
         LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
         throw Exception("Error while posting RDMA requests");
     }
-
+    m_numMsgs++; 
+    tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -777,7 +798,6 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
 	//Send
 	struct ibv_send_wr *bad_wr = NULL;
-    m_numMsgs++;
 	if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
 	{
 
@@ -787,6 +807,8 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
 		throw Exception("Error while posting RDMA requests");
 	}
+    m_numMsgs++;
+    tryIncrement(Op::RECV, Phase::PRE, dstSlot);
 
 }
 
@@ -850,12 +872,7 @@ void IBVerbs :: wait_completion(int& error) {
             }
 
             SlotID slot = wcs[i].wr_id;
-            if (sentMsgCount.find(slot) == sentMsgCount.end()) {
-                sentMsgCount[slot] = 1;
-            }
-            else {
-                sentMsgCount[slot]++;
-            }
+            tryIncrement(Op::SEND, Phase::POST, slot);
             LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
         }
     }
@@ -901,11 +918,41 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
         get_rcvd_msg_count_per_slot(&actualRecvd, slot);
         // this call triggers wait_completion 
         get_sent_msg_count_per_slot(&actualSent, slot);
+        std::cout << "Rank " << m_pid << " slot = " << slot << " Expected sent = " << expectedSent << " actualSent = " << actualSent << " expected recv = " << expectedRecvd << " actualRecvd = " << actualRecvd << std::endl;
     } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
-    sentMsgCount[slot] -= expectedSent;
-    rcvdMsgCount[slot] -= expectedRecvd;
 
     // update sync
+
+}
+
+void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
+    if (resized) reconnectQPs();
+    int error;
+
+    do {
+        wait_completion(error);
+        if (error) {
+            LOG(1, "Error in wait_completion");
+            std::abort();
+        }
+        doRemoteProgress();
+    }
+    while ((rcvdMsgCount.at(slot) < m_recvInitMsgCount.at(slot)) || (sentMsgCount.at(slot) < m_sendInitMsgCount.at(slot)));
+
+    /**
+     * A subsequent barrier is a controversial decision:
+     * - if we use it, the sync guarantees that
+     *   receiver has received all that it is supposed to
+     *   receive. However, it loses all performance advantages
+     *   of waiting "only on certain tags"
+     * - if we do not barrier, we only make sure the slot
+     *   completes all sends and receives that HAVE ALREADY
+     *   BEEN ISSUED. However, a receiver of an RMA put
+     *   cannot know if it is supposed to receive more messages.
+     *   It can only know if it is receiving via an RMA get.
+     *   Therefore, now this operation is commented
+    */
+    //m_comm.barrier();
 
 }
 

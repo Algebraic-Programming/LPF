@@ -66,6 +66,7 @@ public:
  
     err_t sync(); // nothrow
     err_t countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd); // nothrow
+    err_t syncPerSlot(memslot_t slot); // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 

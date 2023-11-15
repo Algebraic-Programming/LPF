@@ -72,6 +72,7 @@ public:
     // returns how many processes have entered in an aborted state
     int sync();
     int countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd);
+    int syncPerSlot(SlotID slot);
 
 private:
     enum Msgs { BufPut , 

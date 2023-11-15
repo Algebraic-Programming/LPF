@@ -269,6 +269,13 @@ lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memsl
     return realContext(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
 }
 
+lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot)
+{
+    (void) attr; // ignore attr parameter since this implementation only
+                 // implements core functionality
+    return realContext(ctx)->syncPerSlot(slot);
+}
+
 lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot)
 {
     lpf::Interface * i = realContext(ctx);
