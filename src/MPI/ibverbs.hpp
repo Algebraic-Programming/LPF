@@ -109,6 +109,8 @@ private:
 
     void stageQPs(size_t maxMsgs ); 
     void reconnectQPs(); 
+    void tryLock(SlotID id, int dstPid);
+    void tryUnlock(SlotID id, int dstPid);
 
     void wait_completion(int& error);
     void doProgress();
@@ -123,6 +125,7 @@ private:
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
+        uint64_t swap_value;
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
@@ -159,6 +162,7 @@ private:
    	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
 	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
     shared_ptr< struct ibv_srq >		 m_srq;	 	// shared receive queue
+    shared_ptr< struct ibv_cq >     m_cqMutex;   // completion queue for mutex
 
     // Disconnected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_stagedQps; 
