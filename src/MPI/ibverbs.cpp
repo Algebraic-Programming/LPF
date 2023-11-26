@@ -363,7 +363,6 @@ void IBVerbs :: doRemoteProgress() {
             else {
                 LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
                 LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
-                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
                 LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
                 LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
 
@@ -493,8 +492,8 @@ void IBVerbs :: reconnectQPs()
             std::memset(&attr, 0, sizeof(attr));
             attr.qp_state      = IBV_QPS_RTS;
             attr.timeout       = 0x12;
-            attr.retry_cnt     = 6;
-            attr.rnr_retry     = 0;
+            attr.retry_cnt     = 7;
+            attr.rnr_retry     = 7;
             attr.sq_psn        = 0;
             attr.max_rd_atomic = 1;
             flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
@@ -528,7 +527,7 @@ void IBVerbs :: reconnectQPs()
 }
 
 void IBVerbs :: tryLock(SlotID dstSlot, int dstPid) {
-    std::cout << "Start with tryLock" << std::endl;
+    LOG(2,"Start with tryLock");
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
     ASSERT( dst.mr );
     struct ibv_sge sg;
@@ -551,7 +550,7 @@ void IBVerbs :: tryLock(SlotID dstSlot, int dstPid) {
     wr.wr.atomic.rkey        = dst.glob[dstPid].rkey;
     wr.wr.atomic.compare_add = 0; /* expected value in remote address */
     wr.wr.atomic.swap        = m_pid; /* the value set if expected value in compare */
-     std::cout << "PID: " << m_pid << " Start with tryLock 553" << std::endl;
+    LOG(2, "PID: " << m_pid << " Start with tryLock 553");
     if (ibv_post_send(m_connectedQps[dstPid].get(), &wr, &bad_wr)) {
         fprintf(stderr, "Error, ibv_post_send() failed\n");
         throw Exception("failed ibv_post_send");
@@ -575,7 +574,7 @@ void IBVerbs :: tryLock(SlotID dstSlot, int dstPid) {
         throw Exception("failed ibv_poll_cq in tryLock");
     }
 
-    std::cout << "Done with tryLock" << std::endl;
+    LOG(2, "Done with tryLock");
 }
 
 void IBVerbs :: tryUnlock(SlotID slot, int dstPid) {
@@ -607,7 +606,7 @@ void IBVerbs :: tryUnlock(SlotID slot, int dstPid) {
         pollResult = ibv_poll_cq(m_cqMutex.get(), 1, &wc);
 
     } while (pollResult < 1);
-    std::cout << "Done with tryUnlock" << std::endl;
+    LOG(2, "Done with tryUnlock");
 }
 
 void IBVerbs :: resizeMemreg( size_t size )
@@ -759,7 +758,7 @@ void IBVerbs :: dereg( SlotID id )
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
 {
-    tryLock(dstSlot, dstPid);
+    //tryLock(dstSlot, dstPid);
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -818,7 +817,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     }
     m_numMsgs++; 
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
-    tryUnlock(dstSlot, dstPid);
+    //tryUnlock(dstSlot, dstPid);
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -931,10 +930,11 @@ void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
     }
     // now that the updates of sent counters are there,
     // read the right one
-    *sent_msgs = sentMsgCount[slot];
+    *sent_msgs = sentMsgCount.at(slot);
 }
 
 void IBVerbs :: wait_completion(int& error) {
+
 
     error = 0;
     struct ibv_wc wcs[POLL_BATCH];
@@ -958,7 +958,6 @@ void IBVerbs :: wait_completion(int& error) {
             }
             else {
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
             }
@@ -1011,8 +1010,6 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
         // this call triggers wait_completion 
         get_sent_msg_count_per_slot(&actualSent, slot);
     } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
-
-    // update sync
 
 }
 
