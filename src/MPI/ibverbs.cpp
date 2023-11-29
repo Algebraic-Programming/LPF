@@ -904,32 +904,16 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 }
 
 void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs) {
-    doRemoteProgress();
     *rcvd_msgs = m_recvdMsgs;
 }
 
 void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 {
-    // the doRemoteProgress polls for
-    // all receives and updates the receive counters
-    doRemoteProgress();
-    // now that the updates of receive counters are there,
-    // read the right one
     *rcvd_msgs = rcvdMsgCount[slot];
 }
 
 void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
 {
-    // the wait_completion polls for
-    // all sends and updates the sent counters
-    int error;
-    wait_completion(error);
-    if (error) {
-        LOG(1, "Error in wait_completion");
-        std::abort();
-    }
-    // now that the updates of sent counters are there,
-    // read the right one
     *sent_msgs = sentMsgCount.at(slot);
 }
 
@@ -1006,8 +990,15 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
     size_t actualSent;
     do {
         // this call triggers doRemoteProgress
+        doRemoteProgress();
         get_rcvd_msg_count_per_slot(&actualRecvd, slot);
         // this call triggers wait_completion 
+        int error;
+        wait_completion(error);
+        if (error) {
+            LOG(1, "Error in wait_completion");
+            std::abort();
+        }
         get_sent_msg_count_per_slot(&actualSent, slot);
     } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
 
