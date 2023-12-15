@@ -156,7 +156,6 @@ private:
     size_t m_recvCount;
     std::atomic_int m_stopProgress;
 
-    int *m_recvCounts;
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
    	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue

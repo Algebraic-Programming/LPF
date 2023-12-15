@@ -240,28 +240,6 @@ IBVerbs :: IBVerbs( Communication & comm )
         throw Exception("Could not register memory region");
     }
 
-    m_recvCounts = (int *)calloc(1024,sizeof(int));
-
-    //int error;
-
-   // auto threadFc = [&]() {
-   //     while(!m_stopProgress) {
-   //         wait_completion(error);
-   //         //doRemoteProgress();
-   //         /*
-   //          * IMPORTANT:
-   //          * If you enable sleep periods here, you are
-   //          * very likely to miss out on events when you need
-   //          * them. The events will be polled much after you might
-   //          * need them. So only enable this if you know what
-   //          * you are doing !!!
-   //          */
-   //         //std::this_thread::sleep_for(std::chrono::microseconds(100));
-   //     }
-   // };
-
-    //progressThread.reset(new std::thread(threadFc));
-    // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
 
 }
