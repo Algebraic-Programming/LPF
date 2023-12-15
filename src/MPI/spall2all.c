@@ -258,6 +258,7 @@ static int sparse_all_to_all_pop( sparse_all_to_all_t * obj, int n,
         *pid = -1;
         *interm_pid = -1;
     }
+
     return error ;
 }
 
