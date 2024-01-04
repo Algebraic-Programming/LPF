@@ -58,7 +58,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_gidIdx( Config::instance().getIBGidIndex() )
     , m_mtu( getMTU( Config::instance().getIBMTU() ))
     , m_maxRegSize(0)
-    , m_stopProgress(0)
     , m_maxMsgSize(0)
     , m_minNrMsgs(0)
     , m_maxSrs(0)
@@ -66,7 +65,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_pd()
     , m_cqLocal()
     , m_cqRemote()
-    , m_cqMutex()
     , m_stagedQps( m_nprocs )
     , m_connectedQps( m_nprocs )
     , m_srs()
@@ -195,9 +193,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     }
     LOG(3, "Opened protection domain");
 
-    m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ));
-    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ));
-    m_cqMutex.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ));
+    m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ), ibv_destroy_cq);
+    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ), ibv_destroy_cq);
     /**
      * New notification functionality for HiCR
      */
@@ -210,13 +207,13 @@ IBVerbs :: IBVerbs( Communication & comm )
 			ibv_destroy_srq);
 
 
-    m_cqLocal.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0));
+    m_cqLocal.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0), ibv_destroy_cq);
     if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
         throw Exception("Could not allocate completion queue");
     }
-    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize * m_nprocs, NULL, NULL, 0));
+    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize * m_nprocs, NULL, NULL, 0), ibv_destroy_cq);
     if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
@@ -245,11 +242,7 @@ IBVerbs :: IBVerbs( Communication & comm )
 }
 
 IBVerbs :: ~IBVerbs()
-{
-    //m_stopProgress = 1;
-    //progressThread->join();
-
-}
+{ }
 
 
 void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
@@ -476,7 +469,7 @@ void IBVerbs :: reconnectQPs()
             attr.max_rd_atomic = 1;
             flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
                 IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC;
-            if( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
+            if( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags))  {
                 LOG(1, "Cannot bring state of QP " << i << " to RTS" );
                 throw Exception("Failed to bring QP's state to RTS" );
             }
@@ -485,107 +478,23 @@ void IBVerbs :: reconnectQPs()
 
         } // for each peer
     }
-    catch(...) {
-        m_comm.allreduceOr( true );
-        throw;
-    }
+            catch(...) {
+                m_comm.allreduceOr( true );
+                throw;
+            }
 
-    if (m_comm.allreduceOr( false ))
-        throw Exception("Another peer failed to set-up Infiniband queue pairs");
+            if (m_comm.allreduceOr( false ))
+                throw Exception("Another peer failed to set-up Infiniband queue pairs");
 
-    LOG(3, "All staged queue pairs have been connected" );
+            LOG(3, "All staged queue pairs have been connected" );
 
-    m_connectedQps.swap( m_stagedQps );
-    for (int i = 0; i < m_nprocs; ++i)
-        m_stagedQps[i].reset();
+            m_connectedQps.swap( m_stagedQps );
 
-    LOG(3, "All old queue pairs have been removed");
+            LOG(3, "All old queue pairs have been removed");
 
-    m_comm.barrier();
-}
+            m_comm.barrier();
+        }
 
-void IBVerbs :: tryLock(SlotID dstSlot, int dstPid) {
-    LOG(2,"Start with tryLock");
-    const MemorySlot & dst = m_memreg.lookup( dstSlot );
-    ASSERT( dst.mr );
-    struct ibv_sge sg;
-    struct ibv_send_wr wr;
-    struct ibv_send_wr *bad_wr;
-    const uint64_t * remoteAddr = &dst.swap_value; // THIS IS INCORRECT - I THINK?
-    
-    sg.addr = NULL;
-    sg.length = 0;
-    sg.lkey = dst.glob[dstPid].lkey;
-
-
-    wr.wr_id      = 0;
-    wr.sg_list    = &sg;
-    wr.num_sge    = 1;
-    wr.opcode     = IBV_WR_ATOMIC_CMP_AND_SWP;
-    wr.send_flags = IBV_SEND_SIGNALED;
-    wr.next = NULL;
-    wr.wr.atomic.remote_addr = reinterpret_cast<uintptr_t>(remoteAddr);
-    wr.wr.atomic.rkey        = dst.glob[dstPid].rkey;
-    wr.wr.atomic.compare_add = 0; /* expected value in remote address */
-    wr.wr.atomic.swap        = m_pid; /* the value set if expected value in compare */
-    LOG(2, "PID: " << m_pid << " Start with tryLock 553");
-    if (ibv_post_send(m_connectedQps[dstPid].get(), &wr, &bad_wr)) {
-        fprintf(stderr, "Error, ibv_post_send() failed\n");
-        throw Exception("failed ibv_post_send");
-
-    }
-    size_t pollResult = 0;
-    struct ibv_wc wc;
-    do {
-    pollResult = ibv_poll_cq(m_cqMutex.get(), 1, &wc);}
-    while (pollResult < 1);
-
-    if (wc.status != IBV_WC_SUCCESS)
-    {
-        LOG( 2, "Got bad completion status from IB message."
-                " status = 0x" << std::hex << wc.status
-                << ", vendor syndrome = 0x" << std::hex
-                << wc.vendor_err );
-        const char * status_descr;
-        status_descr = ibv_wc_status_str(wc.status);
-        LOG( 2, "The work completion status string: " << status_descr);
-        throw Exception("failed ibv_poll_cq in tryLock");
-    }
-
-    LOG(2, "Done with tryLock");
-}
-
-void IBVerbs :: tryUnlock(SlotID slot, int dstPid) {
-    const MemorySlot & dst = m_memreg.lookup( slot );
-    ASSERT( dst.mr );
-    struct ibv_sge sg;
-    struct ibv_send_wr wr;
-    struct ibv_send_wr *bad_wr;
-    const char * remoteAddr = static_cast<const char *>(dst.glob[dstPid].addr);
-
-
-    wr.wr_id      = 0;
-    wr.sg_list    = &sg;
-    wr.num_sge    = 1;
-    wr.opcode     = IBV_WR_ATOMIC_CMP_AND_SWP;
-    wr.send_flags = IBV_SEND_SIGNALED;
-    wr.wr.atomic.remote_addr = reinterpret_cast<uintptr_t>(remoteAddr);
-    wr.wr.atomic.rkey        = dst.glob[dstPid].rkey;
-    wr.wr.atomic.compare_add = m_pid; /* expected value in remote address */
-    wr.wr.atomic.swap        = 0ULL; /* the value set if expected value in compare */
- 
-    if (ibv_post_send(m_connectedQps[dstPid].get(), &wr, &bad_wr)) {
-        fprintf(stderr, "Error, ibv_post_send() failed\n");
-        throw Exception("failed ibv_post_send");
-    }
-    size_t pollResult = 0;
-    struct ibv_wc wc;
-    do  {
-        pollResult = ibv_poll_cq(m_cqMutex.get(), 1, &wc);
-
-    } while (pollResult < 1);
-    LOG(2, "Done with tryUnlock");
-}
 
 void IBVerbs :: resizeMemreg( size_t size )
 {
@@ -610,6 +519,7 @@ void IBVerbs :: resizeMemreg( size_t size )
 void IBVerbs :: resizeMesgq( size_t size )
 {
 
+    std::cout << "resizeMesgq(" << size << ")" << std::endl;
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
 	if (m_cqLocal) {
@@ -620,9 +530,7 @@ void IBVerbs :: resizeMesgq( size_t size )
 			ibv_resize_cq(m_cqRemote.get(),  remote_size);
 		}
 	}
-    if (m_cqMutex) {
-        ibv_resize_cq(m_cqMutex.get(), 1);
-    }
+    std::cout << "m_cqSize = " << m_cqSize << std::endl;
 	stageQPs(m_cqSize);
 	if(remote_size >= m_postCount){
 		if (m_srq) {
@@ -736,7 +644,6 @@ void IBVerbs :: dereg( SlotID id )
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
 {
-    //tryLock(dstSlot, dstPid);
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -795,7 +702,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     }
     m_numMsgs++; 
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
-    //tryUnlock(dstSlot, dstPid);
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,

@@ -154,20 +154,18 @@ private:
     size_t       m_maxSrs; // maximum number of sends requests per QP  
     size_t m_postCount;
     size_t m_recvCount;
-    std::atomic_int m_stopProgress;
 
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
    	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
 	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
     shared_ptr< struct ibv_srq >		 m_srq;	 	// shared receive queue
-    shared_ptr< struct ibv_cq >     m_cqMutex;   // completion queue for mutex
 
     // Disconnected queue pairs
-    std::vector< shared_ptr< struct ibv_qp > > m_stagedQps; 
+    std::vector< shared_ptr<struct ibv_qp> > m_stagedQps; 
 
     // Connected queue pairs
-    std::vector< shared_ptr< struct ibv_qp > > m_connectedQps; 
+    std::vector< shared_ptr<struct ibv_qp> > m_connectedQps; 
 
 
     std::vector< struct ibv_send_wr > m_srs; // array of send requests
