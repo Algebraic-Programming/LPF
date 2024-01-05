@@ -519,7 +519,6 @@ void IBVerbs :: resizeMemreg( size_t size )
 void IBVerbs :: resizeMesgq( size_t size )
 {
 
-    std::cout << "resizeMesgq(" << size << ")" << std::endl;
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
 	if (m_cqLocal) {
@@ -530,7 +529,6 @@ void IBVerbs :: resizeMesgq( size_t size )
 			ibv_resize_cq(m_cqRemote.get(),  remote_size);
 		}
 	}
-    std::cout << "m_cqSize = " << m_cqSize << std::endl;
 	stageQPs(m_cqSize);
 	if(remote_size >= m_postCount){
 		if (m_srq) {
