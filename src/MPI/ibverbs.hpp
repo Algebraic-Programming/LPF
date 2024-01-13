@@ -136,6 +136,8 @@ private:
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
+    std::atomic_size_t m_sendTotalInitMsgCount;
+    std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
     std::map<SlotID, std::atomic_size_t> m_recvInitMsgCount;

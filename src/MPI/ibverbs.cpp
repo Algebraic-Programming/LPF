@@ -81,6 +81,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_postCount(0)
     , m_recvCount(0)
     , m_numMsgs(0)
+    , m_sendTotalInitMsgCount(0)
+    , m_recvTotalInitMsgCount(0)
     , m_sentMsgs(0)
     , m_recvdMsgs(0)
 {
@@ -254,10 +256,15 @@ void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
             m_sendInitMsgCount[slot] = 0;
             break;
         case Phase::PRE:
-            if (op == Op::SEND) 
+            m_numMsgs++;
+            if (op == Op::SEND) {
+                m_sendTotalInitMsgCount++;
                 m_sendInitMsgCount[slot]++;
-            if (op == Op::RECV)
+            }
+            if (op == Op::RECV) {
+                m_recvTotalInitMsgCount++;
                 m_recvInitMsgCount[slot]++;
+            }
             break;
         case Phase::POST:
             if (op == Op::RECV)
@@ -580,6 +587,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     local.rkey = size?slot.mr->rkey:0;
 
     SlotID id =  m_memreg.addLocalReg( slot );
+    tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;
@@ -689,7 +697,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         srcOffset += sge->length;
         dstOffset += sge->length;
 
-        LOG(4, "Enqueued put message of " << sge->length << " bytes to " << dstPid );
+        LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid );
 
     }
     struct ibv_send_wr *bad_wr = NULL;
@@ -698,7 +706,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
         throw Exception("Error while posting RDMA requests");
     }
-    m_numMsgs++; 
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 }
 
@@ -780,7 +787,6 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
 		throw Exception("Error while posting RDMA requests");
 	}
-    m_numMsgs++;
     tryIncrement(Op::RECV, Phase::PRE, dstSlot);
 
 }
@@ -919,13 +925,13 @@ void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
 
 void IBVerbs :: sync(bool resized)
 {
-    
+
     if (resized) reconnectQPs();
 
     int error = 0;
 
-    while (m_numMsgs > m_sentMsgs) {
-        LOG(1, "Rank " << m_pid << " m_numMsgs = " << m_numMsgs << " m_sentMsgs = " << m_sentMsgs);
+    while (m_sendTotalInitMsgCount > m_sentMsgs) {
+        LOG(1, "Rank " << m_pid << " m_sendTotalInitMsgCount = " << m_sendTotalInitMsgCount << " m_sentMsgs = " << m_sentMsgs);
 
         wait_completion(error);
         if (error) {
@@ -934,14 +940,16 @@ void IBVerbs :: sync(bool resized)
         }
 
     }
-    if (m_numMsgs < m_sentMsgs) {
+    if (m_sendTotalInitMsgCount < m_sentMsgs) {
 
-        LOG(1, "Weird, m_numMsgs = " << m_numMsgs << " and m_sentMsgs = " << m_sentMsgs);
+        LOG(1, "Weird, m_sendTotalInitMsgCount = " << m_sendTotalInitMsgCount << " and m_sentMsgs = " << m_sentMsgs);
         std::abort();
     }
 
     m_numMsgs = 0;
+    m_sendTotalInitMsgCount = 0;
     m_sentMsgs = 0;
+    LOG(1, "Process " << m_pid << " will call barrier\n");
     m_comm.barrier();
     // at least once in a while the received queues have to be polled for!
     doRemoteProgress();
