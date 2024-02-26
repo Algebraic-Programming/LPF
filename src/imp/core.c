@@ -144,6 +144,32 @@ lpf_err_t lpf_counting_sync_per_slot( lpf_t lpf, lpf_sync_attr_t attr, lpf_memsl
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_lock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+) {
+	return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_unlock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+) {
+	return LPF_SUCCESS;
+}
+
 static double messageGap( lpf_pid_t p, size_t min_msg_size, lpf_sync_attr_t attr)
 { 
     (void) p;

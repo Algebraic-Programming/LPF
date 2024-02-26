@@ -2336,6 +2336,31 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
 
 extern _LPFLIB_API 
 lpf_err_t lpf_abort(lpf_t ctx);
+
+extern _LPFLIB_API
+lpf_err_t lpf_lock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+);
+
+extern _LPFLIB_API
+lpf_err_t lpf_unlock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+);
+
 /**
  * This function returns in @rcvd_msgs the received message count on LPF slot @slot
  */
