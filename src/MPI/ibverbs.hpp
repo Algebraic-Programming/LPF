@@ -77,6 +77,8 @@ public:
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
 
+    void postCompareAndSwap(SlotID srSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap);
+
     void put( SlotID srcSlot, size_t srcOffset, 
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size);
 
