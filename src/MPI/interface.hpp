@@ -38,6 +38,14 @@ public:
         return s_root; 
     }
 
+    void lockSlot( memslot_t srcSlot, size_t srcOffset, 
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+		    size_t size );
+
+    void unlockSlot( memslot_t srcSlot, size_t srcOffset, 
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+		    size_t size );
+
     _LPFLIB_API
     static void initRoot(int *argc, char ***argv);
 
