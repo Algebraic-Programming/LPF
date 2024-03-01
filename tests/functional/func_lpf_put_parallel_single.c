@@ -38,7 +38,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     EXPECT_EQ( "%d", LPF_SUCCESS, rc );
     rc = lpf_register_global( lpf, &y, sizeof(y), &yslot );
     EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT);
     EXPECT_EQ( "%d", LPF_SUCCESS, rc );
 

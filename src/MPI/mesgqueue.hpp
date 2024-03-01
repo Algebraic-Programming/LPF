@@ -57,6 +57,12 @@ public:
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             memslot_t dstSlot, size_t dstOffset, size_t size );
 
+    void lockSlot( memslot_t srcSlot, size_t srcOffset,
+            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+
+    void unlockSlot( memslot_t srcSlot, size_t srcOffset,
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+
     void put( memslot_t srcSlot, size_t srcOffset,
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 

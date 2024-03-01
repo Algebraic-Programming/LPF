@@ -91,11 +91,30 @@ catch ( const std::bad_alloc & e)
     throw;
 }
 
+
+void Interface :: lockSlot( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size ) 
+{
+    m_mesgQueue.lockSlot( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
 void Interface :: put( memslot_t srcSlot, size_t srcOffset, 
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
         size_t size ) 
 {
     m_mesgQueue.put( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
+void Interface :: unlockSlot( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size ) 
+{
+    m_mesgQueue.unlockSlot( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
             size );
 }

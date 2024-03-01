@@ -217,6 +217,43 @@ lpf_err_t lpf_deregister(
     return LPF_SUCCESS;
 }
 
+
+lpf_err_t lpf_lock_slot( lpf_t ctx,
+                       lpf_memslot_t src_slot, 
+                       size_t src_offset,
+                       lpf_pid_t dst_pid, 
+                       lpf_memslot_t dst_slot, 
+                       size_t dst_offset, 
+                       size_t size, 
+                       lpf_msg_attr_t attr
+)
+{
+    (void) attr; // ignore parameter 'msg' since this implementation only 
+                 // implements core functionality
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        i->lockSlot( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_unlock_slot( lpf_t ctx,
+                       lpf_memslot_t src_slot, 
+                       size_t src_offset,
+                       lpf_pid_t dst_pid, 
+                       lpf_memslot_t dst_slot, 
+                       size_t dst_offset, 
+                       size_t size, 
+                       lpf_msg_attr_t attr
+)
+{
+    (void) attr; // ignore parameter 'msg' since this implementation only 
+                 // implements core functionality
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        i->unlockSlot( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_put( lpf_t ctx,
                        lpf_memslot_t src_slot, 
                        size_t src_offset,
