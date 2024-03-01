@@ -267,8 +267,9 @@ void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
             }
             break;
         case Phase::POST:
-            if (op == Op::RECV)
+            if (op == Op::RECV) {
                 rcvdMsgCount[slot]++;
+            }
             if (op == Op::SEND)
                 sentMsgCount[slot]++;
             break;
@@ -647,12 +648,12 @@ void IBVerbs :: dereg( SlotID id )
 }
 
 
-void IBVerbs :: postCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap)
+void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap)
 {
 	const MemorySlot & src = m_memreg.lookup( srcSlot );
 	const MemorySlot & dst = m_memreg.lookup( dstSlot );
-        const char * localAddr
-            = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
+    char * localAddr
+        = static_cast<char *>(src.glob[m_pid].addr) + srcOffset;
         const char * remoteAddr
             = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
 
@@ -665,7 +666,7 @@ void IBVerbs :: postCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dstPid,
 	struct ibv_wc wcs[POLL_BATCH];
 	struct ibv_send_wr wr;
 	memset(&wr, 0, sizeof(wr));
-	wr.wr_id = 0;
+	wr.wr_id = srcSlot;
 	wr.sg_list = &sge;
 	wr.next = NULL; // this needs to be set, otherwise EINVAL return error in ibv_post_send
 	wr.num_sge = 1;
@@ -685,40 +686,50 @@ blockingCompareAndSwap:
 		throw Exception("Error while posting RDMA requests");
 	}
 
-	int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
-	if ( pollResult > 0) {
-		LOG(4, "Received " << pollResult << " acknowledgements");
+	int pollResult = 0;
+    while (true) {
+        pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
+        if ( pollResult > 0) {
+            LOG(4, "Received " << pollResult << " acknowledgements in compare-and-swap function");
 
-		for (int i = 0; i < pollResult ; ++i) {
-			if (wcs[i].status != IBV_WC_SUCCESS)
-			{
-				LOG( 2, "Got bad completion status from IB message."
-						" status = 0x" << std::hex << wcs[i].status
-						<< ", vendor syndrome = 0x" << std::hex
-						<< wcs[i].vendor_err );
-				const char * status_descr;
-				status_descr = ibv_wc_status_str(wcs[i].status);
-				LOG( 2, "The work completion status string: " << status_descr);
-				error = 1;
-			}
-			else {
-				LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-				LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
-				LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
-			}
-		}
-	}
-	else if (pollResult < 0)
-	{
-		LOG( 1, "Failed to poll IB completion queue" );
-		throw Exception("Poll CQ failure");
-	}
-	const uint64_t * remoteValueFound = reinterpret_cast<const uint64_t *>(localAddr);
+            for (int i = 0; i < pollResult ; ++i) {
+                if (wcs[i].status != IBV_WC_SUCCESS)
+                {
+                    LOG( 2, "Got bad completion status from IB message."
+                            " status = 0x" << std::hex << wcs[i].status
+                            << ", vendor syndrome = 0x" << std::hex
+                            << wcs[i].vendor_err );
+                    const char * status_descr;
+                    status_descr = ibv_wc_status_str(wcs[i].status);
+                    LOG( 2, "The work completion status string: " << status_descr);
+                    error = 1;
+                }
+                else {
+                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
+                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                }
+            }
+            break;
+        }
+        else if (pollResult < 0)
+        {
+            LOG( 1, "Failed to poll IB completion queue" );
+            throw Exception("Poll CQ failure");
+        }
+    } 
+
+	uint64_t * remoteValueFound = reinterpret_cast<uint64_t *>(localAddr);
 	// if we fetched the value we expected, then
 	// we are holding the lock now (that is, we swapped successfully!)
-	// else, loop until you get the lock
-	if (remoteValueFound[0] != compare_add) 
+	// else, re-post your request for the lock
+	if (remoteValueFound[0] != compare_add)  {
+        LOG(2, "Process " << m_pid <<  " couldn't get the lock. remoteValue = " << remoteValueFound[0] << " compare_add = " << compare_add  << " go on, iterate\n");
 		goto blockingCompareAndSwap;
+    }
+    else {
+        LOG(2, "Process " << m_pid << " reads value " << remoteValueFound[0] << " and expected = " << compare_add  <<" gets the lock, done\n");
+    }
 	// else we hold the lock and swap value
 }
 
@@ -816,7 +827,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sr->next = &srs[i+1];
 		sr->send_flags = 0;
 
-		sr->wr_id = m_pid;
+		sr->wr_id = srcSlot;
 
 		sr->sg_list = sge;
 		sr->num_sge = 1;
@@ -862,7 +873,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
 		throw Exception("Error while posting RDMA requests");
 	}
-    tryIncrement(Op::RECV, Phase::PRE, dstSlot);
+    tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 
 }
 

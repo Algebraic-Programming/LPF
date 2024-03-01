@@ -284,7 +284,7 @@ void MessageQueue :: lockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_ibverbs
-m_ibverbs.postCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
 #else 
 	std::cerr << "Only IBVerbs::lockSlot available in this backend, abort\n";
 	std::abort();
@@ -295,9 +295,9 @@ void MessageQueue :: unlockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_ibverbs
-m_ibverbs.postCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
 #else 
-	std::cerr << "Only IBVerbs::lockSlot available in this backend, abort\n";
+	std::cerr << "Only IBVerbs::unlockSlot available in this backend, abort\n";
 	std::abort();
 #endif
 }
