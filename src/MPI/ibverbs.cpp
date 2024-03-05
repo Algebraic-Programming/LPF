@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <unistd.h>
+#include <algorithm>
 
 #define POLL_BATCH 8
 #define MAX_POLLING 128
@@ -248,6 +249,7 @@ IBVerbs :: ~IBVerbs()
 
 
 void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
+    
     switch (phase) {
         case Phase::INIT:
             rcvdMsgCount[slot] = 0;
@@ -270,8 +272,9 @@ void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
             if (op == Op::RECV) {
                 rcvdMsgCount[slot]++;
             }
-            if (op == Op::SEND)
+            if (op == Op::SEND) {
                 sentMsgCount[slot]++;
+            }
             break;
     }
 }
@@ -325,13 +328,13 @@ void IBVerbs :: doRemoteProgress() {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
             LOG(3, "Process " << m_pid << " signals: I received a message in doRemoteProgress");
-        } 
+        }  
         else if (pollResult < 0)
         {
             LOG( 1, "Failed to poll IB completion queue" );
             throw Exception("Poll CQ failure");
         }
-        m_recvdMsgs += pollResult;
+
 		for(int i = 0; i < pollResult; i++) {
             if (wcs[i].status != IBV_WC_SUCCESS) {
                 LOG( 2, "Got bad completion status from IB message."
@@ -353,8 +356,12 @@ void IBVerbs :: doRemoteProgress() {
                  * a mismatch when IB Verbs looks up the slot ID
                  */
                 SlotID slot = wcs[i].imm_data;
-                tryIncrement(Op::RECV, Phase::POST, slot);
-                LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                // Ignore compare-and-swap atomics!
+                if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
+                    m_recvdMsgs ++;
+                    tryIncrement(Op::RECV, Phase::POST, slot);
+                    LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                }
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
             }
         }
@@ -564,7 +571,6 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     ASSERT( size <= m_maxRegSize );
 
     MemorySlot slot;
-    slot.swap_value = 0;
     if ( size > 0) {
         LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
@@ -601,7 +607,6 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     ASSERT( size <= m_maxRegSize );
 
     MemorySlot slot;
-    slot.swap_value = 0;
     if ( size > 0 ) {
         LOG(4, "Registering globally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
@@ -651,7 +656,8 @@ void IBVerbs :: dereg( SlotID id )
 void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap)
 {
 	const MemorySlot & src = m_memreg.lookup( srcSlot );
-	const MemorySlot & dst = m_memreg.lookup( dstSlot );
+	const MemorySlot & dst = m_memreg.lookup( dstSlot);
+
     char * localAddr
         = static_cast<char *>(src.glob[m_pid].addr) + srcOffset;
         const char * remoteAddr
@@ -678,6 +684,7 @@ void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dst
 	wr.wr.atomic.rkey = dst.glob[dstPid].rkey;
 	struct ibv_send_wr *bad_wr;
 	int error;
+    std::vector<ibv_wc_opcode> opcodes;
 
 blockingCompareAndSwap:
 	if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &wr, &bad_wr ))
@@ -686,43 +693,24 @@ blockingCompareAndSwap:
 		throw Exception("Error while posting RDMA requests");
 	}
 
-	int pollResult = 0;
-    while (true) {
-        pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
-        if ( pollResult > 0) {
-            LOG(4, "Received " << pollResult << " acknowledgements in compare-and-swap function");
-
-            for (int i = 0; i < pollResult ; ++i) {
-                if (wcs[i].status != IBV_WC_SUCCESS)
-                {
-                    LOG( 2, "Got bad completion status from IB message."
-                            " status = 0x" << std::hex << wcs[i].status
-                            << ", vendor syndrome = 0x" << std::hex
-                            << wcs[i].vendor_err );
-                    const char * status_descr;
-                    status_descr = ibv_wc_status_str(wcs[i].status);
-                    LOG( 2, "The work completion status string: " << status_descr);
-                    error = 1;
-                }
-                else {
-                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
-                    LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
-                }
-            }
-            break;
+    /**
+     * Keep waiting on a completion of events until you 
+     * register a completed atomic compare-and-swap
+     */
+    do {
+        opcodes = wait_completion(error);
+         if (error) {
+            LOG(1, "Error in wait_completion");
+            std::abort();
         }
-        else if (pollResult < 0)
-        {
-            LOG( 1, "Failed to poll IB completion queue" );
-            throw Exception("Poll CQ failure");
-        }
-    } 
+    } while (std::find(opcodes.begin(), opcodes.end(), IBV_WC_COMP_SWAP) == opcodes.end());
 
 	uint64_t * remoteValueFound = reinterpret_cast<uint64_t *>(localAddr);
-	// if we fetched the value we expected, then
-	// we are holding the lock now (that is, we swapped successfully!)
-	// else, re-post your request for the lock
+	/* 
+     * if we fetched the value we expected, then
+     * we are holding the lock now (that is, we swapped successfully!)
+     * else, re-post your request for the lock
+     */
 	if (remoteValueFound[0] != compare_add)  {
         LOG(2, "Process " << m_pid <<  " couldn't get the lock. remoteValue = " << remoteValueFound[0] << " compare_add = " << compare_add  << " go on, iterate\n");
 		goto blockingCompareAndSwap;
@@ -730,7 +718,7 @@ blockingCompareAndSwap:
     else {
         LOG(2, "Process " << m_pid << " reads value " << remoteValueFound[0] << " and expected = " << compare_add  <<" gets the lock, done\n");
     }
-	// else we hold the lock and swap value
+	// else we hold the lock and swap value into the remote slot ...
 }
 
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
@@ -783,7 +771,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         srcOffset += sge->length;
         dstOffset += sge->length;
 
-        LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid );
+        LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid << " on slot" << dstSlot );
 
     }
     struct ibv_send_wr *bad_wr = NULL;
@@ -827,8 +815,6 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sr->next = &srs[i+1];
 		sr->send_flags = 0;
 
-		sr->wr_id = srcSlot;
-
 		sr->sg_list = sge;
 		sr->num_sge = 1;
 		sr->opcode = IBV_WR_RDMA_READ;
@@ -858,6 +844,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
 	sr->sg_list = sge;
 	sr->num_sge = 0;
+    sr->wr_id = srcSlot;
 	sr->imm_data = dstSlot;
 	sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
 	sr->wr.rdma.rkey = src.glob[srcPid].rkey;
@@ -873,7 +860,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
 		throw Exception("Error while posting RDMA requests");
 	}
-    tryIncrement(Op::SEND, Phase::PRE, srcSlot);
+    tryIncrement(Op::SEND, Phase::PRE, dstSlot);
 
 }
 
@@ -891,16 +878,15 @@ void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
     *sent_msgs = sentMsgCount.at(slot);
 }
 
-void IBVerbs :: wait_completion(int& error) {
-
+std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
 
     error = 0;
     LOG(5, "Polling for messages" );
     struct ibv_wc wcs[POLL_BATCH];
     int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
+    std::vector<ibv_wc_opcode> opcodes;
     if ( pollResult > 0) {
         LOG(4, "Received " << pollResult << " acknowledgements");
-        m_sentMsgs += pollResult;
 
         for (int i = 0; i < pollResult ; ++i) {
             if (wcs[i].status != IBV_WC_SUCCESS)
@@ -918,11 +904,17 @@ void IBVerbs :: wait_completion(int& error) {
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
                 LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
             }
 
             SlotID slot = wcs[i].wr_id;
-            tryIncrement(Op::SEND, Phase::POST, slot);
-            LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
+            opcodes.push_back(wcs[i].opcode);
+            // Ignore compare-and-swap atomics!
+            if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
+                m_sentMsgs ++;
+                tryIncrement(Op::SEND, Phase::POST, slot);
+                LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
+            }
         }
     }
     else if (pollResult < 0)
@@ -930,6 +922,7 @@ void IBVerbs :: wait_completion(int& error) {
         LOG( 1, "Failed to poll IB completion queue" );
         throw Exception("Poll CQ failure");
     }
+    return opcodes;
 }
 
 void IBVerbs :: flush()

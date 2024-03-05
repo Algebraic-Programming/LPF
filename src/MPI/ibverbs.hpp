@@ -114,7 +114,7 @@ private:
     void tryLock(SlotID id, int dstPid);
     void tryUnlock(SlotID id, int dstPid);
 
-    void wait_completion(int& error);
+    std::vector<ibv_wc_opcode> wait_completion(int& error);
     void doProgress();
     void tryIncrement(Op op, Phase phase, SlotID slot);
 
@@ -127,7 +127,6 @@ private:
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
-        uint64_t swap_value;
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
