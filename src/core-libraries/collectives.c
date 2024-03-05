@@ -411,10 +411,14 @@ lpf_err_t lpf_allgatherv(
     }
 
     size_t me = coll.s;
-    for (size_t i=0; i<coll.P; i++) {
-        if ((i != me) || !exclude_myself) {
-            const lpf_err_t rc = lpf_put( coll.ctx, src, 0, i, dst, allgatherv_start_addresses[me], sizes[me], LPF_MSG_DEFAULT);
-            if (rc != LPF_SUCCESS) return rc;
+    // Do I have anything to send? If no, then, skip, as
+    //  I haven't access to the remote global slots
+    if (sizes[me] > 0) {
+        for (size_t i=0; i<coll.P; i++) {
+            if ((i != me) || !exclude_myself) {
+                const lpf_err_t rc = lpf_put( coll.ctx, src, 0, i, dst, allgatherv_start_addresses[me], sizes[me], LPF_MSG_DEFAULT);
+                if (rc != LPF_SUCCESS) return rc;
+            }
         }
     }
     
