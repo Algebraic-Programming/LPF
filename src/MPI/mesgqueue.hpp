@@ -73,7 +73,9 @@ public:
 
     void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
 
-    void flush();
+    void flushSent();
+
+    void flushReceived();
 
     // returns how many processes have entered in an aborted state
     int sync();
