@@ -438,7 +438,7 @@ public:
     }
 
     lpf_pid_t flush() {
-        return m_nodeState.mpi().flush();
+        return (m_nodeState.mpi().flush_sent() && m_nodeState.mpi().flush_received());
     }
 
 private:

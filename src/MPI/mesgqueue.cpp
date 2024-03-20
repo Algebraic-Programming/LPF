@@ -391,10 +391,17 @@ void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot)
 #endif
 }
 
-void MessageQueue :: flush()
+void MessageQueue :: flushSent()
 {
 #ifdef LPF_CORE_MPI_USES_ibverbs
-        m_ibverbs.flush();
+        m_ibverbs.flushSent();
+#endif
+}
+
+void MessageQueue :: flushReceived()
+{
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        m_ibverbs.flushReceived();
 #endif
 }
 

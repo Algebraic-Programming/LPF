@@ -121,8 +121,11 @@ namespace lpf { namespace hybrid {
         err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
         { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
-        err_t flush()
-        { return USE_THREAD(flush)(m_ctx); }
+        err_t flush_sent()
+        { return USE_THREAD(flush_sent)(m_ctx); }
+
+        err_t flush_received()
+        { return USE_THREAD(flush_received)(m_ctx); }
 
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 
@@ -229,8 +232,11 @@ namespace lpf { namespace hybrid {
         err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
         { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
-        err_t flush()
-        {return USE_MPI( flush)(m_ctx);}
+        err_t flush_sent()
+        {return USE_MPI( flush_sent)(m_ctx);}
+
+        err_t flush_received()
+        {return USE_MPI( flush_received)(m_ctx);}
 
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 

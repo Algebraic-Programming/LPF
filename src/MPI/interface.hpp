@@ -84,7 +84,8 @@ public:
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
     void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
     void getRcvdMsgCount(size_t * msgs);
-    void flush();
+    void flushSent();
+    void flushReceived();
 
     err_t rehook( spmd_t spmd, args_t args);
 

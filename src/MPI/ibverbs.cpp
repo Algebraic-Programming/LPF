@@ -287,7 +287,6 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
             }
             break;
     }
-    std::cout << "Process " << m_pid << " tryIncrement phase = " << phase << " slot = " << slot << " m_sendInitMsgCount = " << m_sendInitMsgCount[slot] << "sentMsgCount = " << sentMsgCount[slot] << " m_getInitMsgCount = " << m_getInitMsgCount[slot] << " getMsgCount = " << getMsgCount[slot] << std::endl; // " and new m_numMsgs = " << m_numMsgs <<  " m_sentMsgs = " << m_sentMsgs << std::endl;
 }
 
 void IBVerbs :: stageQPs( size_t maxMsgs )
@@ -338,7 +337,7 @@ void IBVerbs :: doRemoteProgress() {
 	do {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
-            LOG(3, "Process " << m_pid << " signals: I received a message in doRemoteProgress");
+            LOG(3, "Process " << m_pid << " signals: I received " << pollResult << " remote messages in doRemoteProgress");
         }  
         else if (pollResult < 0)
         {
@@ -370,7 +369,6 @@ void IBVerbs :: doRemoteProgress() {
                 // Ignore compare-and-swap atomics!
                 if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
                     tryIncrement(Op::RECV, Phase::POST, slot);
-                    //std::cout << "Process " << m_pid << " Just recvd a message because of slot " << slot << " and m_recvdMsgs = " << m_recvdMsgs << std::endl;
                     LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
                 }
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
@@ -489,8 +487,8 @@ void IBVerbs :: reconnectQPs()
             std::memset(&attr, 0, sizeof(attr));
             attr.qp_state      = IBV_QPS_RTS;
             attr.timeout       = 0x12;
-            attr.retry_cnt     = 7;
-            attr.rnr_retry     = 7;
+            attr.retry_cnt     = 0;//7;
+            attr.rnr_retry     = 0;//7;
             attr.sq_psn        = 0;
             attr.max_rd_atomic = 1;
             flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
@@ -723,11 +721,11 @@ blockingCompareAndSwap:
      * else, re-post your request for the lock
      */
 	if (remoteValueFound[0] != compare_add)  {
-        LOG(2, "Process " << m_pid <<  " couldn't get the lock. remoteValue = " << remoteValueFound[0] << " compare_add = " << compare_add  << " go on, iterate\n");
+        LOG(4, "Process " << m_pid <<  " couldn't get the lock. remoteValue = " << remoteValueFound[0] << " compare_add = " << compare_add  << " go on, iterate\n");
 		goto blockingCompareAndSwap;
     }
     else {
-        LOG(2, "Process " << m_pid << " reads value " << remoteValueFound[0] << " and expected = " << compare_add  <<" gets the lock, done\n");
+        LOG(4, "Process " << m_pid << " reads value " << remoteValueFound[0] << " and expected = " << compare_add  <<" gets the lock, done\n");
     }
 	// else we hold the lock and swap value into the remote slot ...
 }
@@ -735,7 +733,6 @@ blockingCompareAndSwap:
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
 {
-    //std::cout << "Process " << m_pid << " put\n";
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -798,7 +795,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size )
 {
-    //std::cout << "Process " << m_pid << " get\n";
     const MemorySlot & src = m_memreg.lookup( srcSlot );
 	const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -906,7 +902,7 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
     int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
     std::vector<ibv_wc_opcode> opcodes;
     if ( pollResult > 0) {
-        LOG(4, "Received " << pollResult << " acknowledgements");
+        LOG(3, "Process " << m_pid << ": Received " << pollResult << " acknowledgements");
 
         for (int i = 0; i < pollResult ; ++i) {
             if (wcs[i].status != IBV_WC_SUCCESS)
@@ -921,10 +917,10 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
                 error = 1;
             }
             else {
-                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
-                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
-                LOG(2, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
+                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
             }
 
             SlotID slot = wcs[i].wr_id;
@@ -936,25 +932,26 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
                 if (wcs[i].opcode == IBV_WC_RDMA_WRITE)
                     tryIncrement(Op::SEND, Phase::POST, slot);
 
-                //tryIncrement(Op::SEND, Phase::POST, slot);
-                //std::cout << "Process " << m_pid << " Just sent a message because of slot " << slot << " and m_sentMsgs = " << m_sentMsgs << std::endl;
                 LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
             }
         }
     }
     else if (pollResult < 0)
     {
-        LOG( 1, "Failed to poll IB completion queue" );
+        LOG( 5, "Failed to poll IB completion queue" );
         throw Exception("Poll CQ failure");
     }
     return opcodes;
 }
 
-void IBVerbs :: flush()
+void IBVerbs :: flushReceived() {
+        doRemoteProgress();
+}
+
+void IBVerbs :: flushSent()
 {
     int error = 0;
 
-    std::cout << "Process " << m_pid << " begins flush\n";
     bool sendsComplete;
     do {
         sendsComplete = true;
@@ -963,7 +960,7 @@ void IBVerbs :: flush()
                 sendsComplete = false;
                 wait_completion(error);
                 if (error) {
-                    LOG(1, "Error in wait_completion");
+                    LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
                     std::abort();
                 }
             }
@@ -973,14 +970,13 @@ void IBVerbs :: flush()
                 sendsComplete = false;
                 wait_completion(error);
                 if (error) {
-                    LOG(1, "Error in wait_completion");
+                    LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
                     std::abort();
                 }
             }
         }
     } while (!sendsComplete);
 
-    std::cout << "Process " << m_pid << " ends flush\n";
 
 }
 
@@ -1043,14 +1039,14 @@ void IBVerbs :: sync(bool resized)
 
     int error = 0;
 
-    //std::cout << "Process " << m_pid << "will call reset as part of sync!\n";
-    flush();
+    // flush send queues
+    flushSent();
+    // flush receive queues
+    flushReceived();
 
     LOG(1, "Process " << m_pid << " will call barrier\n");
     m_comm.barrier();
 
-    // at least once in a while the received queues have to be polled for!
-    doRemoteProgress();
 
 }
 

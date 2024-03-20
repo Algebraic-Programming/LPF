@@ -2387,7 +2387,17 @@ lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_mem
  * libraries.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_flush( lpf_t ctx);
+lpf_err_t lpf_flush_sent( lpf_t ctx);
+
+/**
+ * This function blocks until all the incoming received messages
+ * waiting on the receive completion queue are handled (via ibv_poll_cq).
+ * No concept of slots is used here.
+ * This allows to reuse the send buffers e.g. in higher-level channel
+ * libraries.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_flush_received( lpf_t ctx);
 
 #ifdef __cplusplus
 }
