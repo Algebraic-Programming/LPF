@@ -127,8 +127,12 @@ void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
     m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
 }
 
-void Interface :: flush() {
-    m_mesgQueue.flush();
+void Interface :: flushSent() {
+    m_mesgQueue.flushSent();
+}
+
+void Interface :: flushReceived() {
+    m_mesgQueue.flushReceived();
 }
 
 void Interface :: getRcvdMsgCount(size_t * msgs) {
