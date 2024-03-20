@@ -340,11 +340,20 @@ lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_me
     return LPF_SUCCESS;
 }
 
-lpf_err_t lpf_flush( lpf_t ctx)
+lpf_err_t lpf_flush_sent( lpf_t ctx)
 {
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted()) {
-        i->flush();
+        i->flushSent();
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_flush_received( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flushReceived();
     }
     return LPF_SUCCESS;
 }

@@ -39,7 +39,8 @@
 
 typedef enum Op {
     SEND,
-    RECV
+    RECV,
+    GET
 } Op;
 
 typedef enum Phase {
@@ -85,7 +86,9 @@ public:
     void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
               SlotID dstSlot, size_t dstOffset, size_t size );
 
-    void flush();
+    void flushSent();
+
+    void flushReceived();
 
     void doRemoteProgress();
 
@@ -137,11 +140,12 @@ private:
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
-    std::atomic_size_t m_sendTotalInitMsgCount;
+    //std::atomic_size_t m_sendTotalInitMsgCount;
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
     std::map<SlotID, std::atomic_size_t> m_recvInitMsgCount;
+    std::map<SlotID, std::atomic_size_t> m_getInitMsgCount;
     std::map<SlotID, std::atomic_size_t> m_sendInitMsgCount;
 
     std::string  m_devName; // IB device name
@@ -179,6 +183,7 @@ private:
     shared_ptr<std::thread> progressThread;
     std::map<SlotID, std::atomic_size_t> rcvdMsgCount;
     std::map<SlotID, std::atomic_size_t> sentMsgCount;
+    std::map<SlotID, std::atomic_size_t> getMsgCount;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     //std::vector< struct ibv_wc > m_wcs; // array of work completions
