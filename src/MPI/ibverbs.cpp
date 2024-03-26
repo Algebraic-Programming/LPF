@@ -256,8 +256,6 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
             m_recvInitMsgCount[slot] = 0;
             sentMsgCount[slot] = 0;
             m_sendInitMsgCount[slot] = 0;
-            m_getInitMsgCount[slot] = 0;
-            getMsgCount[slot] = 0;
             break;
         case Phase::PRE:
             if (op == Op::SEND) {
@@ -265,25 +263,20 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
                 //m_sendTotalInitMsgCount++;
                 m_sendInitMsgCount[slot]++;
             }
-            if (op == Op::RECV) {
+            if (op == Op::RECV || op == Op::GET) {
                 m_recvTotalInitMsgCount++;
                 m_recvInitMsgCount[slot]++;
             }
-            if (op == Op::GET) {
-                m_getInitMsgCount[slot]++;
-            }
             break;
         case Phase::POST:
-            if (op == Op::RECV) {
+            if (op == Op::RECV || op == Op::GET) {
+                m_recvTotalInitMsgCount++;
                 m_recvdMsgs ++;
                 rcvdMsgCount[slot]++;
             }
             if (op == Op::SEND) {
                 m_sentMsgs++;
                 sentMsgCount[slot]++;
-            }
-            if (op == Op::GET) {
-                getMsgCount[slot]++;
             }
             break;
     }
@@ -369,12 +362,6 @@ void IBVerbs :: doRemoteProgress() {
                 // Note: Ignore compare-and-swap atomics!
                 if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
                     SlotID slot;
-                    // This receive is from a GET call
-                    if (wcs[i].opcode == IBV_WC_RDMA_READ) {
-                        slot = wcs[i].wr_id;
-                        tryIncrement(Op::GET, Phase::POST, slot);
-                        LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
-                    }
                     // This receive is from a PUT call
                     if (wcs[i].opcode == IBV_WC_RECV_RDMA_WITH_IMM) {
                         slot = wcs[i].imm_data;
@@ -938,8 +925,10 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
             opcodes.push_back(wcs[i].opcode);
             // Ignore compare-and-swap atomics!
             if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
-                if (wcs[i].opcode == IBV_WC_RDMA_READ)
+                // This receive is from a GET call!
+                if (wcs[i].opcode == IBV_WC_RDMA_READ) {
                     tryIncrement(Op::GET, Phase::POST, slot);
+                }
                 if (wcs[i].opcode == IBV_WC_RDMA_WRITE)
                     tryIncrement(Op::SEND, Phase::POST, slot);
 
@@ -976,16 +965,6 @@ void IBVerbs :: flushSent()
                 }
             }
         }
-        for (auto it = m_getInitMsgCount.begin(); it != m_getInitMsgCount.end(); it++) {
-            if (it->second > getMsgCount[it->first]) {
-                sendsComplete = false;
-                wait_completion(error);
-                if (error) {
-                    LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
-                    std::abort();
-                }
-            }
-        }
     } while (!sendsComplete);
 
 
@@ -996,18 +975,18 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
     if (resized) reconnectQPs();
     size_t actualRecvd;
     size_t actualSent;
+    int error;
     do {
         // this call triggers doRemoteProgress
         doRemoteProgress();
-        get_rcvd_msg_count_per_slot(&actualRecvd, slot);
-        // this call triggers wait_completion 
-        int error;
         wait_completion(error);
         if (error) {
             LOG(1, "Error in wait_completion");
             std::abort();
         }
+        get_rcvd_msg_count_per_slot(&actualRecvd, slot);
         get_sent_msg_count_per_slot(&actualSent, slot);
+
     } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
 
 }
