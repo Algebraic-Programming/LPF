@@ -365,11 +365,22 @@ void IBVerbs :: doRemoteProgress() {
                  * an IB Verbs slot via @getVerbID -- or there will be
                  * a mismatch when IB Verbs looks up the slot ID
                  */
-                SlotID slot = wcs[i].imm_data;
-                // Ignore compare-and-swap atomics!
+
+                // Note: Ignore compare-and-swap atomics!
                 if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
-                    tryIncrement(Op::RECV, Phase::POST, slot);
-                    LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                    SlotID slot;
+                    // This receive is from a GET call
+                    if (wcs[i].opcode == IBV_WC_RDMA_READ) {
+                        slot = wcs[i].wr_id;
+                        tryIncrement(Op::GET, Phase::POST, slot);
+                        LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                    }
+                    // This receive is from a PUT call
+                    if (wcs[i].opcode == IBV_WC_RECV_RDMA_WITH_IMM) {
+                        slot = wcs[i].imm_data;
+                        tryIncrement(Op::RECV, Phase::POST, slot);
+                        LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                    }
                 }
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
             }
@@ -831,8 +842,8 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sr->wr.rdma.rkey = src.glob[srcPid].rkey;
         // This logic is reversed compared to ::put
         // (not srcSlot, as this slot is remote)
-        sr->wr_id = dstSlot;
-        sr->imm_data = dstSlot;
+        sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
+        sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
 
 		size -= sge->length;
 		srcOffset += sge->length;
