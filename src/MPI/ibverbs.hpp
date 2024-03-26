@@ -183,10 +183,8 @@ private:
     shared_ptr<std::thread> progressThread;
     std::map<SlotID, std::atomic_size_t> rcvdMsgCount;
     std::map<SlotID, std::atomic_size_t> sentMsgCount;
-    std::map<SlotID, std::atomic_size_t> getMsgCount;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
-    //std::vector< struct ibv_wc > m_wcs; // array of work completions
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
