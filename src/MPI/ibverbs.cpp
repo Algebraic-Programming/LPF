@@ -27,6 +27,7 @@
 
 #define POLL_BATCH 64
 #define MAX_POLLING 128
+#define ARRAY_SIZE 1000
 
 
 namespace lpf { namespace mpi {
@@ -87,6 +88,16 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_sentMsgs(0)
     , m_recvdMsgs(0)
 {
+
+    // arrays instead of hashmap for counters
+    m_recvInitMsgCount.resize(ARRAY_SIZE, 0);
+    m_getInitMsgCount.resize(ARRAY_SIZE, 0);
+    m_sendInitMsgCount.resize(ARRAY_SIZE, 0);
+    rcvdMsgCount.resize(ARRAY_SIZE, 0);
+    sentMsgCount.resize(ARRAY_SIZE, 0);
+    slotActive.resize(ARRAY_SIZE, 0);
+
+
     m_peerList.reserve( m_nprocs );
 
     int numDevices = -1;
@@ -254,8 +265,10 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
         case Phase::INIT:
             rcvdMsgCount[slot] = 0;
             m_recvInitMsgCount[slot] = 0;
+            m_getInitMsgCount[slot] = 0;
             sentMsgCount[slot] = 0;
             m_sendInitMsgCount[slot] = 0;
+            slotActive[slot] = true;
             break;
         case Phase::PRE:
             if (op == Op::SEND) {
@@ -655,6 +668,12 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
 
 void IBVerbs :: dereg( SlotID id )
 {
+    slotActive[id] = false;
+    m_recvInitMsgCount[id] = 0;
+    m_getInitMsgCount[id] = 0;
+    m_sendInitMsgCount[id] = 0;
+    rcvdMsgCount[id] = 0;
+    sentMsgCount[id] = 0;
     m_memreg.removeReg( id );
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
@@ -955,18 +974,19 @@ void IBVerbs :: flushSent()
     bool sendsComplete;
     do {
         sendsComplete = true;
-        for (auto it = m_sendInitMsgCount.begin(); it != m_sendInitMsgCount.end(); it++) {
-            if (it->second > sentMsgCount[it->first]) {
-                sendsComplete = false;
-                wait_completion(error);
-                if (error) {
-                    LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
-                    std::abort();
+        for (size_t i = 0; i<ARRAY_SIZE; i++) {
+            if (slotActive[i]) {
+                if (m_sendInitMsgCount[i] > sentMsgCount[i]) {
+                    sendsComplete = false;
+                    wait_completion(error);
+                    if (error) {
+                        LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
+                        std::abort();
+                    }
                 }
             }
         }
     } while (!sendsComplete);
-
 
 }
 
@@ -976,19 +996,21 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
     size_t actualRecvd;
     size_t actualSent;
     int error;
-    do {
-        // this call triggers doRemoteProgress
-        doRemoteProgress();
-        wait_completion(error);
-        if (error) {
-            LOG(1, "Error in wait_completion");
-            std::abort();
-        }
-        get_rcvd_msg_count_per_slot(&actualRecvd, slot);
-        get_sent_msg_count_per_slot(&actualSent, slot);
+    if (slotActive[slot]) {
+        do {
+            wait_completion(error);
+            if (error) {
+                LOG(1, "Error in wait_completion");
+                std::abort();
+            }
+            // this call triggers doRemoteProgress
+            doRemoteProgress();
 
-    } while ((expectedSent > actualSent) || (expectedRecvd > actualRecvd));
-
+        } while (
+                (rcvdMsgCount[slot] < m_recvInitMsgCount[slot]) ||
+                (sentMsgCount[slot] < m_sendInitMsgCount[slot])
+                );
+    }
 }
 
 void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {

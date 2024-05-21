@@ -21,7 +21,6 @@
 #include <string>
 #include <atomic>
 #include <vector>
-#include <map>
 #include <memory>
 #include <thread>
 //#if __cplusplus >= 201103L    
@@ -144,9 +143,9 @@ private:
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
-    std::map<SlotID, std::atomic_size_t> m_recvInitMsgCount;
-    std::map<SlotID, std::atomic_size_t> m_getInitMsgCount;
-    std::map<SlotID, std::atomic_size_t> m_sendInitMsgCount;
+    std::vector<size_t> m_recvInitMsgCount;
+    std::vector<size_t> m_getInitMsgCount;
+    std::vector<size_t> m_sendInitMsgCount;
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with
@@ -181,8 +180,9 @@ private:
     SparseSet< pid_t >           m_activePeers; // 
     std::vector< pid_t >         m_peerList;
     shared_ptr<std::thread> progressThread;
-    std::map<SlotID, std::atomic_size_t> rcvdMsgCount;
-    std::map<SlotID, std::atomic_size_t> sentMsgCount;
+    std::vector<size_t> rcvdMsgCount;
+    std::vector<size_t> sentMsgCount;
+    std::vector<bool> slotActive;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
 
