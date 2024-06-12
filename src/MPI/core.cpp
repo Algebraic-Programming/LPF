@@ -217,6 +217,43 @@ lpf_err_t lpf_deregister(
     return LPF_SUCCESS;
 }
 
+
+lpf_err_t lpf_lock_slot( lpf_t ctx,
+                       lpf_memslot_t src_slot, 
+                       size_t src_offset,
+                       lpf_pid_t dst_pid, 
+                       lpf_memslot_t dst_slot, 
+                       size_t dst_offset, 
+                       size_t size, 
+                       lpf_msg_attr_t attr
+)
+{
+    (void) attr; // ignore parameter 'msg' since this implementation only 
+                 // implements core functionality
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        i->lockSlot( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_unlock_slot( lpf_t ctx,
+                       lpf_memslot_t src_slot, 
+                       size_t src_offset,
+                       lpf_pid_t dst_pid, 
+                       lpf_memslot_t dst_slot, 
+                       size_t dst_offset, 
+                       size_t size, 
+                       lpf_msg_attr_t attr
+)
+{
+    (void) attr; // ignore parameter 'msg' since this implementation only 
+                 // implements core functionality
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        i->unlockSlot( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_put( lpf_t ctx,
                        lpf_memslot_t src_slot, 
                        size_t src_offset,
@@ -260,6 +297,65 @@ lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
     (void) attr; // ignore attr parameter since this implementation only
                  // implements core functionality
     return realContext(ctx)->sync();
+}
+
+lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+    (void) attr; // ignore attr parameter since this implementation only
+                 // implements core functionality
+    return realContext(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
+}
+
+lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot)
+{
+    (void) attr; // ignore attr parameter since this implementation only
+                 // implements core functionality
+    return realContext(ctx)->syncPerSlot(slot);
+}
+
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getRcvdMsgCountPerSlot(rcvd_msgs, slot);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getRcvdMsgCount(rcvd_msgs);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_memslot_t slot)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getSentMsgCountPerSlot(sent_msgs, slot);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_flush_sent( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flushSent();
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_flush_received( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flushReceived();
+    }
+    return LPF_SUCCESS;
 }
 
 lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )

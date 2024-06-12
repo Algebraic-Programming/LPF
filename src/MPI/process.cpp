@@ -25,6 +25,7 @@
 #include "log.hpp"
 #include "assert.hpp"
 
+
 namespace lpf {
 
 Process :: Process( const mpi::Comm & comm )
@@ -257,6 +258,8 @@ err_t Process :: hook( const mpi::Comm & machine, Process & subprocess,
                 {
                     // in which case  I stopped early
                     LOG(2, "This process called lpf_sync fewer times than in"
+                            " the other processes. runtime.isAborted() = " << runtime.isAborted() << " nprocs = " << pid_t(machine.nprocs()));
+                    LOG(2, "This process called lpf_sync fewer times than in"
                             " the other processes" );
                     status = LPF_ERR_FATAL;
                 }
@@ -282,7 +285,8 @@ err_t Process :: hook( const mpi::Comm & machine, Process & subprocess,
         {
             LOG(1, "Caught exception of unknown type while executing "
                     "user SPMD function. Aborting..." );
-/*S=3*/     runtime.abort();
+            /*S=3*/     runtime.abort();
+
             status = LPF_ERR_FATAL;
         }
     }

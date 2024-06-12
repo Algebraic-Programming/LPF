@@ -2059,6 +2059,25 @@ extern _LPFLIB_API
 lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
 
 /**
+ * This synchronisation waits on memory slot @slot to complete sending
+ * and receiving @expected_sent and @expected_rcvd messages. The counts are
+ * checked in the ibv_poll_cq calls and associated to certain LPF slots.
+ * This call is only implemented for IB verbs at the moment.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd);
+
+/**
+ * This synchronisation waits on memory slot @slot to complete sending
+ * or receiving all outstanding messages. For the current implementation 
+ * in IB verbs, this means all scheduled sends via ibv_post_send are 
+ * checked for completion via ibv_poll_cq. Currently, there is no logic
+ * scheduling receives, but only sends -- for either get or put.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot);
+
+/**
  * This primitive allows a user to inspect the machine that this LPF program
  * has been assigned. All resources reported in the #lpf_machine_t struct are
  * under full control of the current instance of the LPF implementation for
@@ -2314,6 +2333,68 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs );
  */
 extern _LPFLIB_API
 lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
+
+extern _LPFLIB_API
+lpf_err_t lpf_lock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+);
+
+extern _LPFLIB_API
+lpf_err_t lpf_unlock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+);
+
+/**
+ * This function returns in @rcvd_msgs the received message count on LPF slot @slot
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t *rcvd_msgs, lpf_memslot_t slot);
+
+/**
+ * This function returns in @rcvd_msgs the total received message count
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
+
+/**
+ * This function returns in @sent_msgs the sent message count on LPF slot @slot
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_memslot_t slot);
+
+/**
+ * This function blocks until all the scheduled send messages
+ * (via ibv_post_send) are actually registered as sent (via ibv_poll_cq).
+ * No concept of slots is used here.
+ * This allows to reuse the send buffers e.g. in higher-level channel
+ * libraries.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_flush_sent( lpf_t ctx);
+
+/**
+ * This function blocks until all the incoming received messages
+ * waiting on the receive completion queue are handled (via ibv_poll_cq).
+ * No concept of slots is used here.
+ * This allows to reuse the send buffers e.g. in higher-level channel
+ * libraries.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_flush_received( lpf_t ctx);
 
 #ifdef __cplusplus
 }

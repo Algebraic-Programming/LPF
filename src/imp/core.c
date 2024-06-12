@@ -137,6 +137,39 @@ lpf_err_t lpf_sync( lpf_t lpf, lpf_sync_attr_t attr )
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_counting_sync_per_slot( lpf_t lpf, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+    (void) lpf;
+    (void) attr; 
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_lock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+) {
+	return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_unlock_slot(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+) {
+	return LPF_SUCCESS;
+}
+
 static double messageGap( lpf_pid_t p, size_t min_msg_size, lpf_sync_attr_t attr)
 { 
     (void) p;
@@ -176,6 +209,29 @@ lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
 {
     (void) lpf;
     (void) max_regs ;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t lpf, size_t * rcvd_msgs, lpf_memslot_t slot) {
+    (void) lpf;
+    *rcvd_msgs = 0;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_rcvd_msg_count( lpf_t lpf, size_t * rcvd_msgs) {
+    (void) lpf;
+    *rcvd_msgs = 0;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t lpf, size_t * sent_msgs, lpf_memslot_t slot) {
+    (void) lpf;
+    *sent_msgs = 0;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_flush( lpf_t lpf) {
+    (void) lpf;
     return LPF_SUCCESS;
 }
 

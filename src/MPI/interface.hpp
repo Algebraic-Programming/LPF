@@ -38,6 +38,14 @@ public:
         return s_root; 
     }
 
+    void lockSlot( memslot_t srcSlot, size_t srcOffset, 
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+		    size_t size );
+
+    void unlockSlot( memslot_t srcSlot, size_t srcOffset, 
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+		    size_t size );
+
     _LPFLIB_API
     static void initRoot(int *argc, char ***argv);
 
@@ -65,10 +73,19 @@ public:
     pid_t isAborted() const ;
  
     err_t sync(); // nothrow
+    err_t countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd); // nothrow
+    err_t syncPerSlot(memslot_t slot); // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 
     static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
+
+    typedef size_t SlotID;
+    void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
+    void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
+    void getRcvdMsgCount(size_t * msgs);
+    void flushSent();
+    void flushReceived();
 
     err_t rehook( spmd_t spmd, args_t args);
 
