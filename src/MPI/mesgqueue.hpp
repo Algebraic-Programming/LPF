@@ -42,7 +42,9 @@ namespace lpf {
 class _LPFLIB_LOCAL MessageQueue
 {
 
+#ifdef LPF_CORE_MPI_USES_hicr
     typedef size_t SlotID;
+#endif
 public:
     explicit MessageQueue( Communication & comm );
 
@@ -57,15 +59,19 @@ public:
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             memslot_t dstSlot, size_t dstOffset, size_t size );
 
+    void put( memslot_t srcSlot, size_t srcOffset,
+            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+
+
+    // returns how many processes have entered in an aborted state
+    int sync( bool abort );
+
+#ifdef LPF_CORE_MPI_USES_hicr
     void lockSlot( memslot_t srcSlot, size_t srcOffset,
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 
     void unlockSlot( memslot_t srcSlot, size_t srcOffset,
 		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
-
-    void put( memslot_t srcSlot, size_t srcOffset,
-            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
-
 
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
 
@@ -77,10 +83,10 @@ public:
 
     void flushReceived();
 
-    // returns how many processes have entered in an aborted state
-    int sync();
     int countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd);
+
     int syncPerSlot(SlotID slot);
+#endif
 
 private:
     enum Msgs { BufPut , 
