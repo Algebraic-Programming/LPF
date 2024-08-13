@@ -21,13 +21,11 @@
 #include <string>
 #include <atomic>
 #include <vector>
-#include <memory>
-#include <thread>
-//#if __cplusplus >= 201103L    
-//  #include <memory>
-//#else
-//  #include <tr1/memory>
-//#endif
+#if __cplusplus >= 201103L    
+  #include <memory>
+#else
+  #include <tr1/memory>
+#endif
 
 #include <infiniband/verbs.h>
 
@@ -179,7 +177,6 @@ private:
     std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
     SparseSet< pid_t >           m_activePeers; // 
     std::vector< pid_t >         m_peerList;
-    shared_ptr<std::thread> progressThread;
     std::vector<size_t> rcvdMsgCount;
     std::vector<size_t> sentMsgCount;
     std::vector<bool> slotActive;
