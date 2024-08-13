@@ -191,6 +191,7 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
 
     if (LIB_IBVERBS)
         list(APPEND ENGINES "ibverbs")
+        list(APPEND ENGINES "hicr")
     endif()
 
 endif()

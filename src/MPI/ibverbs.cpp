@@ -30,8 +30,9 @@
 #define ARRAY_SIZE 1000
 
 
-namespace lpf { namespace mpi {
-
+namespace lpf {
+    
+namespace mpi {
 
 struct IBVerbs::Exception : std::runtime_error {
     Exception(const char * what) : std::runtime_error( what ) {}
@@ -1062,5 +1063,6 @@ void IBVerbs :: sync(bool resized)
 
 }
 
+} // mpi
 
-} }
+} // lpf

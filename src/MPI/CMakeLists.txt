@@ -24,6 +24,7 @@ if (MPI_FOUND)
 
     if (LIB_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
+        list(APPEND MPI_ENGINES hicr)
     endif()
 
     if (MPI_OPEN_PORT)
@@ -56,6 +57,9 @@ if (MPI_FOUND)
         if (LPF_IMPL_ID STREQUAL ibverbs)
             set(ibverbs_sources ibverbs.cpp)
         endif()
+        if (LPF_IMPL_ID STREQUAL hicr)
+            set(ibverbs_sources ibverbs.cpp)
+        endif()
 
         add_library(raw_${libname} OBJECT
                 memorytable.cpp
@@ -70,7 +74,7 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-		init.cpp
+                init.cpp
                 ${ibverbs_sources}
             )
 
@@ -137,6 +141,9 @@ if (MPI_FOUND)
         )
 
         if (engine STREQUAL ibverbs)
+           target_link_libraries(${target} ${LIB_IBVERBS})
+        endif()
+        if (engine STREQUAL hicr)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()

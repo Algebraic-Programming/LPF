@@ -100,7 +100,8 @@ void Interface :: put( memslot_t srcSlot, size_t srcOffset,
             size );
 }
 
-#ifdef LPF_CORE_MPI_USES_hicr
+// only for HiCR
+//#ifdef 
 
 void Interface :: lockSlot( memslot_t srcSlot, size_t srcOffset, 
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
@@ -166,7 +167,8 @@ err_t Interface :: syncPerSlot(memslot_t slot)
     }
 }
 
-#endif
+// only for HiCR
+//#endif
 
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
