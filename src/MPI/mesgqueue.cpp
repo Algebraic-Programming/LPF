@@ -97,13 +97,13 @@ MessageQueue :: MessageQueue( Communication & comm )
     , m_edgeRecv()
     , m_edgeSend()
     , m_edgeBuffer()
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     , m_edgeBufferSlot( m_memreg.invalidSlot() )
 #endif
     , m_bodySends()
     , m_bodyRecvs()
     , m_comm( dynamic_cast<mpi::Comm &>(comm) )
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     , m_ibverbs( m_comm )
     , m_memreg( m_comm, m_ibverbs )
 #else

@@ -23,7 +23,7 @@
 namespace lpf {
 
 MemoryTable :: MemoryTable( Communication & comm
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
         , mpi::IBVerbs & ibverbs
 #endif
         )
@@ -34,7 +34,7 @@ MemoryTable :: MemoryTable( Communication & comm
     , m_removed( 0, 0 )
     , m_comm( comm )
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     , m_added( 0, 0 )
     , m_ibverbs( ibverbs )
     , m_comm( comm )
@@ -45,7 +45,7 @@ MemoryTable :: MemoryTable( Communication & comm
 MemoryTable :: Slot
 MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 {
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     Memory rec( mem, size, m_ibverbs.regLocal( mem, size));
 #else
     Memory rec( mem, size);
@@ -56,13 +56,13 @@ MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 MemoryTable :: Slot
 MemoryTable :: addGlobal( void * mem, std::size_t size ) // nothrow
 { 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     Memory rec(mem, size, -1); 
 #else
     Memory rec(mem, size); 
 #endif
     Slot slot = m_memreg.addGlobalReg(rec) ; 
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     m_added.insert( slot );
 #endif
     return slot;
@@ -92,7 +92,7 @@ void MemoryTable :: remove( Slot slot )   // nothrow
     m_memreg.removeReg( slot );
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     if (m_added.contains(slot)) {
         m_added.erase(slot);
     }
@@ -123,7 +123,7 @@ void MemoryTable :: reserve( size_t size ) // throws bad_alloc, strong safe
     m_memreg.reserve( size );
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     m_memreg.reserve( size );
     size_t range = m_memreg.range();
     m_added.resize( range );
@@ -151,7 +151,7 @@ bool MemoryTable :: needsSync() const
 #ifdef LPF_CORE_MPI_USES_mpimsg
     return false;
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     return !m_added.empty();
 #endif
 }
@@ -194,7 +194,7 @@ void MemoryTable :: sync(  )
     } // if 
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
     if ( !m_added.empty() )
     {
         // Register the global with IBverbs

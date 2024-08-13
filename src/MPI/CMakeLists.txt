@@ -24,6 +24,7 @@ if (MPI_FOUND)
 
     if (ENABLE_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
+        list(APPEND MPI_ENGINES hicr)
     endif()
 
     if (MPI_IBARRIER)
@@ -49,6 +50,9 @@ if (MPI_FOUND)
 
             set(ibverbs_sources)
             if (LPF_IMPL_ID STREQUAL ibverbs)
+            set(ibverbs_sources ibverbs.cpp)
+        endif()
+        if (LPF_IMPL_ID STREQUAL hicr)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -128,6 +132,9 @@ if (MPI_FOUND)
         )
 
         if (engine STREQUAL ibverbs)
+           target_link_libraries(${target} ${LIB_IBVERBS})
+        endif()
+        if (engine STREQUAL hicr)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()
