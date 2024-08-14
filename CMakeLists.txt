@@ -106,7 +106,7 @@ set( INSTALL_HEADERS "${prefix}/include" CACHE PATH
 message( STATUS "Installation directory prefix is ${prefix}")
 
 # Dependencies
-set(ENGINES)
+set(ENGINES "")
 find_library( LIB_POSIX_THREADS
     NAMES "pthread"
     DOC   "Posix Threads"

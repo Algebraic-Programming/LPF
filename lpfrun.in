@@ -57,7 +57,7 @@ function printhelp()
     echo
     echo "   -engine <engine>"
     echo "               Allow you to choose the engine. Currently supported"
-    echo "               are: pthread, mpirma, mpimsg, ibverbs, hybrid"
+    echo "               are: pthread, mpirma, mpimsg, ibverbs, hicr, hybrid"
     echo 
     echo "   -probe <seconds>"
     echo "               Set the number of seconds to probe the system for BSP"
@@ -846,7 +846,7 @@ case $engine in
         exit_status=$?
         ;;
 
-    mpirma|mpimsg|ibverbs)
+    mpirma|mpimsg|ibverbs|hicr)
 
         mpi_impl=$(mpi_detect)
         proc_args=

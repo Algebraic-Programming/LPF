@@ -179,7 +179,7 @@ err_t MessageQueue :: resizeMesgQueue( size_t nMsgs )
 #ifdef LPF_CORE_MPI_USES_mpimsg
         m_comm.reserveMsgs( 6* nMsgs ); //another factor three stems from sending edges separately .
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
         m_ibverbs.resizeMesgq( 6*nMsgs);
 #endif
 
@@ -388,10 +388,10 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 int MessageQueue :: sync( bool abort )
 {
 #ifdef LPF_CORE_MPI_USES_hicr
-	m_ibverbs.sync(m_resized);
-    m_resized = false;
     // if not, deal with normal sync
     m_memreg.sync();
+	m_ibverbs.sync(m_resized);
+    m_resized = false;
 #else
 
     LOG(4, "mpi :: MessageQueue :: sync( abort " << (abort?"true":"false")
