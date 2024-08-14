@@ -66,8 +66,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_maxSrs(0)
     , m_device()
     , m_pd()
-    , m_cqLocal()
-    , m_cqRemote()
     , m_stagedQps( m_nprocs )
     , m_connectedQps( m_nprocs )
     , m_srs()
@@ -76,13 +74,9 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_peerList()
     , m_sges()
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    , m_wcs(m_nprocs)
-#endif
-    , m_memreg()
-    , m_dummyMemReg()
-    , m_dummyBuffer()
-    , m_comm( comm )
+#ifdef LPF_CORE_MPI_USES_hicr
+    , m_cqLocal()
+    , m_cqRemote()
     , m_cqSize(1)
     , m_postCount(0)
     , m_recvCount(0)
@@ -91,6 +85,15 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_recvTotalInitMsgCount(0)
     , m_sentMsgs(0)
     , m_recvdMsgs(0)
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+    , m_wcs(m_nprocs)
+    , m_cq()
+#endif
+    , m_memreg()
+    , m_dummyMemReg()
+    , m_dummyBuffer()
+    , m_comm( comm )
 {
 
     // arrays instead of hashmap for counters
@@ -211,6 +214,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     }
     LOG(3, "Opened protection domain");
 
+#ifdef LPF_CORE_MPI_USES_hicr
     m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ), ibv_destroy_cq);
     m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ), ibv_destroy_cq);
     /**
@@ -237,6 +241,19 @@ IBVerbs :: IBVerbs( Communication & comm )
                 << m_nprocs << " entries" );
         throw Exception("Could not allocate completion queue");
     }
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+    struct ibv_cq * const ibv_cq_new_p = ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 );
+    if( ibv_cq_new_p == NULL )
+        m_cq.reset();
+    else
+        m_cq.reset( ibv_cq_new_p, ibv_destroy_cq );
+    if (!m_cq) {
+        LOG(1, "Could not allocate completion queue with '"
+                << m_nprocs << " entries" );
+        throw Exception("Could not allocate completion queue");
+    }
+#endif
 
     LOG(3, "Allocated completion queue with " << m_nprocs << " entries.");
 
@@ -301,6 +318,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
 
 void IBVerbs :: stageQPs( size_t maxMsgs )
 {
+    printf("stageQPs\n");
     // create the queue pairs
     for ( int i = 0; i < m_nprocs; ++i) {
         struct ibv_qp_init_attr attr;
@@ -308,11 +326,17 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
 
         attr.qp_type = IBV_QPT_RC; // we want reliable connection
         attr.sq_sig_all = 0; // only wait for selected messages
+#ifdef LPF_CORE_MPI_USES_hicr
         attr.send_cq = m_cqLocal.get();
         attr.recv_cq = m_cqRemote.get();
         attr.srq = m_srq.get();
-        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs/4);
-        attr.cap.max_recv_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs/4);
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+        attr.send_cq = m_cq.get();
+        attr.recv_cq = m_cq.get();
+#endif
+        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
+        attr.cap.max_recv_wr = 1; // one for the dummy
         attr.cap.max_send_sge = 1;
         attr.cap.max_recv_sge = 1;
 
@@ -557,7 +581,8 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
-#if LPF_CORE_MPI_USES_ibverbs
+
+#ifdef LPF_CORE_MPI_USES_ibverbs
     ASSERT( m_srs.max_size() > m_minNrMsgs );
 
     if ( size > m_srs.max_size() - m_minNrMsgs )
@@ -772,6 +797,7 @@ blockingCompareAndSwap:
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
 {
+#ifdef LPF_CORE_MPI_USES_hicr
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -829,11 +855,59 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+    const MemorySlot & src = m_memreg.lookup( srcSlot );
+    const MemorySlot & dst = m_memreg.lookup( dstSlot );
+
+    ASSERT( src.mr );
+
+    while (size > 0 ) {
+        struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
+        struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
+
+        const char * localAddr
+            = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
+        const char * remoteAddr
+            = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+
+        sge.addr = reinterpret_cast<uintptr_t>( localAddr );
+        sge.length = std::min<size_t>(size, m_maxMsgSize );
+        sge.lkey = src.mr->lkey;
+        m_sges.push_back( sge );
+
+        bool lastMsg = ! m_activePeers.contains( dstPid );
+        sr.next = lastMsg ? NULL : &m_srs[ m_srsHeads[ dstPid ] ];
+        // since reliable connection guarantees keeps packets in order,
+        // we only need a signal from the last message in the queue
+        sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+
+        sr.wr_id = 0; // don't need an identifier
+        sr.sg_list = &m_sges.back();
+        sr.num_sge = 1;
+        sr.opcode = IBV_WR_RDMA_WRITE;
+        sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+        sr.wr.rdma.rkey = dst.glob[dstPid].rkey;
+
+        m_srsHeads[ dstPid ] = m_srs.size();
+        m_srs.push_back( sr );
+        m_activePeers.insert( dstPid );
+        m_nMsgsPerPeer[ dstPid ] += 1;
+
+        size -= sge.length;
+        srcOffset += sge.length;
+        dstOffset += sge.length;
+
+        LOG(4, "Enqueued put message of " << sge.length << " bytes to " << dstPid );
+    }
+#endif
 }
 
 void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size )
 {
+
+#ifdef LPF_CORE_MPI_USES_hicr
     const MemorySlot & src = m_memreg.lookup( srcSlot );
 	const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
@@ -877,34 +951,6 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		srcOffset += sge->length;
 		dstOffset += sge->length;
 	}
-
-	// add extra "message" to do the local and remote completion
-	//sge = &sges[numMsgs]; std::memset(sge, 0, sizeof(ibv_sge));
-	//sr = &srs[numMsgs]; std::memset(sr, 0, sizeof(ibv_send_wr));
-
-    /*
-	const char * localAddr = static_cast<const char *>(dst.glob[m_pid].addr);
-	const char * remoteAddr = static_cast<const char *>(src.glob[srcPid].addr);
-
-	sge->addr = reinterpret_cast<uintptr_t>( localAddr );
-	sge->length = 0;
-	sge->lkey = dst.mr->lkey;
-
-	sr->next = NULL;
-	// since reliable connection guarantees keeps packets in order,
-	// we only need a signal from the last message in the queue
-	sr->send_flags = IBV_SEND_SIGNALED;
-	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
-	sr->sg_list = sge;
-	sr->num_sge = 0;
-    // Should srcSlot and dstSlot be reversed for get?
-    sr->wr_id = srcSlot;
-	sr->imm_data = dstSlot;
-	sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-	sr->wr.rdma.rkey = src.glob[srcPid].rkey;
-
-	//Send
-    */
 	struct ibv_send_wr *bad_wr = NULL;
 	if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
 	{
@@ -916,6 +962,52 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		throw Exception("Error while posting RDMA requests");
 	}
     tryIncrement(Op::GET, Phase::PRE, dstSlot);
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+    const MemorySlot & src = m_memreg.lookup( srcSlot );
+    const MemorySlot & dst = m_memreg.lookup( dstSlot );
+
+    ASSERT( dst.mr );
+
+    while (size > 0) {
+
+        struct ibv_sge sge; std::memset(&sge, 0, sizeof(sge));
+        struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
+
+        const char * localAddr
+            = static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
+        const char * remoteAddr
+            = static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
+
+        sge.addr = reinterpret_cast<uintptr_t>( localAddr );
+        sge.length = std::min<size_t>(size, m_maxMsgSize );
+        sge.lkey = dst.mr->lkey;
+        m_sges.push_back( sge );
+
+        bool lastMsg = ! m_activePeers.contains( srcPid );
+        sr.next = lastMsg ? NULL : &m_srs[ m_srsHeads[ srcPid ] ];
+        // since reliable connection guarantees keeps packets in order,
+        // we only need a signal from the last message in the queue
+        sr.send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+
+        sr.wr_id = 0; // don't need an identifier
+        sr.sg_list = &m_sges.back();
+        sr.num_sge = 1;
+        sr.opcode = IBV_WR_RDMA_READ;
+        sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+        sr.wr.rdma.rkey = src.glob[srcPid].rkey;
+
+        m_srsHeads[ srcPid ] = m_srs.size();
+        m_srs.push_back( sr );
+        m_activePeers.insert( srcPid );
+        m_nMsgsPerPeer[ srcPid ] += 1;
+
+        size -= sge.length;
+        srcOffset += sge.length;
+        dstOffset += sge.length;
+        LOG(4, "Enqueued get message of " << sge.length << " bytes from " << srcPid );
+    }
+#endif
 
 }
 

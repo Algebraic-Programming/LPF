@@ -78,7 +78,7 @@ public:
     void blockingCompareAndSwap(SlotID srSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap);
 
     void put( SlotID srcSlot, size_t srcOffset, 
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size);
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
 
     void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
               SlotID dstSlot, size_t dstOffset, size_t size );
@@ -100,7 +100,8 @@ public:
     void syncPerSlot(bool resized, SlotID slot);
 
     // Do the communication and synchronize
-    void sync(bool reconnect);
+    // 'Reconnect' must be a globally replicated value
+    void sync( bool reconnect);
 
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
@@ -161,6 +162,7 @@ private:
 
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
+    shared_ptr< struct ibv_cq >      m_cq;     // complation queue
    	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
 	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
     shared_ptr< struct ibv_srq >		 m_srq;	 	// shared receive queue
@@ -171,15 +173,16 @@ private:
     // Connected queue pairs
     std::vector< shared_ptr<struct ibv_qp> > m_connectedQps; 
 
+    std::vector<size_t> rcvdMsgCount;
+    std::vector<size_t> sentMsgCount;
+    std::vector<bool> slotActive;
+
 
     std::vector< struct ibv_send_wr > m_srs; // array of send requests
     std::vector< size_t >        m_srsHeads; // head of send queue per peer
     std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
     SparseSet< pid_t >           m_activePeers; // 
     std::vector< pid_t >         m_peerList;
-    std::vector<size_t> rcvdMsgCount;
-    std::vector<size_t> sentMsgCount;
-    std::vector<bool> slotActive;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     std::vector< struct ibv_wc > m_wcs; // array of work completions
