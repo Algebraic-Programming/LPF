@@ -118,7 +118,7 @@ else()
 endif()
 
 # Dependencies
-set(ENGINES)
+set(ENGINES "")
 find_library( LIB_POSIX_THREADS
     NAMES "pthread"
     DOC   "Posix Threads"

@@ -100,7 +100,7 @@ public:
     void syncPerSlot(bool resized, SlotID slot);
 
     // Do the communication and synchronize
-    void sync(bool resized);
+    void sync(bool reconnect);
 
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
@@ -182,6 +182,8 @@ private:
     std::vector<bool> slotActive;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
+    std::vector< struct ibv_wc > m_wcs; // array of work completions
+
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
