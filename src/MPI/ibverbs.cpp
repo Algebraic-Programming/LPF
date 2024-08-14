@@ -76,6 +76,9 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_peerList()
     , m_sges()
+#ifdef LPF_CORE_MPI_USES_ibverbs
+    , m_wcs(m_nprocs)
+#endif
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
@@ -554,6 +557,22 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
+#if LPF_CORE_MPI_USES_ibverbs
+    ASSERT( m_srs.max_size() > m_minNrMsgs );
+
+    if ( size > m_srs.max_size() - m_minNrMsgs )
+    {
+        LOG(2, "Could not increase message queue, because integer will overflow");
+        throw Exception("Could not increase message queue");
+    }
+
+    m_srs.reserve( size + m_minNrMsgs );
+    m_sges.reserve( size + m_minNrMsgs );
+
+    stageQPs(size);
+#endif
+
+#ifdef LPF_CORE_MPI_USES_hicr
 
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
@@ -584,6 +603,8 @@ void IBVerbs :: resizeMesgq( size_t size )
 			}
 		}
 	}
+#endif
+
     LOG(4, "Message queue has been reallocated to size " << size );
 }
 
@@ -1045,10 +1066,11 @@ void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
 
 }
 
-void IBVerbs :: sync(bool resized)
+void IBVerbs :: sync( bool reconnect )
 {
 
-    if (resized) reconnectQPs();
+#ifdef LPF_CORE_MPI_USES_hicr
+    if (reconnect) reconnectQPs();
 
     int error = 0;
 
@@ -1059,7 +1081,108 @@ void IBVerbs :: sync(bool resized)
 
     LOG(1, "Process " << m_pid << " will call barrier\n");
     m_comm.barrier();
+#else
+    if (reconnect) reconnectQPs();
 
+    while ( !m_activePeers.empty() ) {
+        m_peerList.clear();
+
+        // post all requests
+        typedef SparseSet< pid_t> :: const_iterator It;
+        for (It p = m_activePeers.begin(); p != m_activePeers.end(); ++p )
+        {
+            size_t head = m_srsHeads[ *p ];
+            m_peerList.push_back( *p );
+
+            if ( m_nMsgsPerPeer[*p] > m_maxSrs ) {
+                // then there are more messages than maximally allowed
+                // so: dequeue the top m_maxMsgs and post them
+                struct ibv_send_wr * const pBasis =  &m_srs[0];
+                struct ibv_send_wr * pLast = &m_srs[ head ];
+                for (size_t i = 0 ; i < m_maxSrs-1; ++i )
+                    pLast = pLast->next;
+
+                ASSERT( pLast != NULL );
+                ASSERT( pLast->next != NULL ); // because m_nMsgsperPeer[*p] > m_maxSrs
+
+                ASSERT( pLast->next - pBasis ); // since all send requests are stored in an array
+
+                // now do the dequeueing
+                m_srsHeads[*p] = pLast->next - pBasis;
+                pLast->next = NULL;
+                pLast->send_flags = IBV_SEND_SIGNALED;
+                LOG(4, "Posting " << m_maxSrs << " of " << m_nMsgsPerPeer[*p]
+                        << " messages from " << m_pid << " -> " << *p );
+                m_nMsgsPerPeer[*p] -= m_maxSrs;
+            }
+            else {
+                // signal that we're done
+                LOG(4, "Posting remaining " << m_nMsgsPerPeer[*p]
+                        << " messages " << m_pid << " -> " << *p );
+                m_nMsgsPerPeer[*p] = 0;
+            }
+
+            struct ibv_send_wr * bad_wr = NULL;
+            struct ibv_qp * const ibv_qp_p = m_connectedQps[*p].get();
+            ASSERT( ibv_qp_p != NULL );
+            if (int err = ibv_post_send(ibv_qp_p, &m_srs[ head ], &bad_wr ))
+            {
+                LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+                throw Exception("Error while posting RDMA requests");
+            }
+        }
+
+        // wait for completion
+
+        int n = m_activePeers.size();
+        int error = 0;
+        while (n > 0)
+        {
+            LOG(5, "Polling for " << n << " messages" );
+            int pollResult = ibv_poll_cq(m_cqLocal.get(), n, m_wcs.data() );
+            if ( pollResult > 0) {
+                LOG(4, "Received " << pollResult << " acknowledgements");
+                n-= pollResult;
+
+                for (int i = 0; i < pollResult ; ++i) {
+                    if (m_wcs[i].status != IBV_WC_SUCCESS)
+                    {
+                        LOG( 2, "Got bad completion status from IB message."
+                                " status = 0x" << std::hex << m_wcs[i].status
+                                << ", vendor syndrome = 0x" << std::hex
+                                << m_wcs[i].vendor_err );
+                        error = 1;
+                    }
+                }
+            }
+            else if (pollResult < 0)
+            {
+                LOG( 1, "Failed to poll IB completion queue" );
+                throw Exception("Poll CQ failure");
+            }
+        }
+
+        if (error) {
+            throw Exception("Error occurred during polling");
+        }
+
+        for ( unsigned p = 0; p < m_peerList.size(); ++p) {
+            if (m_nMsgsPerPeer[ m_peerList[p] ] == 0 )
+                m_activePeers.erase( m_peerList[p] );
+        }
+    }
+
+    // clear all tables
+    m_activePeers.clear();
+    m_srs.clear();
+    std::fill( m_srsHeads.begin(), m_srsHeads.end(), 0u );
+    std::fill( m_nMsgsPerPeer.begin(), m_nMsgsPerPeer.end(), 0u );
+    m_sges.clear();
+
+    // synchronize
+    m_comm.barrier();
+
+#endif
 
 }
 

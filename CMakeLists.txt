@@ -110,7 +110,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 # Dependencies
-set(ENGINES)
+set(ENGINES "")
 find_library( LIB_POSIX_THREADS
     NAMES "pthread"
     DOC   "Posix Threads"
