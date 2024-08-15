@@ -135,10 +135,6 @@ private:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
-    struct UserContext {
-        size_t lkey;
-    };
-
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
@@ -190,7 +186,6 @@ private:
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     std::vector< struct ibv_wc > m_wcs; // array of work completions
-
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 

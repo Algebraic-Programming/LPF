@@ -97,13 +97,14 @@ IBVerbs :: IBVerbs( Communication & comm )
 {
 
     // arrays instead of hashmap for counters
+ #ifdef LPF_CORE_MPI_USES_hicr
     m_recvInitMsgCount.resize(ARRAY_SIZE, 0);
     m_getInitMsgCount.resize(ARRAY_SIZE, 0);
     m_sendInitMsgCount.resize(ARRAY_SIZE, 0);
     rcvdMsgCount.resize(ARRAY_SIZE, 0);
     sentMsgCount.resize(ARRAY_SIZE, 0);
     slotActive.resize(ARRAY_SIZE, 0);
-
+#endif
 
     m_peerList.reserve( m_nprocs );
 
@@ -325,13 +326,14 @@ IBVerbs :: IBVerbs( Communication & comm )
         throw Exception("Could not register memory region");
     }
 
+    // Wait for all peers to finish
     LOG(3, "Queue pairs have been successfully initialized");
-
 }
 
 IBVerbs :: ~IBVerbs()
-{ }
+{
 
+}
 
 inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
     
@@ -371,7 +373,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
 
 void IBVerbs :: stageQPs( size_t maxMsgs )
 {
-    printf("stageQPs\n");
+    LOG(1, "Enter stageQPs");
     // create the queue pairs
     for ( int i = 0; i < m_nprocs; ++i) {
         struct ibv_qp_init_attr attr;
@@ -383,13 +385,13 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.send_cq = m_cqLocal.get();
         attr.recv_cq = m_cqRemote.get();
         attr.srq = m_srq.get();
+        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
+        attr.cap.max_recv_wr = 1; // one for the dummy
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
         attr.send_cq = m_cq.get();
         attr.recv_cq = m_cq.get();
 #endif
-        attr.cap.max_send_wr = std::min<size_t>(maxMsgs + m_minNrMsgs,m_maxSrs);
-        attr.cap.max_recv_wr = 1; // one for the dummy
         attr.cap.max_send_sge = 1;
         attr.cap.max_recv_sge = 1;
 
@@ -522,7 +524,12 @@ void IBVerbs :: reconnectQPs()
             attr.qp_state = IBV_QPS_INIT;
             attr.port_num = m_ibPort;
             attr.pkey_index = 0;
+#ifdef LPF_CORE_MPI_USES_hicr
             attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC;
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+            attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
+#endif
             flags = IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
             if ( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
                 LOG(1, "Cannot bring state of QP " << i << " to INIT");
@@ -538,9 +545,16 @@ void IBVerbs :: reconnectQPs()
             sge.length = m_dummyBuffer.size();
             sge.lkey = m_dummyMemReg->lkey;
             rr.next = NULL;
-            rr.wr_id = 46;
+            rr.wr_id = 0;
             rr.sg_list = &sge;
             rr.num_sge = 1;
+
+#ifdef LPF_CORE_MPI_USES_ibverbs
+            if (ibv_post_recv(m_stagedQps[i].get(), &rr, &bad_wr)) {
+                LOG(1, "Cannot post a single receive request to QP " << i );
+                throw Exception("Could not post dummy receive request");
+            }
+#endif
 
             // Bring QP to RTR
             std::memset(&attr, 0, sizeof(attr));
@@ -576,13 +590,13 @@ void IBVerbs :: reconnectQPs()
             std::memset(&attr, 0, sizeof(attr));
             attr.qp_state      = IBV_QPS_RTS;
             attr.timeout       = 0x12;
-            attr.retry_cnt     = 0;//7;
-            attr.rnr_retry     = 0;//7;
+            attr.retry_cnt     = 6;
+            attr.rnr_retry     = 0;
             attr.sq_psn        = 0;
             attr.max_rd_atomic = 1;
             flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
                 IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC;
-            if( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags))  {
+            if( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
                 LOG(1, "Cannot bring state of QP " << i << " to RTS" );
                 throw Exception("Failed to bring QP's state to RTS" );
             }
@@ -591,23 +605,24 @@ void IBVerbs :: reconnectQPs()
 
         } // for each peer
     }
-            catch(...) {
-                m_comm.allreduceOr( true );
-                throw;
-            }
+    catch(...) {
+        m_comm.allreduceOr( true );
+        throw;
+    }
 
-            if (m_comm.allreduceOr( false ))
-                throw Exception("Another peer failed to set-up Infiniband queue pairs");
+    if (m_comm.allreduceOr( false ))
+        throw Exception("Another peer failed to set-up Infiniband queue pairs");
 
-            LOG(3, "All staged queue pairs have been connected" );
+    LOG(3, "All staged queue pairs have been connected" );
 
-            m_connectedQps.swap( m_stagedQps );
+    m_connectedQps.swap( m_stagedQps );
+    for (int i = 0; i < m_nprocs; ++i)
+        m_stagedQps[i].reset();
 
-            LOG(3, "All old queue pairs have been removed");
+    LOG(3, "All old queue pairs have been removed");
 
-            m_comm.barrier();
-        }
-
+    m_comm.barrier();
+}
 
 void IBVerbs :: resizeMemreg( size_t size )
 {
@@ -692,7 +707,12 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
         LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
             m_pd.get(), addr, size,
+#ifdef LPF_CORE_MPI_USES_hicr
             IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+#endif
         );
         if( ibv_mr_new_p == NULL )
             slot.mr.reset();
@@ -711,7 +731,9 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     local.rkey = size?slot.mr->rkey:0;
 
     SlotID id =  m_memreg.addLocalReg( slot );
+#ifdef LPF_CORE_MPI_USES_hicr
     tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
+#endif
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;
@@ -728,7 +750,12 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
         LOG(4, "Registering globally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
             m_pd.get(), addr, size,
+#ifdef LPF_CORE_MPI_USES_hicr
             IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC
+#endif
+#ifdef LPF_CORE_MPI_USES_ibverbs
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+#endif
         );
         if( ibv_mr_new_p == NULL )
             slot.mr.reset();
@@ -745,7 +772,9 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
         throw Exception("Another process could not register memory area");
 
     SlotID id = m_memreg.addGlobalReg( slot );
+#ifdef LPF_CORE_MPI_USES_hicr
     tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
+#endif
     MemorySlot & ref = m_memreg.update(id);
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
@@ -765,12 +794,14 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
 
 void IBVerbs :: dereg( SlotID id )
 {
+#ifdef LPF_CORE_MPI_USES_hicr
     slotActive[id] = false;
     m_recvInitMsgCount[id] = 0;
     m_getInitMsgCount[id] = 0;
     m_sendInitMsgCount[id] = 0;
     rcvdMsgCount[id] = 0;
     sentMsgCount[id] = 0;
+#endif
     m_memreg.removeReg( id );
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
@@ -845,7 +876,7 @@ blockingCompareAndSwap:
 }
 
 void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_hicr
     const MemorySlot & src = m_memreg.lookup( srcSlot );
@@ -1281,7 +1312,7 @@ void IBVerbs :: sync( bool reconnect )
         while (n > 0)
         {
             LOG(5, "Polling for " << n << " messages" );
-            int pollResult = ibv_poll_cq(m_cqLocal.get(), n, m_wcs.data() );
+            int pollResult = ibv_poll_cq(m_cq.get(), n, m_wcs.data() );
             if ( pollResult > 0) {
                 LOG(4, "Received " << pollResult << " acknowledgements");
                 n-= pollResult;
@@ -1323,7 +1354,6 @@ void IBVerbs :: sync( bool reconnect )
 
     // synchronize
     m_comm.barrier();
-
 #endif
 
 }
