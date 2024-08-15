@@ -208,6 +208,11 @@ if (MPI_FOUND)
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp
                     $<TARGET_OBJECTS:${comlib}> mpilib.cpp)
+                target_compile_definitions(ibverbs_test
+                    PRIVATE "LPF_CORE_MPI_USES_ibverbs=1"
+                    "LPF_CORE_WARM_UP_PROBE=1"
+                    "LPF_CORE_IMPL_ID=ibverbs"
+                    "LPF_CORE_IMPL_CONFIG=${LPF_IMPL_CONFIG}")
         target_link_libraries( ibverbs_test ${LIB_IBVERBS})
     endif()
 
