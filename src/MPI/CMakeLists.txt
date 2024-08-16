@@ -49,14 +49,11 @@ if (MPI_FOUND)
             set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
 
             set(ibverbs_sources)
-            if (LPF_IMPL_ID STREQUAL ibverbs)
-            set(ibverbs_sources ibverbs.cpp)
-        endif()
-        if (LPF_IMPL_ID STREQUAL hicr)
-            set(ibverbs_sources ibverbs.cpp)
-        endif()
+            if (LPF_IMPL_ID STREQUAL ibverbs OR LPF_IMPL_ID STREQUAL hicr)
+                set(ibverbs_sources ibverbs.cpp)
+            endif()
 
-        add_library(raw_${libname} OBJECT
+            add_library(raw_${libname} OBJECT
                 memorytable.cpp
                 mesgqueue.cpp
                 mpilib.cpp
@@ -74,51 +71,51 @@ if (MPI_FOUND)
             )
 
 
-        target_compile_flags(raw_${libname} 
+            target_compile_flags(raw_${libname} 
                 INTERFACE "-fPIC")
 
-        target_compile_definitions(raw_${libname} 
+            target_compile_definitions(raw_${libname} 
                 PRIVATE "LPF_CORE_MPI_USES_${LPF_IMPL_ID}=1"
                         "LPF_CORE_WARM_UP_PROBE=1"
                         "LPF_CORE_IMPL_ID=${LPF_IMPL_ID}"
                         "LPF_CORE_IMPL_CONFIG=${LPF_IMPL_CONFIG}"
-        )
-        target_include_directories(raw_${libname} 
-             PRIVATE  ${MPI_C_INCLUDE_PATH}
-        )
-        if (iface STREQUAL "spec_")
-            target_compile_definitions(raw_${libname} 
+            )
+            target_include_directories(raw_${libname} 
+                PRIVATE  ${MPI_C_INCLUDE_PATH}
+            )
+            if (iface STREQUAL "spec_")
+                target_compile_definitions(raw_${libname} 
                    PRIVATE "LPF_CORE_STATIC_DISPATCH=1"
                            "LPF_CORE_STATIC_DISPATCH_ID=${LPF_IMPL_ID}"
                            "LPF_CORE_STATIC_DISPATCH_CONFIG=${LPF_IMPL_CONFIG}"
             )
-        endif()
+            endif()
 
-        #Always build the shared library, because we need that for the lpfrun
-        add_library(${libname} SHARED
+            #Always build the shared library, because we need that for the lpfrun
+            add_library(${libname} SHARED
                 $<TARGET_OBJECTS:raw_${libname}> 
                 $<TARGET_OBJECTS:${comlib}>
-        )
-        set_target_properties(${libname} PROPERTIES SOVERSION ${SOVERSION}
+            )
+            set_target_properties(${libname} PROPERTIES SOVERSION ${SOVERSION}
                                                     MACOSX_RPATH TRUE)
 
-        target_compile_flags(${libname} 
+            target_compile_flags(${libname} 
                 INTERFACE "-fPIC")
 
-        if (iface STREQUAL "spec_")
-            target_compile_definitions(${libname} 
-               INTERFACE "LPF_CORE_STATIC_DISPATCH=1"
+            if (iface STREQUAL "spec_")
+                target_compile_definitions(${libname} 
+                   INTERFACE "LPF_CORE_STATIC_DISPATCH=1"
                          "LPF_CORE_STATIC_DISPATCH_ID=${LPF_IMPL_ID}"
                          "LPF_CORE_STATIC_DISPATCH_CONFIG=${LPF_IMPL_CONFIG}"
+                )
+            endif()
+            target_include_directories(${libname} 
+                PUBLIC   ${MPI_C_INCLUDE_PATH}
+                INTERFACE $<INSTALL_INTERFACE:${INSTALL_HEADERS}>
+                    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
             )
-        endif()
-        target_include_directories(${libname} 
-             PUBLIC   ${MPI_C_INCLUDE_PATH}
-             INTERFACE $<INSTALL_INTERFACE:${INSTALL_HEADERS}>
-                       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        )
 
-    endforeach(LPF_IMPL_ID)
+        endforeach(LPF_IMPL_ID)
     endforeach(iface)
 
     # link function that e.g. hybrid implementation can also use.
@@ -131,10 +128,7 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs)
-           target_link_libraries(${target} ${LIB_IBVERBS})
-        endif()
-        if (engine STREQUAL hicr)
+        if (engine STREQUAL ibverbs OR engine STREQUAL hicr)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()
