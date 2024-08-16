@@ -112,6 +112,21 @@ namespace lpf { namespace hybrid {
         err_t deregister( memslot_t memslot) 
         { return USE_THREAD( deregister)(m_ctx, memslot); }
 
+        err_t get_rcvd_msg_count_per_slot( size_t * rcvd_msgs, lpf_memslot_t slot) 
+        { return USE_THREAD( get_rcvd_msg_count_per_slot)(m_ctx, rcvd_msgs, slot); }
+
+        err_t get_sent_msg_count_per_slot( size_t * sent_msgs, lpf_memslot_t slot) 
+        { return USE_THREAD( get_sent_msg_count_per_slot)(m_ctx, sent_msgs, slot); }
+
+        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
+        { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
+
+        err_t flush_sent()
+        { return USE_THREAD(flush_sent)(m_ctx); }
+
+        err_t flush_received()
+        { return USE_THREAD(flush_received)(m_ctx); }
+
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 
                 size_t size, msg_attr_t attr = MSG_DEFAULT )
@@ -126,6 +141,12 @@ namespace lpf { namespace hybrid {
 
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_THREAD(sync)( m_ctx, attr ); }
+
+        err_t sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, memslot_t slot = LPF_INVALID_MEMSLOT)
+        { return USE_THREAD(sync_per_slot)( m_ctx, attr, slot); }
+
+        err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
+        { return USE_THREAD(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }
 
         err_t probe( machine_t * params )
         { return USE_THREAD(probe)(m_ctx, params ); }
@@ -202,6 +223,21 @@ namespace lpf { namespace hybrid {
         err_t deregister( memslot_t memslot) 
         { return USE_MPI( deregister)(m_ctx, memslot); }
 
+        err_t get_rcvd_msg_count_per_slot(size_t *rcvd_msgs, lpf_memslot_t slot) 
+        { return USE_MPI( get_rcvd_msg_count_per_slot)( m_ctx, rcvd_msgs, slot); }
+
+        err_t get_sent_msg_count_per_slot(size_t *sent_msgs, lpf_memslot_t slot) 
+        { return USE_MPI( get_sent_msg_count_per_slot)( m_ctx, sent_msgs, slot); }
+
+        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
+        { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
+
+        err_t flush_sent()
+        {return USE_MPI( flush_sent)(m_ctx);}
+
+        err_t flush_received()
+        {return USE_MPI( flush_received)(m_ctx);}
+
         err_t put( memslot_t src_slot, size_t src_offset, 
                 pid_t dst_pid, memslot_t dst_slot, size_t dst_offset, 
                 size_t size, msg_attr_t attr = MSG_DEFAULT )
@@ -216,6 +252,12 @@ namespace lpf { namespace hybrid {
 
         err_t sync( sync_attr_t attr = SYNC_DEFAULT )
         { return USE_MPI(sync)( m_ctx, attr ); }
+
+        err_t sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT )
+        { return USE_MPI(sync_per_slot)( m_ctx, attr, slot); }
+
+        err_t counting_sync_per_slot( sync_attr_t attr = SYNC_DEFAULT, lpf_memslot_t slot = LPF_INVALID_MEMSLOT, size_t expected_sent = 0, size_t expected_recvd = 0)
+        { return USE_MPI(counting_sync_per_slot)(m_ctx, attr, slot, expected_sent, expected_recvd); }
 
         err_t probe( machine_t * params )
         { return USE_MPI(probe)(m_ctx, params ); }

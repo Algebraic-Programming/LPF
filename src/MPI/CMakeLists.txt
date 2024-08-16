@@ -24,6 +24,7 @@ if (MPI_FOUND)
 
     if (LIB_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
+        list(APPEND MPI_ENGINES hicr)
     endif()
 
     if (MPI_OPEN_PORT)
@@ -53,7 +54,7 @@ if (MPI_FOUND)
         set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
         
         set(ibverbs_sources)
-        if (LPF_IMPL_ID STREQUAL ibverbs)
+        if (LPF_IMPL_ID STREQUAL ibverbs OR LPF_IMPL_ID STREQUAL hicr)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -70,7 +71,7 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-		init.cpp
+                init.cpp
                 ${ibverbs_sources}
             )
 
@@ -136,7 +137,7 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs)
+        if (engine STREQUAL ibverbs OR engine STREQUAL hicr)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()
@@ -201,6 +202,11 @@ if (MPI_FOUND)
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp
                     $<TARGET_OBJECTS:${comlib}> mpilib.cpp)
+                target_compile_definitions(ibverbs_test
+                    PRIVATE "LPF_CORE_MPI_USES_ibverbs=1"
+                    "LPF_CORE_WARM_UP_PROBE=1"
+                    "LPF_CORE_IMPL_ID=ibverbs"
+                    "LPF_CORE_IMPL_CONFIG=${LPF_IMPL_CONFIG}")
         target_link_libraries( ibverbs_test ${LIB_IBVERBS})
     endif()
 
