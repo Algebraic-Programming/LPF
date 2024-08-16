@@ -54,10 +54,7 @@ if (MPI_FOUND)
         set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
         
         set(ibverbs_sources)
-        if (LPF_IMPL_ID STREQUAL ibverbs)
-            set(ibverbs_sources ibverbs.cpp)
-        endif()
-        if (LPF_IMPL_ID STREQUAL hicr)
+        if (LPF_IMPL_ID STREQUAL ibverbs OR LPF_IMPL_ID STREQUAL hicr)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -140,10 +137,7 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs)
-           target_link_libraries(${target} ${LIB_IBVERBS})
-        endif()
-        if (engine STREQUAL hicr)
+        if (engine STREQUAL ibverbs OR engine STREQUAL hicr)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()
