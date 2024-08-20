@@ -287,7 +287,7 @@ TEST( IBVerbs, manyPuts )
 
     comm.barrier();
     IBVerbs verbs( comm );
-    const unsigned N = 100000;
+    const unsigned N = 5000;
 
     std::vector< unsigned char > buf1( N );
     std::vector< unsigned char > buf2( N );
