@@ -172,15 +172,9 @@ if (MPI_FOUND)
     include_directories(${MPI_C_INCLUDE_PATH})
     # add a test for dynamichook 
     if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
-        add_executable(dynamichook.t dynamichook.t.cpp dynamichook.cpp
-                $<TARGET_OBJECTS:${comlib}> )
 
-        target_include_directories(dynamichook.t PRIVATE ${GTEST_INCLUDE_PATH})
-        target_link_libraries(dynamichook.t ${MPI_C_LIBRARIES} gtest)
-        set_target_properties(dynamichook.t PROPERTIES
-                COMPILE_FLAGS "${MPI_C_COMPILE_FLAGS}"
-                LINK_FLAGS "${MPI_C_LINK_FLAGS}"
-        )
+        add_gtest_mpi(dynamichook.t "1;2;5;10" dynamichook.t.cpp dynamichook.cpp mpilib.cpp)
+
         configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
         set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
         add_test(NAME dynamichook_1proc
@@ -199,30 +193,29 @@ if (MPI_FOUND)
 
 # Other unit tests
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp
-                    $<TARGET_OBJECTS:${comlib}> mpilib.cpp)
-        target_link_libraries( ibverbs_test ${LIB_IBVERBS})
+        add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
+        #$<TARGET_OBJECTS:${comlib}> mpilib.cpp)
+        #target_link_libraries( ibverbs_test ${LIB_IBVERBS})
     endif()
 
     add_gtest_mpi( spall2all_test "1;2;5;10" spall2all.t.cpp spall2all.c
-            spall2all.cpp mpilib.cpp
-            $<TARGET_OBJECTS:${comlib}> 
-            )
+            spall2all.cpp mpilib.cpp)
+        #$<TARGET_OBJECTS:${comlib}> )
 
     add_gtest_mpi( dall2all_test "1;2;5;10" dall2all.t.cpp
-            mpilib.cpp $<TARGET_OBJECTS:${comlib}> 
-            )
+        #mpilib.cpp $<TARGET_OBJECTS:${comlib}> 
+        mpilib.cpp)
 
     if (MPI_IBARRIER)
-       add_gtest_mpi( hall2all_test "1;2;5;10" hall2all.t.cpp
-            mpilib.cpp $<TARGET_OBJECTS:${comlib}> )
+       add_gtest_mpi( hall2all_test "1;2;5;10" hall2all.t.cpp mpilib.cpp)
+           #      mpilib.cpp $<TARGET_OBJECTS:${comlib}> )
     endif()
 
-    add_gtest( messagesort_test messagesort.t.cpp messagesort.cpp
-            $<TARGET_OBJECTS:${comlib}> )
+    add_gtest( messagesort_test messagesort.t.cpp messagesort.cpp)
+    #       $<TARGET_OBJECTS:${comlib}> )
 
-    add_gtest( ipcmesg_test ipcmesg.t.cpp 
-            $<TARGET_OBJECTS:${comlib}> )
+    add_gtest( ipcmesg_test ipcmesg.t.cpp)
+    #$<TARGET_OBJECTS:${comlib}> )
 
 endif(MPI_FOUND)
 

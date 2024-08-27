@@ -106,16 +106,8 @@ set( INSTALL_HEADERS "${prefix}/include" CACHE PATH
 message( STATUS "Installation directory prefix is ${prefix}")
 
 # C++ standard
-find_file(TR1_ARRAY "tr1/array")
-if (TR1_ARRAY)
-    message(STATUS "Governing C++ standard is C++98/TR1")
-    set(CMAKE_CXX_STANDARD 98)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-else()
-    message(STATUS "Governing C++ standard is C++11")
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 # Dependencies
 set(ENGINES)
@@ -246,59 +238,6 @@ add_definitions(-DBSPLIB_DLL=1)
 option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
-if (LPF_ENABLE_TESTS)
-message(STATUS "Unit and API tests will be built")
-
-# set testing timeout to 60 seconds
-set(CMAKE_TESTING_TIMEOUT 60)
-
-# import Google Testing Framework
-include(cmake/googletest.cmake)
-
-# Have directory to gather all the tests results
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
-set(test_output "${CMAKE_BINARY_DIR}/junit")
-
-# Have a macro to add a unit test
-function(add_gtest testName)
-    add_executable(${testName} ${ARGN})
-    target_link_libraries(${testName} gtest_main)
-    add_test(${testName} ${testName} --gtest_output=xml:${test_output}/ )
-endfunction(add_gtest)
-
-# Have a macro to add a unit test that should run with MPI
-if (MPI_FOUND)
-    function(add_gtest_mpi testName nprocs)
-        add_executable(${testName} ${ARGN})
-        target_link_libraries(${testName} ${MPI_C_LIBRARIES} gtest_main)
-        foreach( p ${nprocs})
-            set(mpmd)
-            foreach( i RANGE 1 ${p})
-                if (i GREATER 1)
-                  set(mpmd ${mpmd} ":")
-                endif()
-                set(mpmd ${mpmd} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_PREFLAGS}
-                        ./${testName} --gtest_output=xml:${test_output}/${testName}_${i}of${p}.xml)
-            endforeach(i)
-            add_test(NAME ${testName}_${p}
-                     COMMAND ${MPIRUN} ${mpmd}
-                    )
-        endforeach(p)
-    endfunction(add_gtest_mpi)
-endif(MPI_FOUND)
-
-# Enable testing in CMake
-enable_testing()
-else(LPF_ENABLE_TESTS)
-    message(STATUS "Unit and API tests will *not* be built")
-    function(add_gtest testName)
-       # Do nothing because tests are disabled
-    endfunction(add_gtest)
-
-    function(add_gtest_mpi testName nprocs)
-       # DO nothing because tests are disabled
-    endfunction(add_gtest_mpi)
-endif(LPF_ENABLE_TESTS)
 
 # Handling of compiler flags
 function(target_add_compilation_flags target visibility)
@@ -367,9 +306,6 @@ endfunction(target_compile_flags)
 set(lpf_cflags)
 set(lpf_lib_link_flags)
 set(lpf_exe_link_flags)
-include_directories(include)
-include_directories(src/common)
-add_subdirectory(src)
 
 # Collating all compile & link flags
 set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
@@ -392,6 +328,72 @@ function( target_link_exe_with_core target )
     )
 endfunction()
 
+if (LPF_ENABLE_TESTS)
+message(STATUS "Unit and API tests will be built")
+
+# set testing timeout to 60 seconds
+set(CMAKE_TESTING_TIMEOUT 60)
+
+
+# Have directory to gather all the tests results
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
+set(test_output "${CMAKE_BINARY_DIR}/junit")
+
+# Have a macro to add a unit test
+function(add_gtest testName)
+    include(GoogleTest)
+    add_executable(${testName} ${ARGN})
+    target_link_libraries(${testName} GTest::gtest GTest::gtest_main  lpf_common_${LPFLIB_CONFIG_NAME})
+    foreach(LPF_IMPL_ID ${ENGINES})
+        target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
+    endforeach(LPF_IMPL_ID)
+    gtest_add_tests(TARGET ${testName}
+        EXTRA_ARGS  --gtest_output=xml:${test_output}/
+        TEST_LIST seqTests
+        )
+endfunction(add_gtest)
+
+# Have a macro to add a unit test that should run with MPI
+if (MPI_FOUND)
+    function(add_gtest_mpi testName nprocs)
+
+        include(GoogleTest)
+        add_executable(${testName} ${ARGN})
+        target_link_libraries(${testName} GTest::gtest GTest::gtest_main ${MPI_C_LIBRARIES} lpf_common_${LPFLIB_CONFIG_NAME})
+        foreach(LPF_IMPL_ID ${ENGINES})
+            target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
+        endforeach(LPF_IMPL_ID)
+
+        set_target_properties(${testName} PROPERTIES
+            COMPILE_FLAGS "${MPI_C_COMPILE_FLAGS}"
+            LINK_FLAGS "${MPI_C_LINK_FLAGS}")
+
+        gtest_add_tests(TARGET ${testName}
+            EXTRA_ARGS  --gtest_output=xml:${test_output}/
+            TEST_LIST mpiTests
+            )
+    endfunction(add_gtest_mpi)
+endif(MPI_FOUND)
+
+# Enable testing in CMake
+enable_testing()
+find_package(GTest REQUIRED)
+
+else(LPF_ENABLE_TESTS)
+    message(STATUS "Unit and API tests will *not* be built")
+    function(add_gtest testName)
+       # Do nothing because tests are disabled
+    endfunction(add_gtest)
+
+    function(add_gtest_mpi testName nprocs)
+       # DO nothing because tests are disabled
+    endfunction(add_gtest_mpi)
+endif(LPF_ENABLE_TESTS)
+
+include_directories(include)
+include_directories(src/common)
+
+add_subdirectory(src)
 # Apps
 add_subdirectory(src/utils)
 
