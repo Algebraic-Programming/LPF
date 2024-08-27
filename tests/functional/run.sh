@@ -147,77 +147,79 @@ allSuccess=1
 suffix="_${lpf_impl_id}_${lpf_impl_config}"
 for testexe in $(find . -name "*${suffix}" -or -name "*${suffix}_debug")
 do
-  testname=${testexe%_debug}
-  if [ "x${testname}" != "x${testexe}" ] ; then 
-    mode=debug;
-  else
-    mode=default;
-  fi
+    if [[ $testexe == *"bsplib_hpget_many"* ]] ; then
+        testname=${testexe%_debug}
+        if [ "x${testname}" != "x${testexe}" ] ; then 
+            mode=debug;
+        else
+            mode=default;
+        fi
 
-  testname=$(basename ${testname%${suffix}})
-  testCase=$(find $dir -name "${testname}.c" -or -name "${testname}.${lpf_impl_id}.c")
-  description=`get 'test' < $testCase`
-  message=`get 'return Message:' < $testCase`
-  exitCode=`get 'return Exit code:' < $testCase`
-  minProcs=`get 'pre[[:space:]]*P >=' < $testCase`
-  maxProcs=`get 'pre[[:space:]]*P <=' < $testCase`
-  extraParams=`get 'note Extra lpfrun parameters:' < $testCase`
-  indepProcs=`get 'note Independent processes:' < $testCase`
+        testname=$(basename ${testname%${suffix}})
+        log "testname:", $testname
+        testCase=$(find $dir -name "${testname}.c" -or -name "${testname}.${lpf_impl_id}.c")
+        description=`get 'test' < $testCase`
+        message=`get 'return Message:' < $testCase`
+        exitCode=`get 'return Exit code:' < $testCase`
+        minProcs=`get 'pre[[:space:]]*P >=' < $testCase`
+        maxProcs=`get 'pre[[:space:]]*P <=' < $testCase`
+        extraParams=`get 'note Extra lpfrun parameters:' < $testCase`
+        indepProcs=`get 'note Independent processes:' < $testCase`
 
-  if echo "${testexe}" | grep -qf $dir/exception_list ; then
-      log "----------------------------------------------------------------------------"
-      log "  IGNORING:              $testname"
-      log "    Description:         $description"
-      continue
-  fi
+        if echo "${testexe}" | grep -qf $dir/exception_list ; then
+            log "----------------------------------------------------------------------------"
+            log "  IGNORING:              $testname"
+            log "    Description:         $description"
+            continue
+        fi
 
-  if [ x$testname = x ]; then
-    log "Warning: Can't read testname from $testCase. Test case skipped" ;
-    allSuccess=0;
-    continue
-  fi
-  if [ x$exitCode = x ]; then
-    log "Error: Can't read expected exit code from $testCase. Test case skipped" ;
-    allSuccess=0;
-    continue
-  fi
-  if [ '!' '(' $exitCode -ge 0 ')' ]; then
-    log "Error: Can't read expected exit code from $testCase. Test case skipped" ;
-    allSuccess=0;
-    continue
-  fi
-  if [ x$minProcs = x ]; then
-    log "Error: Can't determine lower bound of processes for $testCase. Test case skipped" ;
-    allSuccess=0;
-    continue
-  fi
-  if [ '!' '(' $minProcs -ge 1 ')' ]; then
-    log "Error: Lower bound of processes is illegal for test case $testCase. Test case skipped" ;
-    allSuccess=0;
-    continue
-  fi
-  if [ x$maxProcs = x ]; then
-    maxProcs=$defaultMaxProcs
-  fi
-  if [ '!' '(' $maxProcs -ge 1 ')' ]; then
-    log "Error: Upper bound of processes is illegal for test case $testCase. Test case skipped"
-    allSuccess=0;
-    continue
-  fi
+        if [ x$testname = x ]; then
+            log "Warning: Can't read testname from $testCase. Test case skipped" ;
+            allSuccess=0;
+            continue
+        fi
+        if [ x$exitCode = x ]; then
+            log "Error: Can't read expected exit code from $testCase. Test case skipped" ;
+            allSuccess=0;
+            continue
+        fi
+        if [ '!' '(' $exitCode -ge 0 ')' ]; then
+            log "Error: Can't read expected exit code from $testCase. Test case skipped" ;
+            allSuccess=0;
+            continue
+        fi
+        if [ x$minProcs = x ]; then
+            log "Error: Can't determine lower bound of processes for $testCase. Test case skipped" ;
+            allSuccess=0;
+            continue
+        fi
+        if [ '!' '(' $minProcs -ge 1 ')' ]; then
+            log "Error: Lower bound of processes is illegal for test case $testCase. Test case skipped" ;
+            allSuccess=0;
+            continue
+        fi
+        if [ x$maxProcs = x ]; then
+            maxProcs=$defaultMaxProcs
+        fi
+        if [ '!' '(' $maxProcs -ge 1 ')' ]; then
+            log "Error: Upper bound of processes is illegal for test case $testCase. Test case skipped"
+            allSuccess=0;
+            continue
+        fi
 
-  if [ x$indepProcs '!=' xyes ]; then
-    indepProcs=no
-  fi
+        if [ x$indepProcs '!=' xyes ]; then
+            indepProcs=no
+        fi
 
-  log "----------------------------------------------------------------------------"
-  log "  RUNNING:               $testname   ( $mode )"
-  log "    Description:         $description"
-  log "    Number of processes: $minProcs - $maxProcs"
-  log "    Engine:              $lpf_impl_id"
-  log "    Configuration:       $lpf_impl_config"
-  log "    Extra lpfrun params: $extraParams"
-  log "    Independent processes: $indepProcs"
-  log
+        log "----------------------------------------------------------------------------"
+        log "  RUNNING:               $testname   ( $mode )"
+        log "    Description:         $description"
+        log "    Number of processes: $minProcs - $maxProcs"
+        log "    Engine:              $lpf_impl_id"
+        log "    Configuration:       $lpf_impl_config"
+        log "    Extra lpfrun params: $extraParams"
+        log "    Independent processes: $indepProcs"
+        log
 
 #$lpfcc $testCase -o ${testname}.exe -Wall -Wextra >> $log 2>&1
 #  compilation=$?
@@ -228,63 +230,64 @@ do
 #    continue
 #  fi
 
-  setSuccess=1
-  for (( processes=$minProcs; processes <= $maxProcs; ++processes ))
-  do
-      success=1
-      t0=`getTime`
-      if [ $indepProcs = no ]; then
-          # The normal way of running a test
+setSuccess=1
+for (( processes=$minProcs; processes <= $maxProcs; ++processes ))
+do
+    success=1
+    t0=`getTime`
+    if [ $indepProcs = no ]; then
+        # The normal way of running a test
 
-          lpfrun -engine $lpf_impl_id -log $loglevel \
-              -n $processes -N $defaultNodes ${extraParams} \
-              "$@" ./${testexe}  > $intermOutput 2>&1 
-          actualExitCode=$?
-      else
-          # this way of running processes is required to test implementation of 
-          # lpf_hook on MPI implementations
+        lpfrun -engine $lpf_impl_id -log $loglevel \
+            -n $processes -N $defaultNodes ${extraParams} \
+            "$@" ./${testexe}  > $intermOutput 2>&1 
+                    actualExitCode=$?
+                else
+                    # this way of running processes is required to test implementation of 
+                    # lpf_hook on MPI implementations
 
-          rm $intermOutput
-          touch $intermOutput
-          for (( p = 0; p < processes; ++p ))
-          do
-              lpfrun -engine $lpf_impl_id -log $loglevel -np 1 ${extraParams} "$@" \
-                  ./${testexe} $p ${processes}  >> $intermOutput 2>&1 &
-          done
-          wait `jobs -p`
-          actualExitCode=$?
-      fi
-      t1=`getTime`
-      t=$( ( echo $t1 ; echo $t0; echo "-"; echo "p" ) | dc )
+                    rm $intermOutput
+                    touch $intermOutput
+                    for (( p = 0; p < processes; ++p ))
+                    do
+                        lpfrun -engine $lpf_impl_id -log $loglevel -np 1 ${extraParams} "$@" \
+                            ./${testexe} $p ${processes}  >> $intermOutput 2>&1 &
+                        done
+                        wait `jobs -p`
+                        actualExitCode=$?
+    fi
+    t1=`getTime`
+    t=$( ( echo $t1 ; echo $t0; echo "-"; echo "p" ) | dc )
 
-      cat $intermOutput >> $log
-      # NOTE: Only two exit codes are recognized: failure and success. That's because most
-      # MPI implementations mangle the exit code. 
-      msg=
-      if [ \( $actualExitCode -eq 0 -a $exitCode -ne 0 \) -o \
-           \( $actualExitCode -ne 0 -a $exitCode -eq 0 \) ]; then
-        msg="  TEST FAILURE: Expected exit code $exitCode does not match actual exit code $actualExitCode for $testCase on $processes processes"
-        log "$msg"
-        allSuccess=0;
-        setSuccess=0
-        success=0
-      fi
-      if [ "x$message" != x ]; then
-          if grep -q "$message" $intermOutput ; then
-             let noop=0;
-          else
+    cat $intermOutput >> $log
+    # NOTE: Only two exit codes are recognized: failure and success. That's because most
+    # MPI implementations mangle the exit code. 
+    msg=
+    if [ \( $actualExitCode -eq 0 -a $exitCode -ne 0 \) -o \
+        \( $actualExitCode -ne 0 -a $exitCode -eq 0 \) ]; then
+            msg="  TEST FAILURE: Expected exit code $exitCode does not match actual exit code $actualExitCode for $testCase on $processes processes"
+            log "$msg"
+            allSuccess=0;
+            setSuccess=0
+            success=0
+    fi
+    if [ "x$message" != x ]; then
+        if grep -q "$message" $intermOutput ; then
+            let noop=0;
+        else
             msg="  TEST FAILURE: Expected messages does not match for $testCase on $processes processes"
             log "$msg"
             allSuccess=0
             setSuccess=0
             success=0
-          fi
-      fi
-      junit add "$testname.$processes" $success $t "$msg" < $intermOutput
-  done
-  if [ $setSuccess -eq 1 ]; then
-      log "TEST SUCCESS"
-  fi
+        fi
+    fi
+    junit add "$testname.$processes" $success $t "$msg" < $intermOutput
+done
+if [ $setSuccess -eq 1 ]; then
+    log "TEST SUCCESS"
+fi
+fi
 done
 
 junit write

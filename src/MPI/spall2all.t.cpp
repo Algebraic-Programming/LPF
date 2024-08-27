@@ -23,6 +23,7 @@
 #include <cmath>
 #include <string>
 #include <limits>
+#include <algorithm>
 
 #include <gtest/gtest.h>
 #include <mpi.h>
