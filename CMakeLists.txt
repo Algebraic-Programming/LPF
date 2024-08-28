@@ -343,7 +343,6 @@ if (LPF_ENABLE_TESTS)
     # set testing timeout to 60 seconds
     set(CMAKE_TESTING_TIMEOUT 60)
 
-
     # Have directory to gather all the tests results
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
     set(test_output "${CMAKE_BINARY_DIR}/junit")
