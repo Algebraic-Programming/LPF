@@ -173,7 +173,7 @@ if (MPI_FOUND)
     # add a test for dynamichook 
     if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
 
-        add_gtest_mpi(dynamichook.t "1;2;5;10" dynamichook.t.cpp dynamichook.cpp mpilib.cpp)
+        add_gtest_mpi(dynamichook.t "1;2;5;10"  "mpirma;mpimsg;ibverbs;hybrid" dynamichook.t.cpp dynamichook.cpp mpilib.cpp)
 
         configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
         set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
@@ -193,25 +193,25 @@ if (MPI_FOUND)
 
 # Other unit tests
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
+        add_gtest_mpi( ibverbs_test "1;2;5;10" "ibverbs" ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
         #$<TARGET_OBJECTS:${comlib}> mpilib.cpp)
         #target_link_libraries( ibverbs_test ${LIB_IBVERBS})
     endif()
 
-    add_gtest_mpi( spall2all_test "1;2;5;10" spall2all.t.cpp spall2all.c
+    add_gtest_mpi( spall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" spall2all.t.cpp spall2all.c
             spall2all.cpp mpilib.cpp)
         #$<TARGET_OBJECTS:${comlib}> )
 
-    add_gtest_mpi( dall2all_test "1;2;5;10" dall2all.t.cpp
+        add_gtest_mpi( dall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" dall2all.t.cpp
         #mpilib.cpp $<TARGET_OBJECTS:${comlib}> 
         mpilib.cpp)
 
     if (MPI_IBARRIER)
-       add_gtest_mpi( hall2all_test "1;2;5;10" hall2all.t.cpp mpilib.cpp)
+        add_gtest_mpi( hall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" hall2all.t.cpp mpilib.cpp)
            #      mpilib.cpp $<TARGET_OBJECTS:${comlib}> )
     endif()
 
-    add_gtest( messagesort_test messagesort.t.cpp messagesort.cpp)
+    add_gtest_mpi( messagesort_test "1" "mpirma;mpimsg;ibverbs;hybrid" messagesort.t.cpp messagesort.cpp)
     #       $<TARGET_OBJECTS:${comlib}> )
 
     add_gtest( ipcmesg_test ipcmesg.t.cpp)

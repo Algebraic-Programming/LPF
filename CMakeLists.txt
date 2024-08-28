@@ -343,8 +343,8 @@ set(test_output "${CMAKE_BINARY_DIR}/junit")
 function(add_gtest testName)
     include(GoogleTest)
     add_executable(${testName} ${ARGN})
-    target_link_libraries(${testName} GTest::gtest GTest::gtest_main  lpf_common_${LPFLIB_CONFIG_NAME})
-    foreach(LPF_IMPL_ID ${ENGINES})
+    target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+    foreach(LPF_IMPL_ID pthread)
         target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
     endforeach(LPF_IMPL_ID)
     gtest_add_tests(TARGET ${testName}
@@ -355,12 +355,12 @@ endfunction(add_gtest)
 
 # Have a macro to add a unit test that should run with MPI
 if (MPI_FOUND)
-    function(add_gtest_mpi testName nprocs)
+    function(add_gtest_mpi testName nprocs engines)
 
         include(GoogleTest)
         add_executable(${testName} ${ARGN})
         target_link_libraries(${testName} GTest::gtest GTest::gtest_main ${MPI_C_LIBRARIES} lpf_common_${LPFLIB_CONFIG_NAME})
-        foreach(LPF_IMPL_ID ${ENGINES})
+        foreach(LPF_IMPL_ID ${engines})
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
 
