@@ -128,24 +128,6 @@ foreach (LPF_IMPL_ID ${ENGINES})
 
     # add all source files except the ones we don't want
     foreach(testSource ${test_sources})
-        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
-        get_filename_component(baseName ${testSource} NAME_WE  )
-        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-
-        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
-
-        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
-        get_filename_component(baseName ${testSource} NAME_WE  )
-        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-
-    endforeach(testSource)
-endforeach(LPF_IMPL_ID)
-
-
-include_directories(.)
-add_subdirectory(debug)
-add_subdirectory(collectives)
-
 
 option(LPFLIB_MAKE_TEST_DOC "Build the test documentation" OFF)
 if (LPFLIB_MAKE_TEST_DOC)

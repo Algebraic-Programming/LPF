@@ -335,7 +335,6 @@ endfunction()
 if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
 
-
     # Enable testing in CMake
     enable_testing()
     find_package(GTest REQUIRED)

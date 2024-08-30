@@ -17,7 +17,6 @@
 
 #include <lpf/bsplib.h>
 #include "gtest/gtest.h"
-
 #include <stdint.h>
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)

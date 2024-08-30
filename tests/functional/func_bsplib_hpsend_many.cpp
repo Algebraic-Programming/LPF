@@ -18,7 +18,6 @@
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
 #include "gtest/gtest.h"
-
 #include <stdint.h>
 #include <math.h>
 
@@ -111,7 +110,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     rc = bsplib_destroy( bsplib);
     EXPECT_EQ( BSPLIB_SUCCESS, rc );
-
     free(memory);
 }
 
