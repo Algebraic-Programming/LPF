@@ -43,6 +43,7 @@ foreach(LPF_IMPL_ID "ibverbs")
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
         message("Add test: ${exeName}")
+        # Signature: function(add_gtest_mpi testName engines debug testSource)
         add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug} ${testSource})
     endforeach()
 
@@ -60,7 +61,8 @@ foreach(LPF_IMPL_ID "ibverbs")
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        gtest_discover_tests(${exeName})
+        gtest_discover_tests(${exeName}
+            PROPERTIES TEST_LAUNCHER ${tempString})
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 
