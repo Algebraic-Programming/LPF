@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -27,33 +27,33 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     char a = 'a';
     char b = 'b';
 
     rc = bsplib_push_reg( bsplib, &a, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_get( bsplib,
             bsplib_nprocs( bsplib ) + 1,
             &a, 0, &b, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_PID_OUT_OF_RANGE, rc );
+    EXPECT_EQ( BSPLIB_ERR_PID_OUT_OF_RANGE, rc );
 
     rc = bsplib_get( bsplib, -1,
             &a, 0, &b, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_PID_OUT_OF_RANGE, rc );
+    EXPECT_EQ( BSPLIB_ERR_PID_OUT_OF_RANGE, rc );
 
     rc = bsplib_get( bsplib, 0, &a, 1, &b, sizeof(a) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
     rc = bsplib_get( bsplib, 0, &a, 0, &b, 2*sizeof(a) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
 
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -61,10 +61,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_get_exceptions )
+TEST(API, func_bsplib_get_exceptions )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

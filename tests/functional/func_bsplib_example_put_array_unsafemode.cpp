@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -27,7 +27,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 0, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     int n = 5 * bsplib_nprocs(bsplib);
     int i, dst_pid, dst_idx, p = bsplib_nprocs(bsplib), n_over_p = n / p;
@@ -38,11 +38,11 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         xs[i] = n - ( i + bsplib_pid(bsplib) * n_over_p ) - 1;
     }
 
-    EXPECT_EQ("%d", 0, n % p );
+    EXPECT_EQ( 0, n % p );
     rc = bsplib_push_reg(bsplib, xs, n_over_p * sizeof( int ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n_over_p; ++i )
     {
@@ -51,21 +51,21 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         rc = bsplib_put(bsplib, dst_pid, 
                 &xs[i], xs, dst_idx * sizeof( int ),
             sizeof( int ) );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
     }
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_pop_reg(bsplib, xs );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n_over_p; ++i )
     {
-        EXPECT_EQ("%d", i + (int) bsplib_pid(bsplib) * n_over_p, xs[i] );
+        EXPECT_EQ( i + (int) bsplib_pid(bsplib) * n_over_p, xs[i] );
     }
 
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -73,10 +73,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_put_array_unsafemode )
+TEST( API, func_bsplib_put_array_unsafemode )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

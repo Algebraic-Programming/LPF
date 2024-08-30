@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -27,38 +27,38 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // register NULL once
     rc = bsplib_push_reg( bsplib, NULL, 0 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_pop_reg( bsplib, NULL );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
 
     // register NULL twice
     rc = bsplib_push_reg( bsplib, NULL, 0 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_push_reg( bsplib, NULL, 0 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_pop_reg( bsplib, NULL );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_pop_reg( bsplib, NULL );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
  
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // use of NULL with comm primitives 
  
@@ -67,41 +67,41 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     char *p = bsplib_pid(bsplib) == 0 ? &x : NULL;
 
     rc = bsplib_push_reg(bsplib, p, bsplib_pid(bsplib) == 0 ? 1 : 0 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     if ( bsplib_pid(bsplib) == 1 )
     {
        rc = bsplib_put(bsplib, 0, &y, p, 0, 1 );
-       EXPECT_EQ( "%d", BSPLIB_ERR_NULL_POINTER , rc );
+       EXPECT_EQ( BSPLIB_ERR_NULL_POINTER , rc );
             
        rc = bsplib_hpput(bsplib, 0, &y, p, 0, 1 );
-       EXPECT_EQ( "%d", BSPLIB_ERR_NULL_POINTER , rc );
+       EXPECT_EQ( BSPLIB_ERR_NULL_POINTER , rc );
             
        rc = bsplib_get(bsplib, 0, p, 0, &y, 1 );
-       EXPECT_EQ( "%d", BSPLIB_ERR_NULL_POINTER , rc );
+       EXPECT_EQ( BSPLIB_ERR_NULL_POINTER , rc );
 
        rc = bsplib_hpget(bsplib, 0, p, 0, &y, 1 );
-       EXPECT_EQ( "%d", BSPLIB_ERR_NULL_POINTER , rc );
+       EXPECT_EQ( BSPLIB_ERR_NULL_POINTER , rc );
     }
 
     if ( bsplib_pid(bsplib) == 0 )
     {
-        EXPECT_EQ( "%c", 'x', *p );
+        EXPECT_EQ( 'x', *p );
         rc = bsplib_put(bsplib, 0, &y, p, 0, 1 );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
     }
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     if ( bsplib_pid(bsplib) == 0 )
     {
-        EXPECT_EQ( "%c", 'y', *p );
+        EXPECT_EQ( 'y', *p );
     }
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -109,10 +109,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_bsplib_pushpopreg_null )
+TEST( API, func_bsplib_pushpopreg_null )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

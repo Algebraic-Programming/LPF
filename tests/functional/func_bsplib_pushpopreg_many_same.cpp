@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -36,11 +36,11 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     while (1)
     {
         rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
         for ( i = 0; i < n; ++i ) {
             rc = bsplib_push_reg( bsplib, a, i );
-            EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+            EXPECT_EQ( BSPLIB_SUCCESS, rc );
         }
 
         rc = bsplib_sync( bsplib );
@@ -53,7 +53,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         {
             // reinitialize BSPlib
             rc = bsplib_destroy( bsplib);
-            EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+            EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
             // reduce number of registers
             n /= 2;
@@ -63,21 +63,21 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
             break;
         }
     } 
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n; ++i ) {
         rc = bsplib_pop_reg( bsplib, &a );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
     }
  
     rc = bsplib_pop_reg( bsplib, &a );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
 
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -85,10 +85,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_pushpopreg_many_same)
+TEST( API, func_bsplib_pushpopreg_many_same)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

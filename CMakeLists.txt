@@ -356,6 +356,7 @@ function(add_gtest testName engines debug)
         target_link_libraries(${testName} lpf_debug lpf_hl_debug)
     endif(debug)
     foreach(LPF_IMPL_ID ${engines})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
         target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
     endforeach(LPF_IMPL_ID)
     gtest_add_tests(TARGET ${testName}

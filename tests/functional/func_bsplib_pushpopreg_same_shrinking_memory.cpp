@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -27,45 +27,45 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 2, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // first register a bit of memory
     char memory[10];
     memset( memory, 0, sizeof( memory ) );
     rc = bsplib_push_reg(bsplib, &memory[0], 8 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync(bsplib  );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     char x = 'x';
 
     rc = bsplib_put(bsplib, 
             ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib), 
             &x, memory, 0, sizeof( x ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%c", '\0', memory[0] );
-    EXPECT_EQ( "%c", 'x', x );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( '\0', memory[0] );
+    EXPECT_EQ( 'x', x );
 
     rc = bsplib_put(bsplib, 
             ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib), 
             &x, memory, 4, sizeof( x ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%c", '\0', memory[4] );
-    EXPECT_EQ( "%c", 'x', x );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( '\0', memory[4] );
+    EXPECT_EQ( 'x', x );
 
     rc = bsplib_sync(bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'x', memory[0] );
-    EXPECT_EQ( "%c", 'x', x );
+    EXPECT_EQ( 'x', memory[0] );
+    EXPECT_EQ( 'x', x );
 
-    EXPECT_EQ( "%c", 'x', memory[4] );
-    EXPECT_EQ( "%c", 'x', x );
+    EXPECT_EQ( 'x', memory[4] );
+    EXPECT_EQ( 'x', x );
 
     // now register the memory again, but with smaller extent
     rc = bsplib_push_reg(bsplib, &memory[0], 2 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync(bsplib  );
 
@@ -74,34 +74,34 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     rc = bsplib_put(bsplib, 
                 ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib),
                 &x, memory, 4, sizeof( x ) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
 
-    EXPECT_EQ( "%c", 'x', memory[4] );
-    EXPECT_EQ( "%c", 'a', x );
+    EXPECT_EQ( 'x', memory[4] );
+    EXPECT_EQ( 'a', x );
 
     rc = bsplib_pop_reg(bsplib, &memory[0] );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_sync(bsplib  );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // Stack order of registering the same memory!
     rc = bsplib_put(bsplib, 
             ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib), 
             &x, memory, 4, sizeof( x ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_pop_reg(bsplib, &memory[0] );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'x', memory[4] );
+    EXPECT_EQ( 'x', memory[4] );
 
     rc = bsplib_sync(bsplib  );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'a', x );
-    EXPECT_EQ( "%c", 'a', memory[4] );
+    EXPECT_EQ( 'a', x );
+    EXPECT_EQ( 'a', memory[4] );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -109,10 +109,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_pushpopreg_same_shrinking_memory)
+TEST( API, func_bsplib_pushpopreg_same_shrinking_memory)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
