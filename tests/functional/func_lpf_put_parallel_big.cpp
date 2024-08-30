@@ -36,8 +36,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
 
     const size_t blocksize = 99999;
     const size_t bufsize = nprocs * blocksize;
-    char * srcbuf = calloc( bufsize, 1 );
-    char * dstbuf = calloc( bufsize, 1 );
+    char * srcbuf = (char *) calloc( bufsize, 1 );
+    char * dstbuf = (char *) calloc( bufsize, 1 );
 
     lpf_memslot_t srcslot = LPF_INVALID_MEMSLOT;
     lpf_memslot_t dstslot = LPF_INVALID_MEMSLOT;
@@ -45,8 +45,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
     lpf_register_global( lpf, srcbuf, bufsize, &srcslot);
     lpf_register_global( lpf, dstbuf, bufsize, &dstslot);
 
-    int try = 0;
-    for (try = 0; try < 3; ++try ) {
+    int i = 0;
+    for (i= 0; i < 3; ++i ) {
        lpf_err_t rc = lpf_sync( lpf, LPF_SYNC_DEFAULT ) ;
        EXPECT_EQ( LPF_SUCCESS, rc );
        size_t dstoffset = 0;
@@ -75,9 +75,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
  */
 TEST(API, func_lpf_put_parallel_big)
 {
-    (void) argc;
-    (void) argv;
-
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS );
     EXPECT_EQ( LPF_SUCCESS, rc );
 

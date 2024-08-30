@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -27,38 +27,38 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, (size_t) -1, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     int a;
     // Use of variable without definition
     rc = bsplib_put( bsplib, 0, &a, &a, 0, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
         
     // Tests use of put directly after registration before sync
     rc = bsplib_push_reg( bsplib, &a, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_put( bsplib, 0, &a, &a, 0, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_put( bsplib, 0, &a, &a, 0, sizeof( a ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_pop_reg( bsplib, &a );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // Tests detection of NULL ptr
     rc = bsplib_push_reg( bsplib, NULL, 1);
-    EXPECT_EQ( "%d", BSPLIB_ERR_NULL_POINTER, rc );
+    EXPECT_EQ( BSPLIB_ERR_NULL_POINTER, rc );
 
     // Tests deregistration of non-existent registration
     rc = bsplib_pop_reg( bsplib, &a );
-    EXPECT_EQ( "%d", BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
+    EXPECT_EQ( BSPLIB_ERR_MEMORY_NOT_REGISTERED, rc );
 
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -66,10 +66,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_pushpopreg_exception )
+TEST( API, func_bsplib_pushpopreg_exception )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

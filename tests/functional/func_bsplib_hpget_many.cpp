@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -29,16 +29,16 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     int i, j;
     const int m = 1000;
     const int n = m*(m+1)/2;
-    uint32_t * memory = malloc( 2 + n *sizeof(uint32_t) );
+    uint32_t * memory = (uint32_t *) malloc( 2 + n *sizeof(uint32_t) );
     uint32_t *array = memory + 2;
     uint32_t value[m];
     rc = bsplib_push_reg(bsplib, value, sizeof(value));
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n; ++i )
     {
@@ -51,7 +51,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     }
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
 
     for (i = 1, j=0; i <= m; j += i, ++i) {
@@ -59,33 +59,33 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
                 ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib),
                 value, 0, array + j,
             i*sizeof( uint32_t ) );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
     }
     rc = bsplib_pop_reg(bsplib, value );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n; ++i )
     {
         if ( i < 2)
         {
-            EXPECT_EQ( "%u", 0xAAAAAAAAu, memory[i] );
+            EXPECT_EQ( 0xAAAAAAAAu, memory[i] );
         }
         else
         {
-            EXPECT_EQ( "%u", 0x12345678u, memory[i] );
+            EXPECT_EQ( 0x12345678u, memory[i] );
         }
     }
 
     for ( i = 0; i < m; ++i ) {
-        EXPECT_EQ( "%u", 0x12345678u, value[i] );
+        EXPECT_EQ( 0x12345678u, value[i] );
     }
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     free(memory);
 }
@@ -95,10 +95,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_hpget_many)
+TEST(API, func_bsplib_hpget_many)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
