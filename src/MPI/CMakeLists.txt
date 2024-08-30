@@ -194,28 +194,19 @@ if (MPI_FOUND)
 # Other unit tests
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest_mpi( ibverbs_test "1;2;5;10" "ibverbs" ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
-        #$<TARGET_OBJECTS:${comlib}> mpilib.cpp)
-        #target_link_libraries( ibverbs_test ${LIB_IBVERBS})
     endif()
 
-    add_gtest_mpi( spall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" spall2all.t.cpp spall2all.c
-            spall2all.cpp mpilib.cpp)
-        #$<TARGET_OBJECTS:${comlib}> )
+    add_gtest_mpi( spall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" spall2all.t.cpp spall2all.c spall2all.cpp mpilib.cpp)
 
-        add_gtest_mpi( dall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" dall2all.t.cpp
-        #mpilib.cpp $<TARGET_OBJECTS:${comlib}> 
-        mpilib.cpp)
+    add_gtest_mpi( dall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" dall2all.t.cpp mpilib.cpp)
 
     if (MPI_IBARRIER)
         add_gtest_mpi( hall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" hall2all.t.cpp mpilib.cpp)
-           #      mpilib.cpp $<TARGET_OBJECTS:${comlib}> )
     endif()
 
     add_gtest_mpi( messagesort_test "1" "mpirma;mpimsg;ibverbs;hybrid" messagesort.t.cpp messagesort.cpp)
-    #       $<TARGET_OBJECTS:${comlib}> )
 
-    add_gtest( ipcmesg_test ipcmesg.t.cpp)
-    #$<TARGET_OBJECTS:${comlib}> )
+    add_gtest( ipcmesg_test "hybrid" OFF ipcmesg.t.cpp)
 
 endif(MPI_FOUND)
 

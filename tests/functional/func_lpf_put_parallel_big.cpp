@@ -22,7 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Test.h"
+#include <gtest/gtest.h>
+
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
 {
@@ -47,7 +48,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
     int try = 0;
     for (try = 0; try < 3; ++try ) {
        lpf_err_t rc = lpf_sync( lpf, LPF_SYNC_DEFAULT ) ;
-       EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+       EXPECT_EQ( LPF_SUCCESS, rc );
        size_t dstoffset = 0;
        size_t srcoffset = 0;
        unsigned p;
@@ -59,7 +60,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
     }
 
     lpf_err_t rc = lpf_sync( lpf, LPF_SYNC_DEFAULT ) ;
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     lpf_deregister( lpf, srcslot );
     lpf_deregister( lpf, dstslot );
@@ -72,13 +73,12 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
  * \note Extra lpfrun parameters: -max-mpi-msg-size 500
  * \return Exit code: 0
  */
-TEST( func_lpf_put_parallel_big )
+TEST(API, func_lpf_put_parallel_big)
 {
     (void) argc;
     (void) argv;
 
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    return 0;
 }

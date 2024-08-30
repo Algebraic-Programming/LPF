@@ -331,6 +331,11 @@ endfunction()
 if (LPF_ENABLE_TESTS)
 message(STATUS "Unit and API tests will be built")
 
+
+# Enable testing in CMake
+enable_testing()
+find_package(GTest REQUIRED)
+
 # set testing timeout to 60 seconds
 set(CMAKE_TESTING_TIMEOUT 60)
 
@@ -340,15 +345,21 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
 set(test_output "${CMAKE_BINARY_DIR}/junit")
 
 # Have a macro to add a unit test
-function(add_gtest testName)
+function(add_gtest testName engines debug)
     include(GoogleTest)
     add_executable(${testName} ${ARGN})
+    if (debug)
+        target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+    endif(debug)
     target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
-    foreach(LPF_IMPL_ID pthread)
+    if (debug)
+        target_link_libraries(${testName} lpf_debug lpf_hl_debug)
+    endif(debug)
+    foreach(LPF_IMPL_ID ${engines})
         target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
     endforeach(LPF_IMPL_ID)
     gtest_add_tests(TARGET ${testName}
-        EXTRA_ARGS  --gtest_output=xml:${test_output}/
+        EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
         TEST_LIST seqTests
         )
 endfunction(add_gtest)
@@ -364,20 +375,14 @@ if (MPI_FOUND)
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
 
-        set_target_properties(${testName} PROPERTIES
-            COMPILE_FLAGS "${MPI_C_COMPILE_FLAGS}"
-            LINK_FLAGS "${MPI_C_LINK_FLAGS}")
-
         gtest_add_tests(TARGET ${testName}
-            EXTRA_ARGS  --gtest_output=xml:${test_output}/
-            TEST_LIST mpiTests
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
             )
+    set_property(TARGET ${testName} 
+        PROPERTY TEST_LAUNCHER "mpirun;-n;2")
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
 
-# Enable testing in CMake
-enable_testing()
-find_package(GTest REQUIRED)
 
 else(LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will *not* be built")
