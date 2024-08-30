@@ -345,15 +345,16 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
 set(test_output "${CMAKE_BINARY_DIR}/junit")
 
 # Have a macro to add a unit test
-function(add_gtest testName engines debug)
+function(add_gtest testName engines debug testSource)
     include(GoogleTest)
-    add_executable(${testName} ${ARGN})
+    add_executable(${testName} ${testSource})
     if (debug)
         target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
     endif(debug)
-    target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
     if (debug)
-        target_link_libraries(${testName} lpf_debug lpf_hl_debug)
+        target_link_libraries(${testName} lpf_debug lpf_hl_debug  GTest::gtest GTest::gtest_main)
+    else(debug)
+        target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
     endif(debug)
     foreach(LPF_IMPL_ID ${engines})
         target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
@@ -367,11 +368,19 @@ endfunction(add_gtest)
 
 # Have a macro to add a unit test that should run with MPI
 if (MPI_FOUND)
-    function(add_gtest_mpi testName nprocs engines)
+    function(add_gtest_mpi testName engines debug testSource)
 
         include(GoogleTest)
-        add_executable(${testName} ${ARGN})
-        target_link_libraries(${testName} GTest::gtest GTest::gtest_main ${MPI_C_LIBRARIES} lpf_common_${LPFLIB_CONFIG_NAME})
+        add_executable(${testName} ${testSource} ${ARGN})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+        if (debug)
+            target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+        endif(debug)
+        if (debug)
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
+        else(debug)
+            target_link_libraries(${testName} ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
+        endif(debug)
         foreach(LPF_IMPL_ID ${engines})
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
@@ -379,8 +388,10 @@ if (MPI_FOUND)
         gtest_add_tests(TARGET ${testName}
             EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
             )
-    set_property(TARGET ${testName} 
-        PROPERTY TEST_LAUNCHER "mpirun;-n;2")
+        execute_process(COMMAND bash -c "grep \"pre P\" ${testSource} | cut -d \" \" -f 5" OUTPUT_VARIABLE minProcs)
+
+        set_property(TARGET ${testName} 
+            PROPERTY TEST_LAUNCHER "mpirun;-n;${minProcs}")
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
 
@@ -391,7 +402,7 @@ else(LPF_ENABLE_TESTS)
        # Do nothing because tests are disabled
     endfunction(add_gtest)
 
-    function(add_gtest_mpi testName nprocs)
+    function(add_gtest_mpi testName engines debug)
        # DO nothing because tests are disabled
     endfunction(add_gtest_mpi)
 endif(LPF_ENABLE_TESTS)

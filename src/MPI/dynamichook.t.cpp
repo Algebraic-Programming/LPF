@@ -24,6 +24,9 @@
 
 #include <iostream>
 
+/** 
+ * \pre P >= 1
+ */
 int main(int argc, char ** argv)
 {
     MPI_Init(&argc, &argv);

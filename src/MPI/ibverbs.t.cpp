@@ -281,6 +281,9 @@ TEST( IBVerbs, getHuge )
     EXPECT_EQ( hugeMsg, hugeBuf );
 }
 
+/** 
+ * \pre P >= 1
+ */
 TEST( IBVerbs, manyPuts )
 {
     Comm comm = Lib::instance().world();

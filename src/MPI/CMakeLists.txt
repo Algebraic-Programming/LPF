@@ -173,38 +173,39 @@ if (MPI_FOUND)
     # add a test for dynamichook 
     if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
 
-        add_gtest_mpi(dynamichook.t "1;2;5;10"  "mpirma;mpimsg;ibverbs;hybrid" dynamichook.t.cpp dynamichook.cpp mpilib.cpp)
 
-        configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
-        set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
-        add_test(NAME dynamichook_1proc
-                 COMMAND bash ${dynamic_hook_t_sh} 1)
-        set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 120 )
-        add_test(NAME dynamichook_2proc
-                 COMMAND bash ${dynamic_hook_t_sh} 2)
-        set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 240 )
-        add_test(NAME dynamichook_3proc
-                 COMMAND bash ${dynamic_hook_t_sh} 3)
-        set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 360 )
-        add_test(NAME dynamichook_10proc
-                 COMMAND bash ${dynamic_hook_t_sh} 10)
-        set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 1200 )
+                add_gtest_mpi(dynamichook.t "mpirma;mpimsg;ibverbs;hybrid" ON dynamichook.t.cpp dynamichook.cpp mpilib.cpp)
+        
+                configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
+                set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
+                add_test(NAME dynamichook_1proc
+                         COMMAND bash ${dynamic_hook_t_sh} 1)
+                set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 120 )
+                add_test(NAME dynamichook_2proc
+                         COMMAND bash ${dynamic_hook_t_sh} 2)
+                set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 240 )
+                add_test(NAME dynamichook_3proc
+                         COMMAND bash ${dynamic_hook_t_sh} 3)
+                set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 360 )
+                add_test(NAME dynamichook_10proc
+                         COMMAND bash ${dynamic_hook_t_sh} 10)
+                set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 1200 )
     endif()
 
 # Other unit tests
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "1;2;5;10" "ibverbs" ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
+        add_gtest_mpi( ibverbs_test "ibverbs" ON ibverbs.t.cpp ibverbs.cpp mpilib.cpp)
     endif()
 
-    add_gtest_mpi( spall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" spall2all.t.cpp spall2all.c spall2all.cpp mpilib.cpp)
+        add_gtest_mpi( spall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON spall2all.t.cpp spall2all.c spall2all.cpp mpilib.cpp)
 
-    add_gtest_mpi( dall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" dall2all.t.cpp mpilib.cpp)
+        add_gtest_mpi( dall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON dall2all.t.cpp mpilib.cpp)
 
     if (MPI_IBARRIER)
-        add_gtest_mpi( hall2all_test "1;2;5;10" "mpirma;mpimsg;ibverbs;hybrid" hall2all.t.cpp mpilib.cpp)
+        add_gtest_mpi( hall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON hall2all.t.cpp mpilib.cpp)
     endif()
 
-    add_gtest_mpi( messagesort_test "1" "mpirma;mpimsg;ibverbs;hybrid" messagesort.t.cpp messagesort.cpp)
+    add_gtest_mpi( messagesort_test "mpirma;mpimsg;ibverbs;hybrid" ON messagesort.t.cpp messagesort.cpp)
 
     add_gtest( ipcmesg_test "hybrid" OFF ipcmesg.t.cpp)
 
