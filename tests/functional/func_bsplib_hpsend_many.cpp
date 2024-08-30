@@ -44,7 +44,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     int i, j;
     size_t size;
-    const int m = 1000;
+    const int m = 100;
     const int n = m*(m+1)/2;
     uint32_t * memory = (uint32_t *) malloc( 2 + n *sizeof(uint32_t) );
     uint32_t *array = memory + 2;
