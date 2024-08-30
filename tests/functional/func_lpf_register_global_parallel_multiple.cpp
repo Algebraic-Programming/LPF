@@ -17,12 +17,12 @@
 
 #include <lpf/core.h>
 #include <string.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) args; // ignore args parameter
-    EXPECT_LT( "%d", (int) pid, (int) nprocs );
+    EXPECT_LT( (int) pid, (int) nprocs );
     char a[1] = { 'i' };
     char b[2] = { 'p', 'q' };
     char c[3] = { 'a', 'b', 'c'};
@@ -35,62 +35,62 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     lpf_err_t rc = LPF_SUCCESS;
 
     rc = lpf_resize_message_queue( lpf, 1);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( lpf, 4);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_global( lpf, &a, sizeof(a), &aSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_global( lpf, &c, sizeof(c), &cSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_global( lpf, &d, sizeof(d), &dSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'i', a[0]);
-    EXPECT_EQ( "%c", 'p', b[0]);
-    EXPECT_EQ( "%c", 'q', b[1]);
-    EXPECT_EQ( "%c", 'a', c[0]);
-    EXPECT_EQ( "%c", 'b', c[1]);
-    EXPECT_EQ( "%c", 'c', c[2]);
-    EXPECT_EQ( "%c", 'h', d[0]);
-    EXPECT_EQ( "%c", 'a', d[1]);
-    EXPECT_EQ( "%c", 'l', d[2]);
-    EXPECT_EQ( "%c", 'l', d[3]);
-    EXPECT_EQ( "%c", 'o', d[4]);
-    EXPECT_EQ( "%c", '\0', d[5]);
+    EXPECT_EQ( 'i', a[0]);
+    EXPECT_EQ( 'p', b[0]);
+    EXPECT_EQ( 'q', b[1]);
+    EXPECT_EQ( 'a', c[0]);
+    EXPECT_EQ( 'b', c[1]);
+    EXPECT_EQ( 'c', c[2]);
+    EXPECT_EQ( 'h', d[0]);
+    EXPECT_EQ( 'a', d[1]);
+    EXPECT_EQ( 'l', d[2]);
+    EXPECT_EQ( 'l', d[3]);
+    EXPECT_EQ( 'o', d[4]);
+    EXPECT_EQ( '\0', d[5]);
 
     if ( 0 == pid )
     {
         rc = lpf_register_local( lpf, &b, sizeof(b), &bSlot );
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+        EXPECT_EQ( LPF_SUCCESS, rc );
 
         rc = lpf_put( lpf, bSlot, 1u * sizeof(b[0]), 
                 1u, dSlot, 2u*sizeof(d[0]), sizeof(b[0]), LPF_MSG_DEFAULT );
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+        EXPECT_EQ( LPF_SUCCESS, rc );
     }
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'i', a[0]);
-    EXPECT_EQ( "%c", 'p', b[0]);
-    EXPECT_EQ( "%c", 'q', b[1]);
-    EXPECT_EQ( "%c", 'a', c[0]);
-    EXPECT_EQ( "%c", 'b', c[1]);
-    EXPECT_EQ( "%c", 'c', c[2]);
-    EXPECT_EQ( "%c", 'h', d[0]);
-    EXPECT_EQ( "%c", 'a', d[1]);
-    EXPECT_EQ( "%c", pid == 1 ? 'q' : 'l', d[2]);
-    EXPECT_EQ( "%c", 'l', d[3]);
-    EXPECT_EQ( "%c", 'o', d[4]);
-    EXPECT_EQ( "%c", '\0', d[5]);
+    EXPECT_EQ( 'i', a[0]);
+    EXPECT_EQ( 'p', b[0]);
+    EXPECT_EQ( 'q', b[1]);
+    EXPECT_EQ( 'a', c[0]);
+    EXPECT_EQ( 'b', c[1]);
+    EXPECT_EQ( 'c', c[2]);
+    EXPECT_EQ( 'h', d[0]);
+    EXPECT_EQ( 'a', d[1]);
+    EXPECT_EQ( pid == 1 ? 'q' : 'l', d[2]);
+    EXPECT_EQ( 'l', d[3]);
+    EXPECT_EQ( 'o', d[4]);
+    EXPECT_EQ( '\0', d[5]);
 
 
     lpf_deregister( lpf, dSlot );
@@ -104,9 +104,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_lpf_register_global_parallel_multiple )
+TEST( API, func_lpf_register_global_parallel_multiple )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc);
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc);
 }

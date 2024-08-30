@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 
 /** 
@@ -24,7 +24,7 @@
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( type_lpf_t )
+TEST( API, type_lpf_t )
 {
     lpf_t var_d = NULL;
 
@@ -34,8 +34,7 @@ TEST( type_lpf_t )
     lpf_t var_e = y;
     y = var_d;
 
-    EXPECT_EQ( "%ld", sizeof(lpf_t), sizeof(void *));
-    EXPECT_EQ( "%p", NULL, y );
-    EXPECT_EQ( "%p", (lpf_t) &x, var_e );
-    return 0;
+    EXPECT_EQ( sizeof(lpf_t), sizeof(void *));
+    EXPECT_EQ( NULL, y );
+    EXPECT_EQ( (lpf_t) &x, var_e );
 }

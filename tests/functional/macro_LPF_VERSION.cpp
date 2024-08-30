@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #ifdef _LPF_VERSION
   #if _LPF_VERSION == 202000L
@@ -33,8 +33,7 @@
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( macro_LPF_VERSION )
+TEST( API, macro_LPF_VERSION )
 {
-    EXPECT_EQ( "%ld", 202000L, _LPF_VERSION );
-    return 0;
+    EXPECT_EQ( 202000L, _LPF_VERSION );
 }

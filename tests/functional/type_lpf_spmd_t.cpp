@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void test_spmd( const lpf_t lpf, const lpf_pid_t pid, const lpf_pid_t nprocs, const lpf_args_t args)
 {
@@ -37,7 +37,7 @@ lpf_spmd_t var_c = & test_spmd;
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( type_lpf_spmd_t )
+TEST( API, type_lpf_spmd_t )
 {
     lpf_spmd_t var_d = NULL;
     lpf_spmd_t var_e = & test_spmd;
@@ -48,8 +48,7 @@ TEST( type_lpf_spmd_t )
     lpf_args_t e;
     (*var_e)(a, b, c, e);
 
-    EXPECT_EQ( "%p", (lpf_spmd_t) NULL, var_b );
-    EXPECT_EQ( "%p", &test_spmd, var_e );
-    EXPECT_EQ( "%p", (lpf_spmd_t) NULL, var_d );
-    return 0;
+    EXPECT_EQ( (lpf_spmd_t) NULL, var_b );
+    EXPECT_EQ( &test_spmd, var_e );
+    EXPECT_EQ( (lpf_spmd_t) NULL, var_d );
 }

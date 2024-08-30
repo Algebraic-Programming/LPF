@@ -66,8 +66,8 @@ endforeach(LPF_IMPL_ID)
 
 include_directories(.)
 
-#add_subdirectory(c99)
-#add_subdirectory(debug)
+add_subdirectory(c99)
+add_subdirectory(debug)
 
 
 option(LPFLIB_MAKE_TEST_DOC "Build the test documentation" OFF)

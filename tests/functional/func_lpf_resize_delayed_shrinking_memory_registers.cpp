@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -28,13 +28,13 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         
     size_t maxMsgs = 0 , maxRegs = 16;
     rc = lpf_resize_message_queue( lpf, maxMsgs);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( lpf, maxRegs );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    char buffer[16] = "abcdefghijklmnop";
+    char * buffer = "abcdefghijklmnop";
     lpf_memslot_t slots[16];
 
     // register 16 entries
@@ -42,27 +42,27 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     for ( i = 0; i < 16; ++i)
     {
         rc = lpf_register_global( lpf, &buffer[i], sizeof(buffer[i]), &slots[i] );
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+        EXPECT_EQ( LPF_SUCCESS, rc );
     }
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     // resize to 0 again. 
     maxRegs = 0;
     rc = lpf_resize_memory_register( lpf, maxRegs );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     // deregister all 
     for ( i = 0; i < 16; ++i)
     {
         rc = lpf_deregister( lpf, slots[i] );
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+        EXPECT_EQ( LPF_SUCCESS, rc );
     }
 
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
 /** 
@@ -70,10 +70,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_resize_delayed_shrinking_memory_registers )
+TEST( API, func_lpf_resize_delayed_shrinking_memory_registers )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

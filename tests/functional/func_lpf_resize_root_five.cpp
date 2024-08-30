@@ -16,25 +16,24 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 /** 
  * \test Test lpf_resize function on LPF_ROOT and set maxMsgs to five
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_resize_root_five )
+TEST( API, func_lpf_resize_root_five )
 {
     lpf_err_t rc = LPF_SUCCESS;
         
     size_t maxMsgs = 5 , maxRegs = 7;
     rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( LPF_ROOT, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    return 0;
 }

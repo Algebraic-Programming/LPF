@@ -16,24 +16,23 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 /** 
  * \test Test lpf_resize function on LPF_ROOT allocating nothing
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_resize_root_zero )
+TEST( API, func_lpf_resize_root_zero )
 {
     lpf_err_t rc = LPF_SUCCESS;
     size_t maxMsgs = 0 , maxRegs = 0;
     rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( LPF_ROOT, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    return 0;
 }
