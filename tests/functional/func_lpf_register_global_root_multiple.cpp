@@ -17,14 +17,14 @@
 
 #include <lpf/core.h>
 #include <string.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 /** 
  * \test Test registering two times a global variable.
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_register_global_root_multiple )
+TEST( API, func_lpf_register_global_root_multiple )
 {
     char a[1] = { 'i' };
     char b[2] = { 'p', 'q' };
@@ -36,44 +36,43 @@ TEST( func_lpf_register_global_root_multiple )
     lpf_err_t rc = LPF_SUCCESS;
 
     rc = lpf_resize_message_queue( LPF_ROOT, 2);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( LPF_ROOT, 3);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( LPF_ROOT, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_global( LPF_ROOT, &a, sizeof(a), &aSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_local( LPF_ROOT, &b, sizeof(b), &bSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_register_global( LPF_ROOT, &c, sizeof(c), &cSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( LPF_ROOT, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'i', a[0]);
-    EXPECT_EQ( "%c", 'p', b[0]);
-    EXPECT_EQ( "%c", 'q', b[1]);
-    EXPECT_EQ( "%c", 'a', c[0]);
-    EXPECT_EQ( "%c", 'b', c[1]);
-    EXPECT_EQ( "%c", 'c', c[2]);
+    EXPECT_EQ( 'i', a[0]);
+    EXPECT_EQ( 'p', b[0]);
+    EXPECT_EQ( 'q', b[1]);
+    EXPECT_EQ( 'a', c[0]);
+    EXPECT_EQ( 'b', c[1]);
+    EXPECT_EQ( 'c', c[2]);
 
     rc = lpf_put( LPF_ROOT, bSlot, 1u * sizeof(b[0]), 
             0u, cSlot, 2u*sizeof(c[0]), sizeof(b[0]), LPF_MSG_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( LPF_ROOT, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_EQ( "%c", 'i', a[0]);
-    EXPECT_EQ( "%c", 'p', b[0]);
-    EXPECT_EQ( "%c", 'q', b[1]);
-    EXPECT_EQ( "%c", 'a', c[0]);
-    EXPECT_EQ( "%c", 'b', c[1]);
-    EXPECT_EQ( "%c", 'q', c[2]);
+    EXPECT_EQ( 'i', a[0]);
+    EXPECT_EQ( 'p', b[0]);
+    EXPECT_EQ( 'q', b[1]);
+    EXPECT_EQ( 'a', c[0]);
+    EXPECT_EQ( 'b', c[1]);
+    EXPECT_EQ( 'q', c[2]);
 
-    return 0;
 }

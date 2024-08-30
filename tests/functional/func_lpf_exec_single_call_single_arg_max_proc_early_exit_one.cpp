@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <string.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 
 
@@ -28,50 +28,50 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     int a[2] = { pid, -1 };
     lpf_memslot_t aSlot = LPF_INVALID_MEMSLOT;
 
-    EXPECT_LE( "%d", 2, nprocs );
+    EXPECT_LE( 2, nprocs );
 
     if ( 0 == pid )
     {
-        EXPECT_EQ( "%zd", (size_t) sizeof(int), args.input_size );
-        EXPECT_EQ( "%zd", (size_t) sizeof(int), args.output_size );
-        EXPECT_EQ( "%d", 1, * (int *) args.input );
+        EXPECT_EQ( (size_t) sizeof(int), args.input_size );
+        EXPECT_EQ( (size_t) sizeof(int), args.output_size );
+        EXPECT_EQ( 1, * (int *) args.input );
     }
     else
     {
-        EXPECT_EQ( "%zd", (size_t) 0, args.input_size );
-        EXPECT_EQ( "%zd", (size_t) 0, args.output_size );
-        EXPECT_EQ( "%p", (void *) NULL, args.input );
-        EXPECT_EQ( "%p", (void *) NULL, args.output );
+        EXPECT_EQ( (size_t) 0, args.input_size );
+        EXPECT_EQ( (size_t) 0, args.output_size );
+        EXPECT_EQ(( void *) NULL, args.input );
+        EXPECT_EQ( (void *) NULL, args.output );
     }
 
     // perform a simple communication
     rc = lpf_resize_message_queue( lpf, 2);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( lpf, 1 );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( lpf , LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_register_global( lpf, &a, sizeof(a), &aSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( lpf , LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_put( lpf, aSlot, 0, (pid+1) % nprocs, aSlot, sizeof(a[0]), sizeof(a[0]), LPF_MSG_DEFAULT);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( lpf , LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_EQ( "%d", a[0], (int) pid );
-    EXPECT_EQ( "%d", a[1], (int) ((pid+nprocs-1) % nprocs) );
+    EXPECT_EQ( a[0], (int) pid );
+    EXPECT_EQ( a[1], (int) ((pid+nprocs-1) % nprocs) );
 
     rc = lpf_deregister( lpf, aSlot );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     
     // now, all other processes except 'one' perform an extra sync.
     if ( 1 != pid )
     {
         rc = lpf_sync( lpf, LPF_SYNC_DEFAULT);
-        EXPECT_EQ( "%d", LPF_ERR_FATAL, rc );
+        EXPECT_EQ( LPF_ERR_FATAL, rc );
     }
     
     // It is still possible to send output through the args
@@ -87,7 +87,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_lpf_exec_single_call_single_arg_max_proc_early_exit_one )
+TEST( API, func_lpf_exec_single_call_single_arg_max_proc_early_exit_one )
 {
     lpf_err_t rc = LPF_SUCCESS;
     int input = 1;
@@ -100,8 +100,7 @@ TEST( func_lpf_exec_single_call_single_arg_max_proc_early_exit_one )
     args.f_size = 0;
     args.f_symbols = NULL;
     rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args );
-    EXPECT_EQ( "%d", LPF_ERR_FATAL , rc );
+    EXPECT_EQ( LPF_ERR_FATAL , rc );
 
-    EXPECT_EQ( "%d", 2, output );
-    return 0;
+    EXPECT_EQ( 2, output );
 }

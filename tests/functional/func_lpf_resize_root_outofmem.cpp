@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 
 
@@ -25,25 +25,24 @@
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_resize_root_outofmem )
+TEST( API, func_lpf_resize_root_outofmem )
 {
     lpf_err_t rc = LPF_SUCCESS;
  
     size_t maxMsgs = ((size_t) -1)/10 ;
     size_t maxRegs = ((size_t) -1)/10;
     rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( "%d", LPF_ERR_OUT_OF_MEMORY, rc );
+    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
     rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( "%d", LPF_ERR_OUT_OF_MEMORY, rc );
+    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
 
        
 
     maxMsgs = -1;
     maxRegs = -1;
     rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( "%d", LPF_ERR_OUT_OF_MEMORY, rc );
+    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
     rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( "%d", LPF_ERR_OUT_OF_MEMORY, rc );
+    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
 
-    return 0;
 }

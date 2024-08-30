@@ -16,7 +16,7 @@
  */
 
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -28,7 +28,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     size_t tagSize = sizeof( int );
     size_t nmsg = -1, bytes = -1;
@@ -36,26 +36,26 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     // set tag size which go in effect next super-step
     oldTagSize = bsplib_set_tagsize(bsplib, tagSize );
-    EXPECT_EQ( "%zu", ( size_t ) 0, oldTagSize );
+    EXPECT_EQ(  ( size_t ) 0, oldTagSize );
 
     const int x = 0x12345678;
     //const int y = 0x87654321;
 
     rc = bsplib_send(bsplib, 0, NULL, &x, sizeof( x ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_qsize(bsplib, &nmsg, &bytes );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", ( size_t ) ( bsplib_pid(bsplib) == 0 ? bsplib_nprocs(bsplib) : 0 ),
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  ( size_t ) ( bsplib_pid(bsplib) == 0 ? bsplib_nprocs(bsplib) : 0 ),
         nmsg );
-    EXPECT_EQ( "%zu", ( size_t ) ( bsplib_pid(bsplib) ==
+    EXPECT_EQ(  ( size_t ) ( bsplib_pid(bsplib) ==
             0 ? bsplib_nprocs(bsplib) * sizeof( x ) : 0 ), bytes );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -63,10 +63,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_bsplib_send_one)
+TEST( API, func_bsplib_send_one)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

@@ -16,7 +16,7 @@
  */
 
 #include <lpf/core.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 {
@@ -26,11 +26,11 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         
     size_t maxMsgs = 8 , maxRegs = 4;
     rc = lpf_resize_message_queue( lpf, maxMsgs);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( lpf, maxRegs );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     char buffer[8] = "abcd";
     lpf_memslot_t slots[4];
@@ -44,28 +44,28 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         for ( i = 0; i < maxRegs; ++i)
         {
             rc = lpf_register_global( lpf, &buffer[i*2], sizeof(buffer[0])*2, &slots[i] );
-            EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+            EXPECT_EQ( LPF_SUCCESS, rc );
         }
 
         rc = lpf_sync( lpf, LPF_SYNC_DEFAULT);
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-        EXPECT_STREQ( 4, "abcd", buffer );
+        EXPECT_EQ( LPF_SUCCESS, rc );
+        EXPECT_STREQ( "abcd", buffer );
 
         for (i = 0; i < maxRegs; ++i)
         {
             rc = lpf_put( lpf, slots[i], 0u, 
                     (pid+i)%nprocs, slots[i], 1u, sizeof(buffer[0]), LPF_MSG_DEFAULT );
-            EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+            EXPECT_EQ( LPF_SUCCESS, rc );
         }
 
         rc = lpf_sync( lpf, LPF_SYNC_DEFAULT);
-        EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-        EXPECT_STREQ( 4, "aacc", buffer );
+        EXPECT_EQ( LPF_SUCCESS, rc );
+        EXPECT_STREQ( "aacc", buffer );
 
         for ( i = 0 ; i < maxRegs; ++i)
         {
             rc = lpf_deregister( lpf, slots[i] );
-            EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+            EXPECT_EQ( LPF_SUCCESS, rc );
         }
 
         // reset to previous state
@@ -80,10 +80,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_deregister_parallel_multiple )
+TEST( API, func_lpf_deregister_parallel_multiple )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

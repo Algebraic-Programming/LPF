@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -29,7 +29,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 0, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     int i;
     const int n = 10;
@@ -37,19 +37,19 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     uint32_t *array = memory + 2;
     int length = 5;
     rc = bsplib_push_reg(bsplib, array, length );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     uint32_t value = 0x12345678;
     rc = bsplib_put(bsplib, 
             ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib),
             &value, array, 0,
         sizeof( value ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_pop_reg(bsplib, array );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n; ++i )
     {
@@ -58,28 +58,28 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     for ( i = 0; i < n; ++i )
     {
-        EXPECT_EQ( "%u", 0xAAAAAAAAu, memory[i] );
+        EXPECT_EQ( 0xAAAAAAAAu, memory[i] );
     }
-    EXPECT_EQ( "%u", 0x12345678u, value );
+    EXPECT_EQ( 0x12345678u, value );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     for ( i = 0; i < n; ++i )
     {
         if ( 2 != i )
         {
-            EXPECT_EQ( "%u", 0xAAAAAAAAu, memory[i] );
+            EXPECT_EQ( 0xAAAAAAAAu, memory[i] );
         }
         else
         {
-            EXPECT_EQ( "%u", 0x12345678u, memory[i] );
+            EXPECT_EQ( 0x12345678u, memory[i] );
         }
     }
-    EXPECT_EQ( "%u", 0x12345678u, value );
+    EXPECT_EQ( 0x12345678u, value );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -87,10 +87,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_put_normal_unsafemode)
+TEST( API, func_bsplib_put_normal_unsafemode)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

@@ -16,7 +16,7 @@
  */
 
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -28,15 +28,15 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     size_t tagSize = bsplib_pid( bsplib );
     bsplib_set_tagsize( bsplib, tagSize );
     rc = bsplib_sync( bsplib );
-    EXPECT_EQ( "%d", BSPLIB_ERR_TAGSIZE_MISMATCH, rc );
+    EXPECT_EQ( BSPLIB_ERR_TAGSIZE_MISMATCH, rc );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -44,10 +44,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_bsplib_set_different_tag_size )
+TEST( API, func_bsplib_set_different_tag_size )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

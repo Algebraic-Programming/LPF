@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <string.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void function_1(void) {} 
 void function_2(int a, long b, double c, float d) 
@@ -28,50 +28,50 @@ void spmd1( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) lpf; // ignore lpf context variable
 
-    EXPECT_EQ( "%d", nprocs, 2 );
+    EXPECT_EQ( nprocs, 2 );
 
     if (0 == pid)
     {
-        EXPECT_EQ( "%zd", sizeof(int), args.input_size );
-        EXPECT_EQ( "%zd", sizeof(int), args.output_size );
+        EXPECT_EQ( sizeof(int), args.input_size );
+        EXPECT_EQ( sizeof(int), args.output_size );
         int n = (* (int *) args.input); 
-        EXPECT_EQ( "%d", 4, n );
+        EXPECT_EQ( 4, n );
         * (int * ) args.output = 1 ;
     }
     else
     {
-        EXPECT_EQ( "%zd", (size_t) 0, args.input_size );
-        EXPECT_EQ( "%zd", (size_t) 0, args.output_size );
-        EXPECT_EQ( "%p", (void *) NULL, args.input );
-        EXPECT_EQ( "%p", (void *) NULL, args.output );
+        EXPECT_EQ( (size_t) 0, args.input_size );
+        EXPECT_EQ( (size_t) 0, args.output_size );
+        EXPECT_EQ( (void *) NULL, args.input );
+        EXPECT_EQ( (void *) NULL, args.output );
     }
-    EXPECT_EQ( "%zd", (size_t) 1 , args.f_size );
-    EXPECT_EQ( "%p", (lpf_func_t) function_1, args.f_symbols[0] ); //note: function pointers cannot be formatted in ANSI C
+    EXPECT_EQ( (size_t) 1 , args.f_size );
+    EXPECT_EQ( (lpf_func_t) function_1, args.f_symbols[0] ); //note: function pointers cannot be formatted in ANSI C
 }
 
 void spmd2( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) lpf; // ignore lpf context variable
 
-    EXPECT_EQ( "%d", nprocs, 2 );
+    EXPECT_EQ( nprocs, 2 );
 
     if (0 == pid)
     {
-        EXPECT_EQ( "%zd", sizeof(int), args.input_size );
-        EXPECT_EQ( "%zd", sizeof(int), args.output_size );
+        EXPECT_EQ( sizeof(int), args.input_size );
+        EXPECT_EQ( sizeof(int), args.output_size );
         int n = (* (int *) args.input) ; 
-        EXPECT_EQ( "%d", 3, n );
+        EXPECT_EQ( 3, n );
         * (int * ) args.output = 2;
     }
     else
     {
-        EXPECT_EQ( "%zd", (size_t) 0, args.input_size );
-        EXPECT_EQ( "%zd", (size_t) 0, args.output_size );
-        EXPECT_EQ( "%p", (void *) NULL, args.input );
-        EXPECT_EQ( "%p", (void *) NULL, args.output );
+        EXPECT_EQ( (size_t) 0, args.input_size );
+        EXPECT_EQ( (size_t) 0, args.output_size );
+        EXPECT_EQ( (void *) NULL, args.input );
+        EXPECT_EQ( (void *) NULL, args.output );
     }
-    EXPECT_EQ( "%zd", (size_t) 1 , args.f_size );
-    EXPECT_EQ( "%p", (lpf_func_t) function_2, args.f_symbols[0] ); //note: function pointers cannot be formatted in ANSI C
+    EXPECT_EQ(  (size_t) 1 , args.f_size );
+    EXPECT_EQ(  (lpf_func_t) function_2, args.f_symbols[0] ); //note: function pointers cannot be formatted in ANSI C
 }
 
 
@@ -82,7 +82,7 @@ void spmd2( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( func_lpf_exec_multiple_call_single_arg_dual_proc )
+TEST( API, func_lpf_exec_multiple_call_single_arg_dual_proc )
 {
     int input[2] = { 4, 3};
     int output[2] = { -1, -1 };
@@ -97,7 +97,7 @@ TEST( func_lpf_exec_multiple_call_single_arg_dual_proc )
     args.f_size = 1;
 
     rc = lpf_exec( LPF_ROOT, 2, &spmd1, args );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     args.input = &input[1];
     args.input_size = sizeof(int);
@@ -107,15 +107,14 @@ TEST( func_lpf_exec_multiple_call_single_arg_dual_proc )
     args.f_size = 1;
 
     rc = lpf_exec( LPF_ROOT, 2, &spmd2, args );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     int i;
     for (i = 0; i < 2; ++i)
     {
         int m = input[i];
-        EXPECT_EQ( "%d", 4-i, m );
+        EXPECT_EQ( 4-i, m );
         int n = output[i];
-        EXPECT_EQ( "%d", i+1, n );
+        EXPECT_EQ( i+1, n );
     }
-    return 0;
 }

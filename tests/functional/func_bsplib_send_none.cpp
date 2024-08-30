@@ -16,7 +16,7 @@
  */
 
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -28,7 +28,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     size_t tagSize = sizeof( int );
     size_t nmsg = -1, bytes = -1;
@@ -36,18 +36,18 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     // set tag size which go in effect next super-step
     oldTagSize = bsplib_set_tagsize(bsplib, tagSize );
-    EXPECT_EQ( "%zu", ( size_t ) 0, oldTagSize );
+    EXPECT_EQ(  ( size_t ) 0, oldTagSize );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_qsize(bsplib, &nmsg, &bytes );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", (size_t) 0, nmsg );
-    EXPECT_EQ( "%zu", ( size_t ) 0 , bytes );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  (size_t) 0, nmsg );
+    EXPECT_EQ(  ( size_t ) 0 , bytes );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -55,10 +55,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_send_none)
+TEST( API, func_bsplib_send_none)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 

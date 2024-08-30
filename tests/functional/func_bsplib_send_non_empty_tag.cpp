@@ -16,7 +16,7 @@
  */
 
 #include <lpf/bsplib.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdint.h>
 
@@ -28,7 +28,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     
     bsplib_t bsplib;
     rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     size_t tagSize = sizeof( int );
     size_t oldTagSize = -1;
@@ -37,92 +37,91 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     // set tag size which go in effect next super-step
     oldTagSize = bsplib_set_tagsize(bsplib, tagSize );
-    EXPECT_EQ( "%zu", ( size_t ) 0, oldTagSize );
+    EXPECT_EQ(  ( size_t ) 0, oldTagSize );
 
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // assert that messages queue is empty
     rc = bsplib_get_tag(bsplib, &status, NULL );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", ( size_t ) - 1, status );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  ( size_t ) - 1, status );
     rc = bsplib_qsize(bsplib, &nmsg, &bytes );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", ( size_t ) 0, nmsg );
-    EXPECT_EQ( "%zu", ( size_t ) 0, bytes );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  ( size_t ) 0, nmsg );
+    EXPECT_EQ(  ( size_t ) 0, bytes );
 
     // send two messages
     const int x = 0x12345678;
     const int y = 0x87654321;
     rc = bsplib_send(bsplib, 0, &x, &y, sizeof( y ) );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
     rc = bsplib_send(bsplib, 0, &x, &y, 0 );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     // message queue is still empty, of course
     rc = bsplib_qsize(bsplib, &nmsg, &bytes );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", ( size_t ) 0, nmsg );
-    EXPECT_EQ( "%zu", ( size_t ) 0, bytes );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  ( size_t ) 0, nmsg );
+    EXPECT_EQ(  ( size_t ) 0, bytes );
 
     // Barrier synchronization
     rc = bsplib_sync(bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
     rc = bsplib_qsize(bsplib, &nmsg, &bytes );
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-    EXPECT_EQ( "%zu", ( size_t ) ( bsplib_pid(bsplib) == 0 ? 2 * bsplib_nprocs(bsplib) : 0 ),
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    EXPECT_EQ(  ( size_t ) ( bsplib_pid(bsplib) == 0 ? 2 * bsplib_nprocs(bsplib) : 0 ),
         nmsg );
-    EXPECT_EQ( "%zu", ( size_t ) ( bsplib_pid(bsplib) ==
+    EXPECT_EQ(  ( size_t ) ( bsplib_pid(bsplib) ==
             0 ? bsplib_nprocs(bsplib) * sizeof( y ) : 0 ), bytes );
 
     int z = 0;
     size_t nMessages = 0;
     while ( rc = bsplib_get_tag(bsplib, &status, &z ), status != (size_t) -1 )
     {
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
 
-        EXPECT_EQ( "%d", x, z );
-        EXPECT_NE( "%zu", ( size_t ) -1, status );
+        EXPECT_EQ( x, z );
+        EXPECT_NE(  ( size_t ) -1, status );
 
         // before the move qsize should return 
         size_t msgs2 = -1;
         size_t bytes2 = -1;
         rc = bsplib_qsize(bsplib, &msgs2, &bytes2 );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-        EXPECT_EQ( "%zu", bytes, bytes2 );
-        EXPECT_EQ( "%zu", msgs2, 2 * bsplib_nprocs(bsplib) - nMessages );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
+        EXPECT_EQ(  bytes, bytes2 );
+        EXPECT_EQ(  msgs2, 2 * bsplib_nprocs(bsplib) - nMessages );
 
         // dequeue the message
         int a = -1;
         rc = bsplib_move(bsplib, &a, sizeof( a ) );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
         ++nMessages;
 
         // after the move the values returned by qsize decrease
         bytes -= status;
         rc = bsplib_qsize(bsplib, &msgs2, &bytes2 );
-        EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
-        EXPECT_EQ( "%zu", bytes, bytes2 );
-        EXPECT_EQ( "%zu", msgs2, 2 * bsplib_nprocs(bsplib) - nMessages );
+        EXPECT_EQ( BSPLIB_SUCCESS, rc );
+        EXPECT_EQ(  bytes, bytes2 );
+        EXPECT_EQ(  msgs2, 2 * bsplib_nprocs(bsplib) - nMessages );
 
         if ( status == sizeof( y ) )
         {
-            EXPECT_EQ( "%d", y, a );
+            EXPECT_EQ( y, a );
         }
         else
         {
-            EXPECT_EQ( "%zu", ( size_t ) 0, status );
-            EXPECT_EQ( "%d", -1, a );
+            EXPECT_EQ(  ( size_t ) 0, status );
+            EXPECT_EQ( -1, a );
         }
     }
 
-    EXPECT_EQ( "%u",
-            bsplib_pid(bsplib) == 0 ? 2 * bsplib_nprocs(bsplib) : 0, 
+    EXPECT_EQ(             bsplib_pid(bsplib) == 0 ? 2 * bsplib_nprocs(bsplib) : 0, 
             (unsigned) nMessages );
 
     rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( "%d", BSPLIB_SUCCESS, rc );
+    EXPECT_EQ( BSPLIB_SUCCESS, rc );
 }
 
 /** 
@@ -130,10 +129,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_bsplib_send_non_empty_tag )
+TEST( API, func_bsplib_send_non_empty_tag )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
