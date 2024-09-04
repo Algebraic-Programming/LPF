@@ -36,8 +36,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    char * buf1 = "abcdefghijklmnop";
-    char * buf2 = "ABCDEFGHIJKLMNOP";
+    std::string buf1 = "abcdefghijklmnop";
+    std::string buf2 = "ABCDEFGHIJKLMNOP";
     lpf_memslot_t slot1, slot2;
 
     rc = lpf_register_global( lpf, &buf1[0], sizeof(buf1), &slot1 );
@@ -62,7 +62,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     EXPECT_EQ( LPF_SUCCESS, rc );
 
 
-    EXPECT_STREQ( buf2, "abcdefghijklmnop");
+    EXPECT_STREQ( buf2.c_str(), "abcdefghijklmnop");
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );

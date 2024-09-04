@@ -26,106 +26,158 @@
 #list(REMOVE_ITEM AllGenericTestSources ${AllSpecificTestSources})
 
 set(test_sources
-func_bsplib_example_lpf_sum.cpp
-func_bsplib_example_lpf_sum_unsafemode.cpp
-func_bsplib_example_put_array.cpp
-func_bsplib_example_put_array_unsafemode.cpp
-func_bsplib_example_reverse.cpp
-func_bsplib_example_reverse_unsafemode.cpp
-func_bsplib_get_exceptions.cpp
-func_bsplib_get_normal.cpp
-func_bsplib_get_normal_unsafemode.cpp
-func_bsplib_get_twice_on_same_remote.cpp
-func_bsplib_get_twice_on_same_remote_unsafemode.cpp
-func_bsplib_getput_same_dest.cpp
-func_bsplib_getput_same_dest_unsafemode.cpp
-func_bsplib_getput_same_remote.cpp
-func_bsplib_getput_same_remote_unsafemode.cpp
-func_bsplib_getput_zero_bytes.cpp
-func_bsplib_hpget_many.cpp
-func_bsplib_hpput_many.cpp
-func_bsplib_hpsend_many.cpp
-func_bsplib_nprocs.cpp
-func_bsplib_pid.cpp
-func_bsplib_pushpopreg_ambiguous.cpp
-func_bsplib_pushpopreg_different_variables.cpp
-func_bsplib_pushpopreg_exceptions.cpp
-func_bsplib_pushpopreg_many_same.cpp
-func_bsplib_pushpopreg_normal.cpp
-func_bsplib_pushpopreg_normal_unsafemode.cpp
-func_bsplib_pushpopreg_null.cpp
-func_bsplib_pushpopreg_pop_before_put.cpp
-func_bsplib_pushpopreg_pop_before_put_unsafemode.cpp
-func_bsplib_pushpopreg_pop_on_one_process.cpp
-func_bsplib_pushpopreg_push_on_one_process.cpp
-func_bsplib_pushpopreg_same_growing_memory.cpp
-func_bsplib_pushpopreg_same_shrinking_memory.cpp
-func_bsplib_pushpopreg_two_pops_before_two_puts.cpp
-func_bsplib_put_exceptions.cpp
-func_bsplib_put_normal.cpp
-func_bsplib_put_normal_unsafemode.cpp
-func_bsplib_send_empty_tag.cpp
-func_bsplib_send_non_empty_tag.cpp
-func_bsplib_send_none.cpp
-func_bsplib_send_null.cpp
-func_bsplib_send_one.cpp
-func_bsplib_send_one_unsafemode.cpp
-func_bsplib_set_different_tag_size.cpp
-func_bsplib_set_tag_size.cpp
-func_bsplib_sync_except_p0.cpp
-func_bsplib_sync_only_p0.cpp
-func_bsplib_time.cpp
-func_lpf_deregister_parallel_multiple.cpp
-func_lpf_deregister_parallel_single.cpp
-func_lpf_exec_multiple_call_single_arg_dual_proc.cpp
-func_lpf_exec_nested_call_single_arg_dual_proc.cpp
-func_lpf_exec_single_call_no_arg_max_proc.cpp
-func_lpf_exec_single_call_no_arg_single_proc.cpp
-func_lpf_exec_single_call_single_arg_dual_proc.cpp
-func_lpf_exec_single_call_single_arg_max_proc_early_exit_one.cpp
-func_lpf_exec_single_call_single_arg_max_proc_early_exit_zero.cpp
-func_lpf_exec_single_call_single_arg_single_proc.cpp
-func_lpf_get_parallel_alltoall.cpp
-func_lpf_get_parallel_huge.cpp
-func_lpf_get_parallel_overlapping_complete.cpp
-func_lpf_get_parallel_overlapping_pyramid.cpp
-func_lpf_get_parallel_overlapping_rooftiling.cpp
-func_lpf_get_parallel_single.cpp
-#func_lpf_hook_simple.mpirma.cpp
-#func_lpf_hook_simple.pthread.cpp
-#func_lpf_hook_subset.mpimsg.cpp
-#func_lpf_hook_tcp.mpirma.cpp
-#func_lpf_hook_tcp_timeout.mpirma.cpp
-func_lpf_probe_parallel_full.cpp
-func_lpf_probe_parallel_nested.cpp
-func_lpf_probe_root.cpp
-func_lpf_put_and_get_overlapping.cpp
-func_lpf_put_parallel_alltoall.cpp
-func_lpf_put_parallel_bad_pattern.cpp
-func_lpf_put_parallel_big.cpp
-func_lpf_put_parallel_huge.cpp
-func_lpf_put_parallel_overlapping_complete.cpp
-func_lpf_put_parallel_overlapping_pyramid.cpp
-func_lpf_put_parallel_overlapping_rooftiling.cpp
-func_lpf_put_parallel_single.cpp
-func_lpf_register_and_deregister_irregularly.cpp
-func_lpf_register_and_deregister_many_global.cpp
-func_lpf_register_global_parallel_grow.cpp
-func_lpf_register_global_parallel_multiple.cpp
-func_lpf_register_global_parallel_shrink.cpp
-func_lpf_register_global_root_multiple.cpp
-func_lpf_register_global_root_single.cpp
-func_lpf_register_local_parallel_multiple.cpp
-func_lpf_resize_delayed_shrinking_memory_registers.cpp
-func_lpf_resize_delayed_shrinking_message_queues.cpp
-func_lpf_resize_parallel_five.cpp
-func_lpf_resize_root_five.cpp
-func_lpf_resize_root_outofmem.cpp
-func_lpf_resize_root_zero.cpp
-macro_LPF_VERSION.cpp
-type_lpf_spmd_t.cpp
-type_lpf_t.cpp
-)
+    func_bsplib_example_lpf_sum.cpp
+    func_bsplib_example_lpf_sum_unsafemode.cpp
+    func_bsplib_example_put_array.cpp
+    func_bsplib_example_put_array_unsafemode.cpp
+    func_bsplib_example_reverse.cpp
+    func_bsplib_example_reverse_unsafemode.cpp
+    func_bsplib_get_exceptions.cpp
+    func_bsplib_get_normal.cpp
+    func_bsplib_get_normal_unsafemode.cpp
+    func_bsplib_get_twice_on_same_remote.cpp
+    func_bsplib_get_twice_on_same_remote_unsafemode.cpp
+    func_bsplib_getput_same_dest.cpp
+    func_bsplib_getput_same_dest_unsafemode.cpp
+    func_bsplib_getput_same_remote.cpp
+    func_bsplib_getput_same_remote_unsafemode.cpp
+    func_bsplib_getput_zero_bytes.cpp
+    func_bsplib_hpget_many.cpp
+    func_bsplib_hpput_many.cpp
+    func_bsplib_hpsend_many.cpp
+    func_bsplib_nprocs.cpp
+    func_bsplib_pid.cpp
+    func_bsplib_pushpopreg_ambiguous.cpp
+    func_bsplib_pushpopreg_different_variables.cpp
+    func_bsplib_pushpopreg_exceptions.cpp
+    func_bsplib_pushpopreg_many_same.cpp
+    func_bsplib_pushpopreg_normal.cpp
+    func_bsplib_pushpopreg_normal_unsafemode.cpp
+    func_bsplib_pushpopreg_null.cpp
+    func_bsplib_pushpopreg_pop_before_put.cpp
+    func_bsplib_pushpopreg_pop_before_put_unsafemode.cpp
+    func_bsplib_pushpopreg_pop_on_one_process.cpp
+    func_bsplib_pushpopreg_push_on_one_process.cpp
+    func_bsplib_pushpopreg_same_growing_memory.cpp
+    func_bsplib_pushpopreg_same_shrinking_memory.cpp
+    func_bsplib_pushpopreg_two_pops_before_two_puts.cpp
+    func_bsplib_put_exceptions.cpp
+    func_bsplib_put_normal.cpp
+    func_bsplib_put_normal_unsafemode.cpp
+    func_bsplib_send_empty_tag.cpp
+    func_bsplib_send_non_empty_tag.cpp
+    func_bsplib_send_none.cpp
+    func_bsplib_send_null.cpp
+    func_bsplib_send_one.cpp
+    func_bsplib_send_one_unsafemode.cpp
+    func_bsplib_set_different_tag_size.cpp
+    func_bsplib_set_tag_size.cpp
+    func_bsplib_sync_except_p0.cpp
+    func_bsplib_sync_only_p0.cpp
+    func_bsplib_time.cpp
+    func_lpf_deregister_parallel_multiple.cpp
+    func_lpf_deregister_parallel_single.cpp
+    func_lpf_exec_multiple_call_single_arg_dual_proc.cpp
+    func_lpf_exec_nested_call_single_arg_dual_proc.cpp
+    func_lpf_exec_single_call_no_arg_max_proc.cpp
+    func_lpf_exec_single_call_no_arg_single_proc.cpp
+    func_lpf_exec_single_call_single_arg_dual_proc.cpp
+    func_lpf_exec_single_call_single_arg_max_proc_early_exit_one.cpp
+    func_lpf_exec_single_call_single_arg_max_proc_early_exit_zero.cpp
+    func_lpf_exec_single_call_single_arg_single_proc.cpp
+    func_lpf_get_parallel_alltoall.cpp
+    func_lpf_get_parallel_huge.cpp
+    func_lpf_get_parallel_overlapping_complete.cpp
+    func_lpf_get_parallel_overlapping_pyramid.cpp
+    func_lpf_get_parallel_overlapping_rooftiling.cpp
+    func_lpf_get_parallel_single.cpp
+    #func_lpf_hook_simple.mpirma.cpp
+    #func_lpf_hook_simple.pthread.cpp
+    #func_lpf_hook_subset.mpimsg.cpp
+    #func_lpf_hook_tcp.mpirma.cpp
+    #func_lpf_hook_tcp_timeout.mpirma.cpp
+    func_lpf_probe_parallel_full.cpp
+    func_lpf_probe_parallel_nested.cpp
+    func_lpf_probe_root.cpp
+    func_lpf_put_and_get_overlapping.cpp
+    func_lpf_put_parallel_alltoall.cpp
+    #func_lpf_put_parallel_bad_pattern.cpp <= in exception_list
+    func_lpf_put_parallel_big.cpp
+    func_lpf_put_parallel_huge.cpp
+    func_lpf_put_parallel_overlapping_complete.cpp
+    func_lpf_put_parallel_overlapping_pyramid.cpp
+    func_lpf_put_parallel_overlapping_rooftiling.cpp
+    func_lpf_put_parallel_single.cpp
+    func_lpf_register_and_deregister_irregularly.cpp
+    func_lpf_register_and_deregister_many_global.cpp
+    func_lpf_register_global_parallel_grow.cpp
+    func_lpf_register_global_parallel_multiple.cpp
+    func_lpf_register_global_parallel_shrink.cpp
+    func_lpf_register_global_root_multiple.cpp
+    func_lpf_register_global_root_single.cpp
+    func_lpf_register_local_parallel_multiple.cpp
+    func_lpf_resize_delayed_shrinking_memory_registers.cpp
+    func_lpf_resize_delayed_shrinking_message_queues.cpp
+    func_lpf_resize_parallel_five.cpp
+    func_lpf_resize_root_five.cpp
+    func_lpf_resize_root_outofmem.cpp
+    func_lpf_resize_root_zero.cpp
+    macro_LPF_VERSION.cpp
+    type_lpf_spmd_t.cpp
+    type_lpf_t.cpp
+    # debug:
+    debug/func_lpf_debug_deregister_non_existing_slot.cpp
+    debug/func_lpf_debug_exec_null_f_symbols.cpp
+    debug/func_lpf_debug_exec_null_input.cpp
+    debug/func_lpf_debug_exec_null_output.cpp
+    debug/func_lpf_debug_exec_null_spmd.cpp
+    debug/func_lpf_debug_get_local_src_slot.cpp
+    debug/func_lpf_debug_get_overflow_dst_offset.cpp
+    debug/func_lpf_debug_get_overflow_src_offset.cpp
+    debug/func_lpf_debug_get_read_past_source_memory_global_known_at_sync.cpp
+    debug/func_lpf_debug_get_read_past_source_memory_global_known_before_sync.cpp
+    debug/func_lpf_debug_get_too_many_requests.cpp
+    debug/func_lpf_debug_get_too_many_requests_remote.cpp
+    debug/func_lpf_debug_get_too_many_requests_self.cpp
+    debug/func_lpf_debug_get_unknown_dest_slot.cpp
+    debug/func_lpf_debug_get_unknown_source_pid.cpp
+    debug/func_lpf_debug_get_unknown_source_slot.cpp
+    debug/func_lpf_debug_get_write_past_dest_memory_global.cpp
+    debug/func_lpf_debug_get_write_past_dest_memory_local.cpp
+    debug/func_lpf_debug_global_deregister_mismatch.cpp
+    debug/func_lpf_debug_global_deregister_order_mismatch.cpp
+    debug/func_lpf_debug_global_deregister_unequal.cpp
+    debug/func_lpf_debug_global_register_null_memreg.cpp
+    debug/func_lpf_debug_hook_null_f_symbols.pthread.cpp
+    debug/func_lpf_debug_hook_null_input.pthread.cpp
+    debug/func_lpf_debug_hook_null_output.pthread.cpp
+    debug/func_lpf_debug_hook_null_spmd.pthread.cpp
+    debug/func_lpf_debug_local_register_null_memreg.cpp
+    debug/func_lpf_debug_put_after_deregister_dest_after_sync.cpp
+    debug/func_lpf_debug_put_after_deregister_dest.cpp
+    debug/func_lpf_debug_put_after_deregister_source_after_sync.cpp
+    debug/func_lpf_debug_put_after_deregister_source.cpp
+    debug/func_lpf_debug_put_get_too_many_requests.cpp
+    debug/func_lpf_debug_put_get_too_many_requests_remote.cpp
+    debug/func_lpf_debug_put_local_dest_slot.cpp
+    debug/func_lpf_debug_put_overflow_dst_offset.cpp
+    debug/func_lpf_debug_put_overflow_src_offset.cpp
+    debug/func_lpf_debug_put_read_past_source_memory_global.cpp
+    debug/func_lpf_debug_put_read_past_source_memory_local.cpp
+    debug/func_lpf_debug_put_read_write_conflict_among_many.cpp
+    debug/func_lpf_debug_put_read_write_conflict.cpp
+    debug/func_lpf_debug_put_too_many_requests.cpp
+    debug/func_lpf_debug_put_too_many_requests_remote.cpp
+    debug/func_lpf_debug_put_too_many_requests_self.cpp
+    debug/func_lpf_debug_put_unknown_dest_pid.cpp
+    debug/func_lpf_debug_put_unknown_dest_slot.cpp
+    debug/func_lpf_debug_put_unknown_source_slot.cpp
+    debug/func_lpf_debug_put_write_past_dest_memory_global_known_at_sync.cpp
+    debug/func_lpf_debug_put_write_past_dest_memory_global_known_before_sync.cpp
+    debug/func_lpf_debug_register_global_dst_unsynced.cpp
+    debug/func_lpf_debug_register_global_src_unsynced.cpp
+    )
+
 
 foreach(LPF_IMPL_ID "ibverbs")
     set(debug ON)
@@ -170,7 +222,6 @@ endforeach(LPF_IMPL_ID)
 include_directories(.)
 
 add_subdirectory(c99)
-add_subdirectory(debug)
 
 
 option(LPFLIB_MAKE_TEST_DOC "Build the test documentation" OFF)

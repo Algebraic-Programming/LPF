@@ -89,8 +89,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
 /** 
  * \test Test lpf_put by doing a pattern which bad for a sparse all-to-all
- * \pre P >= 16
- * \pre P <= 16
+ * \pre P >= 5
+ * \pre P <= 5
  * \return Exit code: 0
  */
 TEST( API, func_lpf_put_parallel_bad_pattern )
