@@ -389,10 +389,19 @@ if (MPI_FOUND)
             EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
             )
         execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
-        set_property(TARGET ${testName}
-            PROPERTY
-            TEST_LAUNCHER mpirun;-n;${minProcs}
-            )
+        execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+        message("lpfProbeSecs: ${lpfProbeSecs}")
+        if ("${lpfProbeSecs}" STREQUAL "")
+            set_property(TARGET ${testName}
+                PROPERTY
+                TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-n;${minProcs}
+                )
+        else()
+            set_property(TARGET ${testName}
+                PROPERTY
+                TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-probe;${lpfProbeSecs};-n;${minProcs};
+                )
+        endif()
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
 
