@@ -34,7 +34,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    char * buffer = "abcdefghijklmnop";
+    std::string buffer = "abcdefghijklmnop";
     lpf_memslot_t slots[16];
 
     // register 16 entries
