@@ -16,6 +16,7 @@
  */
 
 #include "debug/lpf/core.h"
+
 #undef lpf_get
 #undef lpf_put
 #undef lpf_sync
@@ -78,7 +79,8 @@
 #include "memreg.hpp"
 #include "rwconflict.hpp"
 
-
+#include "mpi.h"
+#include <csignal>
 
 namespace lpf { namespace debug {
 
@@ -220,6 +222,12 @@ public:
         }
     }
 
+    static void signal_handler(int signal)
+    {
+        if (signal == SIGABRT)
+            MPI_Abort(MPI_COMM_WORLD, 6);
+    }
+ 
 
     Interface( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs )
         : m_ctx( ctx )
@@ -266,7 +274,9 @@ public:
         , m_resized_by_me_slot( LPF_INVALID_MEMSLOT )
         , m_resized_slot( LPF_INVALID_MEMSLOT )
     {
+        std::signal(SIGABRT, signal_handler);
     }
+
 
     void cleanup()
     {

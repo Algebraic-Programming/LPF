@@ -25,7 +25,8 @@ add_library( ${libname}
     rwconflict.cpp
     $<TARGET_OBJECTS:${comlib}>
 )
-target_link_libraries( ${libname} ${LIB_POSIX_THREADS} )
+target_link_libraries( ${libname} ${LIB_POSIX_THREADS} ${MPI_C_LIBRARIES})
+target_include_directories( ${libname} PRIVATE ${MPI_C_INCLUDE_PATH})
 set_target_properties(${libname} PROPERTIES 
         SOVERSION ${SOVERSION}
 )
