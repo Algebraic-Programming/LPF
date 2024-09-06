@@ -73,12 +73,6 @@ set(debug_test_sources
     func_lpf_debug_resize_memory_register_with_size_max_minus_three.cpp
     )
 
-set(DEATH_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/death_test_launcher.py)
-configure_file( ${CMAKE_SOURCE_DIR}/death_test_launcher.py ${DEATH_TEST_LAUNCHER} @ONLY )
-if( NOT Python3_FOUND )
-    find_package( Python3 )
-endif()
-set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${DEATH_TEST_LAUNCHER})
 
 foreach(LPF_IMPL_ID "ibverbs")
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
@@ -103,7 +97,7 @@ foreach(LPF_IMPL_ID "ibverbs")
         #target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
         #target_link_exe_with_core(${testName})
         #target_link_libraries(${testName} lpf_debug lpf_hl_debug)
-        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug} TRUE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}" )
         #add_test(NAME ${testName} COMMAND ${MY_DT_LAUNCHER} ${CMAKE_BINARY_DIR}/lpfrun_build ${minProcs} $<TARGET_FILE:${testName}> ${retCode})
     endforeach()
 endforeach(LPF_IMPL_ID)
