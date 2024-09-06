@@ -11,10 +11,13 @@ args = parser.parse_args()
 run_cmd = [args.parallel_launcher, '-engine', 'ibverbs', '-n', str(args.process_count), args.cmd[0], args.cmd[1]]
 print("Death test launcher command:")
 print(run_cmd)
-cmd = subprocess.run( run_cmd, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL )
-retcode = cmd.returncode
-
-if (retcode != args.expected_return_code):
-    print("Test " + args.cmd[0] + args.cmd[1] + "\nreturned\t" + str(retcode) + "\nexpected return code was: " + str(args.expected_return_code))
-    sys.exit(1)
+cmd = subprocess.run( run_cmd, capture_output=True)
+if args.cmd[1] != "--gtest_list_tests":
+    print("args command is " + args.cmd[1])
+    
+    retcode = cmd.returncode
+    
+    if (retcode != args.expected_return_code):
+        print("Test " + args.cmd[0] + args.cmd[1] + "\nreturned\t" + str(retcode) + "\nexpected return code was: " + str(args.expected_return_code))
+        sys.exit(1)
 print("Test " + args.cmd[0] + args.cmd[1] + " passed")

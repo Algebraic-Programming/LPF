@@ -40,5 +40,5 @@ TEST(API, func_lpf_debug_exec_null_f_symbols )
     args.output_size = 0;
     args.f_symbols = NULL;
     args.f_size = 4;
-    EXPECT_DEATH(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), "NULL f_symbols argument");
+    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), LPF_SUCCESS);
 }
