@@ -174,7 +174,7 @@ if (MPI_FOUND)
     if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
 
 
-        add_gtest_mpi(dynamichook.t "mpirma;mpimsg;ibverbs;hybrid" ON 
+        add_gtest_mpi(dynamichook.t "mpirma;mpimsg;ibverbs;hybrid" ON OFF
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
@@ -197,28 +197,28 @@ if (MPI_FOUND)
 
 # Other unit tests
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "ibverbs" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
+        add_gtest_mpi( ibverbs_test "ibverbs" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
-        add_gtest_mpi( spall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON 
+    add_gtest_mpi( spall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON FALSE
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.c 
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
-        add_gtest_mpi( dall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON 
+        add_gtest_mpi( dall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON FALSE
             ${CMAKE_CURRENT_SOURCE_DIR}/dall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
     if (MPI_IBARRIER)
-        add_gtest_mpi( hall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON 
+        add_gtest_mpi( hall2all_test "mpirma;mpimsg;ibverbs;hybrid" ON FALSE
             ${CMAKE_CURRENT_SOURCE_DIR}/hall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
-    add_gtest_mpi( messagesort_test "mpirma;mpimsg;ibverbs;hybrid" ON 
+    add_gtest_mpi( messagesort_test "mpirma;mpimsg;ibverbs;hybrid" ON FALSE
         ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.t.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.cpp)
 

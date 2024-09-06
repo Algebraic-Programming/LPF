@@ -364,17 +364,24 @@ function(add_gtest testName engines debug testSource)
         )
 endfunction(add_gtest)
 
+
+
+set(DEATH_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/death_test_launcher.py)
+configure_file( ${CMAKE_SOURCE_DIR}/death_test_launcher.py ${DEATH_TEST_LAUNCHER} @ONLY )
+if( NOT Python3_FOUND )
+    find_package( Python3 )
+endif()
+set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${DEATH_TEST_LAUNCHER})
 # Have a macro to add a unit test that should run with MPI
 if (MPI_FOUND)
-    function(add_gtest_mpi testName engines debug testSource)
+
+    function(add_gtest_mpi testName engines debug deathTest testSource )
 
         include(GoogleTest)
         add_executable(${testName} ${testSource} ${ARGN})
         target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
         if (debug)
             target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-        endif(debug)
-        if (debug)
             target_link_libraries(${testName} lpf_debug lpf_hl_debug ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
         else(debug)
             target_link_libraries(${testName} ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
@@ -383,23 +390,38 @@ if (MPI_FOUND)
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
 
-        gtest_add_tests(TARGET ${testName}
-            EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
-            )
-        execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
-        execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
-        message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
-        message("For test: ${testSource} - minProcs: ${minProcs}")
-        if ("${lpfProbeSecs}" STREQUAL "")
-            set_property(TARGET ${testName}
-                PROPERTY
-                TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-n;${minProcs}
-                )
+        # It is quite different how we launch death tests (via our wrapper), and how we launch normal tests (via GTest package)
+        if (${debug} AND ${deathTest})
+            message("TEST ${testName} is death test")
+            execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
+            execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+            message("For test: ${testSource} - expected return code: ${retCode}")
+            #add_test(NAME ${testName} COMMAND ${MY_DT_LAUNCHER} ${CMAKE_BINARY_DIR}/lpfrun_build ${minProcs} $<TARGET_FILE:${testName}> ${retCode})
+                set_property(TARGET ${testName}
+                    PROPERTY
+                    TEST_LAUNCHER ${MY_DT_LAUNCHER};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-P;${minProcs};-R;${retCode}
+                    )
         else()
-            set_property(TARGET ${testName}
-                PROPERTY
-                TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-probe;${lpfProbeSecs};-n;${minProcs};
+            message("TEST ${testName} is normal test")
+            gtest_add_tests(TARGET ${testName}
+                EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
                 )
+            execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+            message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
+            message("For test: ${testSource} - minProcs: ${minProcs}")
+            # The tests in the debug folder need a special launcher
+            if ("${lpfProbeSecs}" STREQUAL "")
+                set_property(TARGET ${testName}
+                    PROPERTY
+                    TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-n;${minProcs}
+                    )
+            else()
+                set_property(TARGET ${testName}
+                    PROPERTY
+                    TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-probe;${lpfProbeSecs};-n;${minProcs};
+                    )
+            endif()
         endif()
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
