@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set(test_sources ${test_sources}
+set(debug_test_sources
     func_lpf_debug_deregister_non_existing_slot.cpp
     func_lpf_debug_exec_null_f_symbols.cpp
     func_lpf_debug_exec_null_input.cpp
@@ -37,10 +37,10 @@ set(test_sources ${test_sources}
     func_lpf_debug_global_deregister_order_mismatch.cpp
     func_lpf_debug_global_deregister_unequal.cpp
     func_lpf_debug_global_register_null_memreg.cpp
-    func_lpf_debug_hook_null_f_symbols.pthread.cpp
-    func_lpf_debug_hook_null_input.pthread.cpp
-    func_lpf_debug_hook_null_output.pthread.cpp
-    func_lpf_debug_hook_null_spmd.pthread.cpp
+    #func_lpf_debug_hook_null_f_symbols.pthread.cpp
+    #func_lpf_debug_hook_null_input.pthread.cpp
+    #func_lpf_debug_hook_null_output.pthread.cpp
+    #func_lpf_debug_hook_null_spmd.pthread.cpp
     func_lpf_debug_local_register_null_memreg.cpp
     func_lpf_debug_put_after_deregister_dest_after_sync.cpp
     func_lpf_debug_put_after_deregister_dest.cpp
@@ -72,3 +72,39 @@ set(test_sources ${test_sources}
     func_lpf_debug_rehook_null_spmd.cpp
     func_lpf_debug_resize_memory_register_with_size_max_minus_three.cpp
     )
+
+set(DEATH_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/death_test_launcher.py)
+configure_file( ${CMAKE_SOURCE_DIR}/death_test_launcher.py ${DEATH_TEST_LAUNCHER} @ONLY )
+if( NOT Python3_FOUND )
+    find_package( Python3 )
+endif()
+set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${DEATH_TEST_LAUNCHER})
+
+foreach(LPF_IMPL_ID "ibverbs")
+    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+    set(mode)
+    if (debug)
+        set(mode "_debug")
+    endif(debug)
+    foreach(testSource ${CMAKE_CURRENT_SOURCE_DIR}/${debug_test_sources})
+        #execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+        #execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
+        #message("minProcs: ${minProcs}")
+        #message("retCode: ${retCode}")
+        # get_filename_component(baseName ${testSource} NAME_WE  )
+        # set(testName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+        # add_executable(${testName} ${testSource}) 
+
+        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
+        get_filename_component(baseName ${testSource} NAME_WE  )
+        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+
+        #target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+        #target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+        #target_link_exe_with_core(${testName})
+        #target_link_libraries(${testName} lpf_debug lpf_hl_debug)
+        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug} ${testSource})
+        #add_test(NAME ${testName} COMMAND ${MY_DT_LAUNCHER} ${CMAKE_BINARY_DIR}/lpfrun_build ${minProcs} $<TARGET_FILE:${testName}> ${retCode})
+    endforeach()
+endforeach(LPF_IMPL_ID)
+

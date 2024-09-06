@@ -125,59 +125,7 @@ set(test_sources
     macro_LPF_VERSION.cpp
     type_lpf_spmd_t.cpp
     type_lpf_t.cpp
-    # debug:
-    debug/func_lpf_debug_deregister_non_existing_slot.cpp
-    debug/func_lpf_debug_exec_null_f_symbols.cpp
-    debug/func_lpf_debug_exec_null_input.cpp
-    debug/func_lpf_debug_exec_null_output.cpp
-    debug/func_lpf_debug_exec_null_spmd.cpp
-    debug/func_lpf_debug_get_local_src_slot.cpp
-    debug/func_lpf_debug_get_overflow_dst_offset.cpp
-    debug/func_lpf_debug_get_overflow_src_offset.cpp
-    debug/func_lpf_debug_get_read_past_source_memory_global_known_at_sync.cpp
-    debug/func_lpf_debug_get_read_past_source_memory_global_known_before_sync.cpp
-    debug/func_lpf_debug_get_too_many_requests.cpp
-    debug/func_lpf_debug_get_too_many_requests_remote.cpp
-    debug/func_lpf_debug_get_too_many_requests_self.cpp
-    debug/func_lpf_debug_get_unknown_dest_slot.cpp
-    debug/func_lpf_debug_get_unknown_source_pid.cpp
-    debug/func_lpf_debug_get_unknown_source_slot.cpp
-    debug/func_lpf_debug_get_write_past_dest_memory_global.cpp
-    debug/func_lpf_debug_get_write_past_dest_memory_local.cpp
-    debug/func_lpf_debug_global_deregister_mismatch.cpp
-    debug/func_lpf_debug_global_deregister_order_mismatch.cpp
-    debug/func_lpf_debug_global_deregister_unequal.cpp
-    debug/func_lpf_debug_global_register_null_memreg.cpp
-    debug/func_lpf_debug_hook_null_f_symbols.pthread.cpp
-    debug/func_lpf_debug_hook_null_input.pthread.cpp
-    debug/func_lpf_debug_hook_null_output.pthread.cpp
-    debug/func_lpf_debug_hook_null_spmd.pthread.cpp
-    debug/func_lpf_debug_local_register_null_memreg.cpp
-    debug/func_lpf_debug_put_after_deregister_dest_after_sync.cpp
-    debug/func_lpf_debug_put_after_deregister_dest.cpp
-    debug/func_lpf_debug_put_after_deregister_source_after_sync.cpp
-    debug/func_lpf_debug_put_after_deregister_source.cpp
-    debug/func_lpf_debug_put_get_too_many_requests.cpp
-    debug/func_lpf_debug_put_get_too_many_requests_remote.cpp
-    debug/func_lpf_debug_put_local_dest_slot.cpp
-    debug/func_lpf_debug_put_overflow_dst_offset.cpp
-    debug/func_lpf_debug_put_overflow_src_offset.cpp
-    debug/func_lpf_debug_put_read_past_source_memory_global.cpp
-    debug/func_lpf_debug_put_read_past_source_memory_local.cpp
-    debug/func_lpf_debug_put_read_write_conflict_among_many.cpp
-    debug/func_lpf_debug_put_read_write_conflict.cpp
-    debug/func_lpf_debug_put_too_many_requests.cpp
-    debug/func_lpf_debug_put_too_many_requests_remote.cpp
-    debug/func_lpf_debug_put_too_many_requests_self.cpp
-    debug/func_lpf_debug_put_unknown_dest_pid.cpp
-    debug/func_lpf_debug_put_unknown_dest_slot.cpp
-    debug/func_lpf_debug_put_unknown_source_slot.cpp
-    debug/func_lpf_debug_put_write_past_dest_memory_global_known_at_sync.cpp
-    debug/func_lpf_debug_put_write_past_dest_memory_global_known_before_sync.cpp
-    debug/func_lpf_debug_register_global_dst_unsynced.cpp
-    debug/func_lpf_debug_register_global_src_unsynced.cpp
     )
-
 
 foreach(LPF_IMPL_ID "ibverbs")
     set(debug ON)
@@ -220,6 +168,7 @@ endforeach(LPF_IMPL_ID)
 
 
 include_directories(.)
+add_subdirectory(debug)
 
 add_subdirectory(c99)
 
