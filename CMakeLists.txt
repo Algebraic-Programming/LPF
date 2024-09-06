@@ -390,6 +390,10 @@ if (MPI_FOUND)
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
 
+
+        gtest_add_tests(TARGET ${testName}
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
+            )
         # It is quite different how we launch death tests (via our wrapper), and how we launch normal tests (via GTest package)
         if (${debug} AND ${deathTest})
             message("TEST ${testName} is death test")
@@ -402,10 +406,7 @@ if (MPI_FOUND)
                     TEST_LAUNCHER ${MY_DT_LAUNCHER};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-P;${minProcs};-R;${retCode}
                     )
         else()
-            message("TEST ${testName} is normal test")
-            gtest_add_tests(TARGET ${testName}
-                EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
-                )
+            message("test ${testName} is normal test")
             execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
             execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
             message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
