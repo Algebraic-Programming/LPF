@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <string.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t a)
 {
@@ -31,7 +31,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t a)
     args.f_symbols = NULL;
     args.f_size = 0;
     rc = lpf_rehook( lpf, &spmd, args );
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
 /** 
@@ -40,10 +40,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t a)
  * \return Message: NULL output argument while output_size is non-zero
  * \return Exit code: 6
  */
-TEST( func_lpf_debug_rehook_null_output )
+TEST( API, func_lpf_debug_rehook_null_output )
 {
     lpf_err_t rc = LPF_SUCCESS;
     rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
-    return 0;
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }

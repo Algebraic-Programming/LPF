@@ -388,7 +388,8 @@ if (MPI_FOUND)
             )
         execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
         execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
-        message("lpfProbeSecs: ${lpfProbeSecs}")
+        message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
+        message("For test: ${testSource} - minProcs: ${minProcs}")
         if ("${lpfProbeSecs}" STREQUAL "")
             set_property(TARGET ${testName}
                 PROPERTY
