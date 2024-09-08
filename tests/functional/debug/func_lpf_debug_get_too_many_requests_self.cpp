@@ -45,13 +45,13 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_DEATH(lpf_get( lpf, 0, xSlot, 0, ySlot, 0, sizeof(int), LPF_MSG_DEFAULT ), "LOL");
+
+    rc = lpf_get( lpf, 0, xSlot, 0, ySlot, 0, sizeof(int), LPF_MSG_DEFAULT );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ(LPF_SUCCESS, rc );
+    FAIL();
 
-    EXPECT_EQ( 3, y[0] );
-    EXPECT_EQ( 4, y[1] );
 }
 
 /** 

@@ -41,5 +41,6 @@ TEST( API, func_lpf_debug_exec_null_input )
     args.output_size = 0;
     args.f_symbols = NULL;
     args.f_size = 0;
-    EXPECT_DEATH(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), "NULL input argument");
+    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), rc);
+    FAIL();
 }

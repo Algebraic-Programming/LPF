@@ -57,16 +57,10 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     rc = lpf_get( lpf, (pid+nprocs-1)%nprocs, ySlot, sizeof(int)*(N-3),
                   xSlot, sizeof(int)+2, sizeof(int)*3, LPF_MSG_DEFAULT );
 
-    EXPECT_DEATH(lpf_sync( lpf, LPF_SYNC_DEFAULT ), "GA");
-
-    rc = lpf_deregister( lpf, xSlot );
     EXPECT_EQ( LPF_SUCCESS, rc );
+    rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
+    FAIL();
 
-    rc = lpf_deregister( lpf, ySlot );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    delete xs;
-    delete ys;
 }
 
 /** 

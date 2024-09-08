@@ -44,7 +44,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    EXPECT_DEATH(lpf_get( lpf, (pid+1)%nprocs, xSlot, 0, ySlot, 2, -1, LPF_MSG_DEFAULT ), "numerical overflow while");
+    rc = lpf_get( lpf, (pid+1)%nprocs, xSlot, 0, ySlot, 2, -1, LPF_MSG_DEFAULT );
+    FAIL();
 
 }
 

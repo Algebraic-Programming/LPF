@@ -24,7 +24,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     (void) pid; (void) nprocs; (void) args;
     int x = 0;
     lpf_memslot_t xSlot = LPF_INVALID_MEMSLOT;
-    EXPECT_DEATH(lpf_register_global( lpf, &x, sizeof(x), &xSlot ), "LO");
+    lpf_register_global( lpf, &x, sizeof(x), &xSlot );
+    FAIL();
 }
 
 /** 

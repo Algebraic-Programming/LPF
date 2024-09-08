@@ -33,6 +33,7 @@ void spmd( lpf_t a, lpf_pid_t b, lpf_pid_t c, lpf_args_t d)
  */
 TEST( API, func_lpf_debug_exec_null_output )
 {
+    lpf_err_t rc = LPF_SUCCESS;
     lpf_args_t args;
     args.input = NULL;
     args.input_size = 0;
@@ -40,5 +41,6 @@ TEST( API, func_lpf_debug_exec_null_output )
     args.output_size = 10;
     args.f_symbols = NULL;
     args.f_size = 0;
-    EXPECT_DEATH(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), "NULL output argument");
+    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), rc);
+    FAIL();
 }
