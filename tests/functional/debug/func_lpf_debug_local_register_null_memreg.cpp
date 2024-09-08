@@ -35,6 +35,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
  */
 TEST( API, func_lpf_debug_local_register_null_memreg )
 {
-    lpf_err_t rc = LPF_SUCCESS;
-    EXPECT_DEATH(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS ), "LOL");
+    lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS );
+    FAIL();
 }

@@ -28,5 +28,7 @@
  */
 TEST( API, func_lpf_debug_exec_null_spmd )
 {
-    EXPECT_DEATH(lpf_exec( LPF_ROOT, LPF_MAX_P, NULL, LPF_NO_ARGS ), "");
+    lpf_err_t rc = LPF_SUCCESS;
+    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, NULL, LPF_NO_ARGS ), rc);
+    FAIL();
 }
