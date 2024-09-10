@@ -392,38 +392,56 @@ if (MPI_FOUND)
 
 
         gtest_add_tests(TARGET ${testName}
-            EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
+            #EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
             )
         # It is quite different how we launch death tests (via our wrapper), and how we launch normal tests (via GTest package)
-        if (${debug} AND ${deathTest})
+        #if (${debug} AND ${deathTest})
             message("TEST ${testName} is death test")
             execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
-            execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \" P >=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \" P <=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE maxProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+
+            if ("${minProcs}" STREQUAL "")
+                set(minProcs "1")
+            endif()
+            if ("${maxProcs}" STREQUAL "")
+                set(maxProcs "5")
+            endif()
+            if ("${lpfProbeSecs}" STREQUAL "")
+                set(lpfProbeSecs "0.0")
+            endif()
+            if ("${retCode}" STREQUAL "")
+                set(retCode "0")
+            endif()
+
+
+            message("For test: ${testSource} lpfProbeSecs ${lpfProbeSecs}")
+            message("For test: ${testSource} maxProcs ${maxProcs}")
             message("For test: ${testSource} - expected return code: ${retCode}")
             #add_test(NAME ${testName} COMMAND ${MY_DT_LAUNCHER} ${CMAKE_BINARY_DIR}/lpfrun_build ${minProcs} $<TARGET_FILE:${testName}> ${retCode})
                 set_property(TARGET ${testName}
                     PROPERTY
-                    TEST_LAUNCHER ${MY_DT_LAUNCHER};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-P;${minProcs};-R;${retCode}
+                    TEST_LAUNCHER ${MY_DT_LAUNCHER};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode}
                     )
-        else()
-            message("test ${testName} is normal test")
-            execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
-            execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
-            message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
-            message("For test: ${testSource} - minProcs: ${minProcs}")
-            # The tests in the debug folder need a special launcher
-            if ("${lpfProbeSecs}" STREQUAL "")
-                set_property(TARGET ${testName}
-                    PROPERTY
-                    TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-n;${minProcs}
-                    )
-            else()
-                set_property(TARGET ${testName}
-                    PROPERTY
-                    TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-probe;${lpfProbeSecs};-n;${minProcs};
-                    )
-            endif()
-        endif()
+                # else()
+                #     message("test ${testName} is normal test")
+                #     execute_process(COMMAND bash -c "grep -m 1 \"pre P\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+                #     message("For test: ${testSource} - lpfProbeSecs: ${lpfProbeSecs}")
+                #     message("For test: ${testSource} - minProcs: ${minProcs}")
+                #     # The tests in the debug folder need a special launcher
+                #     if ("${lpfProbeSecs}" STREQUAL "")
+                #         set_property(TARGET ${testName}
+                #             PROPERTY
+                #             TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-n;${minProcs}
+                #             )
+                #     else()
+                #         set_property(TARGET ${testName}
+                #             PROPERTY
+                #             TEST_LAUNCHER ${CMAKE_BINARY_DIR}/lpfrun_build;-engine;ibverbs;-probe;${lpfProbeSecs};-n;${minProcs};
+                #             )
+                #     endif()
+                # endif()
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
 
