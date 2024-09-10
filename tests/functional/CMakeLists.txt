@@ -169,8 +169,7 @@ endforeach(LPF_IMPL_ID)
 
 include_directories(.)
 add_subdirectory(debug)
-
-add_subdirectory(c99)
+add_subdirectory(collectives)
 
 
 option(LPFLIB_MAKE_TEST_DOC "Build the test documentation" OFF)
