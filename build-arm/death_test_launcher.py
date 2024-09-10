@@ -16,7 +16,7 @@ if args.cmd[1] == "--gtest_list_tests":
 else:
     for i in range(args.min_process_count, args.max_process_count+1):
         if args.lpf_probe_timer > 0.0:
-            run_cmd = [args.parallel_launcher, '-engine', 'ibverbs', '-probe', args.lpf_probe_timer, '-n', str(i)] + args.cmd
+            run_cmd = [args.parallel_launcher, '-engine', 'ibverbs', '-probe', str(args.lpf_probe_timer), '-n', str(i)] + args.cmd
         else:
             run_cmd = [args.parallel_launcher, '-engine', 'ibverbs', '-n', str(i)] + args.cmd
         print("Run command: ")

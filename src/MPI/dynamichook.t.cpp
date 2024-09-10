@@ -24,6 +24,8 @@
 
 #include <iostream>
 
+extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
+
 /** 
  * \pre P >= 1
  */

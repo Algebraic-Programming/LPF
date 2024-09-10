@@ -31,16 +31,40 @@
 
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=1;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
+
+/** 
+ * \pre P >= 1
+ * \pre P <= 2
+ */
+class SparseAll2AllTests : public testing::Test {
+
+    protected:
+
+    static void SetUpTestSuite() {
+
+       MPI_Init(NULL, NULL);
+       Lib::instance();
+
+        MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
+        MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+
+    }
+
+    static void TearDownTestSuite() {
+        MPI_Finalize();
+    }
+
+    static int my_pid;
+    static int nprocs;
+};
+
+int SparseAll2AllTests::my_pid = -1;
+int SparseAll2AllTests::nprocs = -1;
 
 
-TEST( Spall2allC, EnoughMemory )
+TEST_F( SparseAll2AllTests, EnoughMemory )
 {
-    lpf::mpi::Lib::instance().world();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
 
 using namespace std;
 using namespace lpf::mpi;
@@ -161,23 +185,18 @@ const int M = N * (6 + 2*(int) ceil(1+log10(nprocs)) );
     sparse_all_to_all_destroy( &spt );
 }
 
-TEST( Spall2all, Create )
+TEST_F( SparseAll2AllTests, Create )
 {
     SparseAllToAll x(9, 10);
 }
 
-TEST( Spall2all, Reserve )
+TEST_F( SparseAll2AllTests, Reserve )
 {
     SparseAllToAll x( 4,10);
 }
 
-TEST( Spall2all, ReserveUnequal )
+TEST_F( SparseAll2AllTests, ReserveUnequal )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     SparseAllToAll x( my_pid, nprocs );
 
     // simulate the case where one of the processes can't 
@@ -190,14 +209,8 @@ TEST( Spall2all, ReserveUnequal )
     EXPECT_TRUE( !error );
 }
 
-TEST( Spall2all, Send )
+TEST_F( SparseAll2AllTests, Send )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
-
     SparseAllToAll x( my_pid, nprocs );
     x.reserve( nprocs * ceil(1+log2(nprocs)) , sizeof(int));
     for (int i = 0; i <= my_pid ; ++i)
@@ -208,13 +221,8 @@ TEST( Spall2all, Send )
     EXPECT_TRUE( !error );
 }
 
-TEST( Spall2all, Ring )
+TEST_F( SparseAll2AllTests, Ring )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
 
     SparseAllToAll x(my_pid, nprocs);
     EXPECT_TRUE(  x.empty() );
@@ -237,13 +245,8 @@ TEST( Spall2all, Ring )
 }
 
 
-TEST( Spall2all, Access )
+TEST_F( SparseAll2AllTests, Access )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     SparseAllToAll x(my_pid, nprocs);
     x.reserve( nprocs * ceil(1+log2(nprocs)) , sizeof(int) );
     EXPECT_TRUE(  x.empty() );
@@ -261,14 +264,8 @@ TEST( Spall2all, Access )
     EXPECT_TRUE(  x.empty() );
 }
 
-TEST( Spall2all, SmallBuf )
+TEST_F( SparseAll2AllTests, SmallBuf )
 {
-    Lib::instance();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     SparseAllToAll x(my_pid, nprocs);
     const int nMsgs = 5;
     x.reserve( nMsgs , sizeof(int) );
@@ -288,13 +285,8 @@ TEST( Spall2all, SmallBuf )
 
 }
 
-TEST( Spall2all, SmallBufProc1 )
+TEST_F( SparseAll2AllTests, SmallBufProc1 )
 {
-    Lib::instance();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
 
     SparseAllToAll x(my_pid, nprocs);
     const int nMsgs = 100;
@@ -319,14 +311,8 @@ TEST( Spall2all, SmallBufProc1 )
 
 }
 
-TEST( Spall2all, ManyMsgs )
+TEST_F( SparseAll2AllTests, ManyMsgs )
 {
-    Lib::instance();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     SparseAllToAll x(my_pid, nprocs);
     const int nMsgs = 10000;
     x.reserve( nMsgs * 2 , sizeof(int) );
@@ -357,19 +343,14 @@ TEST( Spall2all, ManyMsgs )
     }
 }
 
-TEST( Spall2all, LargeSend )
+TEST_F( SparseAll2AllTests, LargeSend )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
-    SparseAllToAll x( my_pid, nprocs );
 
     std::vector<char> data( size_t(std::numeric_limits<int>::max()) + 10u );
     for (size_t i = 0; i < data.size(); ++i)
         data[i] = char(i + my_pid) ;
 
+    SparseAllToAll x( my_pid, nprocs );
     x.reserve( 1 , data.size() );
     x.send( (my_pid + 1) % nprocs, data.data(), data.size() );
 

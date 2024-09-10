@@ -25,23 +25,22 @@
 using namespace lpf::mpi;
 
 extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
-//
-static char ** _argv = nullptr;
-static int _argc = 0;
 
+
+/** 
+ * \pre P >= 1
+ * \pre P <= 2
+ */
 class IBVerbsTests : public testing::Test {
 
     protected:
 
     static void SetUpTestSuite() {
 
-       // int provided;
-       MPI_Init(&_argc, &_argv);
-       // MPI_Comm world = MPI_COMM_WORLD;
+       MPI_Init(NULL, NULL);
         Lib::instance();
         comm = new Comm();
         *comm = Lib::instance().world();
-        //comm = new Comm(&world);
         comm->barrier();
         verbs = new IBVerbs( *comm );
     }
@@ -120,8 +119,8 @@ TEST_F( IBVerbsTests, put )
     verbs->put( b1, 0, (comm->pid() + 1)%comm->nprocs(), b2, 0, sizeof(buf1));
 
     verbs->sync(true);
-    //EXPECT_EQ( "Hi", std::string(buf1) );
-    //EXPECT_EQ( "Hi", std::string(buf2) );
+    EXPECT_EQ( "Hi", std::string(buf1) );
+    EXPECT_EQ( "Hi", std::string(buf2) );
 }
 
 
@@ -279,9 +278,6 @@ TEST_F( IBVerbsTests, getHuge )
     EXPECT_EQ( hugeMsg, hugeBuf );
 }
 
-/** 
- * \pre P >= 1
- */
 TEST_F( IBVerbsTests, manyPuts )
 {
     const unsigned N = 5000;
@@ -309,12 +305,5 @@ TEST_F( IBVerbsTests, manyPuts )
         EXPECT_EQ( b2_exp, buf2[i]);
         EXPECT_EQ( b1_exp, buf1[i] );
     }
-}
-
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  _argc = argc;
-  _argv = argv;
-  return RUN_ALL_TESTS();
 }
 
