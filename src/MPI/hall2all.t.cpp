@@ -23,28 +23,51 @@
 
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=1;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
 
 
-TEST( Hall2all, Create )
+/** 
+ * \pre P >= 1
+ * \pre P <= 2
+ */
+class HAll2AllTests : public testing::Test {
+
+    protected:
+
+    static void SetUpTestSuite() {
+
+       MPI_Init(NULL, NULL);
+       Lib::instance();
+
+        MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
+        MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+
+    }
+
+    static void TearDownTestSuite() {
+        MPI_Finalize();
+    }
+
+    static int my_pid;
+    static int nprocs;
+};
+
+int HAll2AllTests::my_pid = -1;
+int HAll2AllTests::nprocs = -1;
+
+TEST_F( HAll2AllTests, Create )
 {
     HoeflerAllToAll x(9, 10);
 }
 
-TEST( Hall2all, Reserve )
+TEST_F( HAll2AllTests, Reserve )
 {
     HoeflerAllToAll x( 4,10);
     x.reserve( 50 , 100);
 }
 
-TEST( Hall2all, Send )
+TEST_F( HAll2AllTests, Send )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
-
     HoeflerAllToAll x( my_pid, nprocs );
     x.reserve( nprocs , sizeof(int));
     for (int i = 0; i <= my_pid ; ++i)
@@ -55,13 +78,8 @@ TEST( Hall2all, Send )
     EXPECT_TRUE( !error );
 }
 
-TEST( Hall2all, Ring )
+TEST_F( HAll2AllTests, Ring )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     HoeflerAllToAll x(my_pid, nprocs);
     x.reserve( nprocs , sizeof(int));
     x.send( (my_pid + 1) % nprocs, &my_pid, sizeof(my_pid) );
@@ -83,14 +101,8 @@ TEST( Hall2all, Ring )
 }
 
 
-TEST( Hall2all, ManyMsgs )
+TEST_F( HAll2AllTests, ManyMsgs )
 {
-    Lib::instance();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     HoeflerAllToAll x(my_pid, nprocs );
     const int nMsgs = 10000;
     x.reserve( nMsgs , sizeof(int));
@@ -121,13 +133,8 @@ TEST( Hall2all, ManyMsgs )
     }
 }
 
-TEST( Hall2all, LargeSend )
+TEST_F( HAll2AllTests, LargeSend )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     HoeflerAllToAll x( my_pid, nprocs );
 
     std::vector<char> data( size_t(std::numeric_limits<int>::max()) + 10u );
