@@ -127,28 +127,26 @@ set(test_sources
     type_lpf_t.cpp
     )
 
-foreach(LPF_IMPL_ID "ibverbs")
-    set(debug ON)
-    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+foreach (LPF_IMPL_ID ${ENGINES})
+set(debug ON)
+set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
 
-    set(mode)
-    if (debug)
-        set(mode "_debug")
-    endif(debug)
+set(mode)
+if (debug)
+    set(mode "_debug")
+endif(debug)
 
-    # add all source files except the ones we don't want
-    foreach(testSource ${test_sources})
-        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
-        get_filename_component(baseName ${testSource} NAME_WE  )
-        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+# add all source files except the ones we don't want
+foreach(testSource ${test_sources})
+    string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
+    get_filename_component(baseName ${testSource} NAME_WE  )
+    set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        message("Add test: ${exeName}")
-        # Signature: function(add_gtest_mpi testName engines debug testSource)
-        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
-    endforeach()
+    message("Add test: ${exeName}")
+    # Signature: function(add_gtest_mpi testName engines debug testSource)
+    add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+endforeach()
 
-endforeach(LPF_IMPL_ID)
-foreach(LPF_IMPL_ID "ibverbs")
     set(debug ON)
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
     set(mode)

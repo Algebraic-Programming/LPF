@@ -51,7 +51,7 @@ foreach(LPF_IMPL_ID "ibverbs")
 
         message("Add test: ${exeName}")
         # Signature: function(add_gtest_mpi testName engines debug testSource)
-        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        add_gtest_mpi(${exeName} ${ENGINES} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
     endforeach()
 
 endforeach(LPF_IMPL_ID)
