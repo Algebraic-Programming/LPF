@@ -366,16 +366,16 @@ endfunction(add_gtest)
 
 
 
-set(DEATH_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/death_test_launcher.py)
-configure_file( ${CMAKE_SOURCE_DIR}/death_test_launcher.py ${DEATH_TEST_LAUNCHER} @ONLY )
+set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
+configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY )
 if( NOT Python3_FOUND )
     find_package( Python3 )
 endif()
-set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${DEATH_TEST_LAUNCHER})
+set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
 # Have a macro to add a unit test that should run with MPI
 if (MPI_FOUND)
 
-    function(add_gtest_mpi testName engines debug deathTest testSource )
+    function(add_gtest_mpi testName ENGINE debug deathTest testSource )
 
         include(GoogleTest)
         add_executable(${testName} ${testSource} ${ARGN})
@@ -386,7 +386,9 @@ if (MPI_FOUND)
         else(debug)
             target_link_libraries(${testName} ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
         endif(debug)
-        foreach(LPF_IMPL_ID ${engines})
+
+        # Maybe I should link to only 1 engine for each case in the future?
+        foreach(LPF_IMPL_ID ${ENGINE})
             target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
 
@@ -413,10 +415,9 @@ if (MPI_FOUND)
             set(retCode "0")
         endif()
 
-
         set_property(TARGET ${testName}
             PROPERTY
-            TEST_LAUNCHER ${MY_DT_LAUNCHER};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode}
+            TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode}
             )
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
