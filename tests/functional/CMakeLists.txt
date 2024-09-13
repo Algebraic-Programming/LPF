@@ -127,7 +127,7 @@ set(test_sources
     type_lpf_t.cpp
     )
 
-foreach (LPF_IMPL_ID "ibverbs")
+foreach (LPF_IMPL_ID ${ENGINES})
     set(debug ON)
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
 
@@ -142,16 +142,14 @@ foreach (LPF_IMPL_ID "ibverbs")
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        message("Add test: ${exeName}")
-        # Signature: function(add_gtest_mpi testName engines debug testSource)
         add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
 
         string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        message("Try to gtest-discover ${exeName}")
-        gtest_discover_tests(${exeName})
+        gtest_discover_tests(${exeName}
+            TEST_PREFIX ${LPF_IMPL_ID}_)
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 

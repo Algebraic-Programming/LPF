@@ -11,9 +11,11 @@ parser.add_argument("-t", "--lpf_probe_timer", type=float)
 parser.add_argument("-R", "--expected_return_code", type=int)
 parser.add_argument( 'cmd', nargs=argparse.REMAINDER )
 args = parser.parse_args()
+# This is only for passing Gtest info to CMake
 if args.cmd[1] == "--gtest_list_tests":
     run_cmd = [args.cmd[0], args.cmd[1]]
     cmd = subprocess.run( run_cmd, capture_output=True)
+# Actual use of our launcher
 else:
     for i in range(args.min_process_count, args.max_process_count+1):
         if args.lpf_probe_timer > 0.0:
