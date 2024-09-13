@@ -320,12 +320,16 @@ function( target_link_exe_with_core target )
     endif()
     set(corelib "lpf_core_univ_${engine}_${LPFLIB_CONFIG_NAME}")
 
-    target_link_libraries(${target} ${corelib})
+    if ("${engine}" STREQUAL "pthread")
+        target_link_libraries(${target} ${corelib})
+    else()
+        target_link_libraries(${target} ${corelib} ${MPI_C_LIBRARIES})
+    endif()
     target_compile_flags(${target} PRIVATE ${LPF_CORE_COMPILE_FLAGS})
     set_target_properties(${target} PROPERTIES
-            LINK_FLAGS "${LPF_CORE_LIB_LINK_FLAGS} ${LPF_CORE_EXE_LINK_FLAGS}"
-            LINKER_LANGUAGE CXX
-    )
+        LINK_FLAGS "${LPF_CORE_LIB_LINK_FLAGS} ${LPF_CORE_EXE_LINK_FLAGS}"
+        LINKER_LANGUAGE CXX
+        )
 endfunction()
 
 if (LPF_ENABLE_TESTS)
@@ -354,9 +358,9 @@ function(add_gtest testName engines debug testSource)
     else(debug)
         target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
     endif(debug)
+    target_link_exe_with_core(${testName} ${engines})
     foreach(LPF_IMPL_ID ${engines})
         target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
-        target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
     endforeach(LPF_IMPL_ID)
     gtest_add_tests(TARGET ${testName}
         EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
@@ -377,30 +381,33 @@ if (MPI_FOUND)
 
     function(add_gtest_mpi testName ENGINE debug deathTest testSource )
 
+        if ("{$ENGINE}" STREQUAL "")
+            message(FATAL_ERROR "engine cannot be empty, ever!")
+        endif()
         include(GoogleTest)
         add_executable(${testName} ${testSource} ${ARGN})
         target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
         if (debug)
             target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-            target_link_libraries(${testName} lpf_debug lpf_hl_debug ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
         else(debug)
-            target_link_libraries(${testName} ${MPI_C_LIBRARIES} GTest::gtest GTest::gtest_main)
+            target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
         endif(debug)
 
-        # Maybe I should link to only 1 engine for each case in the future?
-        foreach(LPF_IMPL_ID ${ENGINE})
-            target_link_exe_with_core(${testName} ${LPF_IMPL_ID})
-        endforeach(LPF_IMPL_ID)
-
-
-        gtest_add_tests(TARGET ${testName}
-            EXTRA_ARGS --gtest_output=xml:${test_output}/${testName}
-            )
 
         execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
         execute_process(COMMAND bash -c "grep -m 1 \" P >=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
         execute_process(COMMAND bash -c "grep -m 1 \" P <=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE maxProcs)
         execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+
+        target_link_exe_with_core(${testName} ${ENGINE})
+
+
+        gtest_add_tests(TARGET ${testName}
+            TEST_PREFIX ${ENGINE}_
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            )
+
 
         if ("${minProcs}" STREQUAL "")
             set(minProcs "1")
@@ -415,10 +422,8 @@ if (MPI_FOUND)
             set(retCode "0")
         endif()
 
-        set_property(TARGET ${testName}
-            PROPERTY
-            TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode}
-            )
+        set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+
     endfunction(add_gtest_mpi)
 endif(MPI_FOUND)
 
@@ -429,7 +434,7 @@ else(LPF_ENABLE_TESTS)
        # Do nothing because tests are disabled
     endfunction(add_gtest)
 
-    function(add_gtest_mpi testName engines debug)
+    function(add_gtest_mpi testName ENGINE debug deathTest testSource )
        # DO nothing because tests are disabled
     endfunction(add_gtest_mpi)
 endif(LPF_ENABLE_TESTS)
