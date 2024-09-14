@@ -378,3 +378,8 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     return t->resizeMemreg(max_regs);
 }
 
+lpf_err_t lpf_abort(lpf_t ctx) {
+    std::abort();
+    return LPF_SUCCESS;
+}
+

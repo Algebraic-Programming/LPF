@@ -202,7 +202,7 @@ if (MPI_FOUND)
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
-    foreach (engine ${ENGINES})
+    foreach (engine ${MPI_ENGINES})
         add_gtest_mpi( spall2all_test_${engine} ${engine} ON FALSE
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.c 
