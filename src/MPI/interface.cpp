@@ -225,6 +225,4 @@ void Interface :: probe( machine_t & machine )
     machine.l = &Interface::latency;
 }
 
-
-
 } // namespace lpf

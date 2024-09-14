@@ -179,3 +179,8 @@ lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_abort( lpf_t lpf)
+{
+    (void) lpf;
+    return LPF_SUCCESS;
+}
