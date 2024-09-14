@@ -417,3 +417,8 @@ lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_
         return LPF_SUCCESS;
     return LPF_SUCCESS;
 }
+lpf_err_t lpf_abort(lpf_t ctx) {
+    std::abort();
+    return LPF_SUCCESS;
+}
+

@@ -435,6 +435,9 @@ _LPFLIB_API lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_
         return t->getSentMsgCount(sent_msgs, slot);
     else
         return LPF_SUCCESS;
+_LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx)
+{
+    return LPF_SUCCESS;
 }
 
 } // extern "C"

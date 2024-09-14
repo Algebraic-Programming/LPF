@@ -34,6 +34,7 @@
 #undef lpf_get_rcvd_msg_count_per_slot
 #undef lpf_get_sent_msg_count_per_slot
 #undef lpf_flush
+#undef lpf_abort
 
 #undef lpf_init_t
 #undef lpf_pid_t

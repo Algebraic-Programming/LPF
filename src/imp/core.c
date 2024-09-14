@@ -238,3 +238,8 @@ lpf_err_t lpf_flush( lpf_t lpf) {
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_abort( lpf_t lpf)
+{
+    (void) lpf;
+    return LPF_SUCCESS;
+}
