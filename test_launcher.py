@@ -15,6 +15,7 @@ args = parser.parse_args()
 if args.cmd[1] == "--gtest_list_tests":
     run_cmd = [args.cmd[0], args.cmd[1]]
     cmd = subprocess.run( run_cmd, capture_output=True)
+    sys.exit(cmd.returncode)
 # Actual use of our launcher
 else:
     for i in range(args.min_process_count, args.max_process_count+1):
@@ -27,9 +28,7 @@ else:
         cmd = subprocess.run( run_cmd, capture_output=True)
         print("Test returned code = " + str(cmd.returncode))
         retcode = cmd.returncode
-        if (args.engine == 'pthread') and retcode == 134 and args.expected_return_code == 6:
-            pass
-        elif (retcode != args.expected_return_code):
+        if (retcode != args.expected_return_code):
             print("Test " + args.cmd[0] + args.cmd[1] + "\nreturned\t" + str(retcode) + "\nexpected return code was: " + str(args.expected_return_code))
             sys.exit(1)
     print("Test " + args.cmd[0] + args.cmd[1] + " passed")

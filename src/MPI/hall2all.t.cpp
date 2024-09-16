@@ -74,12 +74,14 @@ TEST_F( HAll2AllTests, Send )
         x.send( (my_pid + 1) % nprocs, &i, sizeof(int) );
 
     bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
+    int dummyOutput[4];
+    int error = x.exchange( Lib::instance().world(), prerandomize, dummyOutput);
     EXPECT_TRUE( !error );
 }
 
 TEST_F( HAll2AllTests, Ring )
 {
+    int dummyOutput[4];
     HoeflerAllToAll x(my_pid, nprocs);
     x.reserve( nprocs , sizeof(int));
     x.send( (my_pid + 1) % nprocs, &my_pid, sizeof(my_pid) );
@@ -87,7 +89,7 @@ TEST_F( HAll2AllTests, Ring )
     EXPECT_FALSE(  x.empty() );
 
     bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
+    int error = x.exchange( Lib::instance().world(), prerandomize, dummyOutput);
     EXPECT_TRUE( !error );
 
     EXPECT_FALSE(  x.empty() );
@@ -117,8 +119,9 @@ TEST_F( HAll2AllTests, ManyMsgs )
 
         bool prerandomize = true;
         int trials = 5;
+        int dummyOutput[4];
         int error = x.exchange( Lib::instance().world(), prerandomize, 
-                NULL, trials);
+                dummyOutput, trials);
         EXPECT_FALSE( error );
 
         for (int i = 0; i < nMsgs; ++i)
@@ -145,7 +148,8 @@ TEST_F( HAll2AllTests, LargeSend )
     x.send( (my_pid + 1) % nprocs, data.data(), data.size() );
 
     bool prerandomize = false;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
+    int dummyOutput[4];
+    int error = x.exchange( Lib::instance().world(), prerandomize, dummyOutput);
     EXPECT_TRUE( !error );
 
     x.recv( data.data(), data.size() );

@@ -89,8 +89,8 @@ void spmd( lpf_t ctx, const lpf_pid_t s, lpf_pid_t p, lpf_args_t args )
     rc = lpf_deregister( ctx, dst_slot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    delete src;
-    delete dst;
+    delete[] src;
+    delete[] dst;
 }
 
 /** 

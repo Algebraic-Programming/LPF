@@ -376,6 +376,15 @@ if (LPF_ENABLE_TESTS)
     if( NOT Python3_FOUND )
         find_package( Python3 )
     endif()
+    # Proposed optimisation by Albert
+    #execute_process( COMMAND ${Python3_EXECUTABLE} -OO -m py_compile ${MY_TEST_LAUNCHER}
+    #    OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE python_opt
+    #)
+    #if ( NOT python_opt EQUAL "0" )
+    #    message( FATAL_ERROR "cannot compile test runner" )
+    #else()
+    #    message( "compilation of test runner successful" )
+    #endif()
     set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
     # Have a macro to add a unit test that should run with MPI
     if (MPI_FOUND)
