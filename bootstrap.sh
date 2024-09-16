@@ -87,7 +87,6 @@ installdir="$builddir"
 config=Release
 doc=OFF
 functests=OFF
-googletest_license_agreement=NO
 perftests=OFF
 reconfig=no
 CMAKE_EXE=cmake
@@ -126,43 +125,6 @@ do
 
        --functests)
             functests=ON
-            cat <<EOF
-
-==============================================================================
-        *** Use of third party software: Google Testing Framework ***
-------------------------------------------------------------------------------
-The functional test suite requires Google Testing Framework which comes with
-its own license. The license can be viewed via
-        https://github.com/google/googletest/blob/release-1.8.1/LICENSE
-Do you agree with the license [yes/no] ?
-EOF
-            read answer
-            if [ x$answer != xyes ]; then
-cat <<EOF
-------------------------------------------------------------------------------
-The answer was is '$answer'. For agreement, please type 'yes'.
-
-Agreement with Google Testing Framework license is necessary for the
-functioning of the test suite. Please do not use the --functests parameter.
-==============================================================================
-EOF
-                exit 1
-            else
-cat <<EOF
-------------------------------------------------------------------------------
-User agrees with Google Testing Framework license. It will be downloaded during
-the build.
-==============================================================================
-EOF
-                googletest_license_agreement=YES
-            fi
-
-            shift
-            ;;
-
-       --functests=i-agree-with-googletest-license)
-            functests=ON
-            googletest_license_agreement=YES
             shift
             ;;
 
@@ -282,7 +244,6 @@ ${CMAKE_EXE} -Wno-dev \
       -DLPFLIB_MAKE_DOC=$doc         \
       -DLPFLIB_MAKE_TEST_DOC=$doc    \
       -DLPF_ENABLE_TESTS=$functests \
-      -DGTEST_AGREE_TO_LICENSE=$googletest_license_agreement \
       -DLPFLIB_PERFTESTS=$perftests  \
       -DLPFLIB_CONFIG_NAME=${config_name:-${config}}\
       -DLPF_HWLOC="${hwloc}" \
