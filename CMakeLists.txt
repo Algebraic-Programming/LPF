@@ -382,12 +382,12 @@ if (LPF_ENABLE_TESTS)
     #else()
     #    message( "compilation of test runner successful" )
     #endif()
+
     set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
     # Have a macro to add a unit test that should run with MPI
     if (MPI_FOUND)
 
         function(add_gtest_mpi testName ENGINE debug deathTest testSource )
-
             if ("{$ENGINE}" STREQUAL "")
                 message(FATAL_ERROR "engine cannot be empty, ever!")
             endif()
