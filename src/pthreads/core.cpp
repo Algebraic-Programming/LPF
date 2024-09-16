@@ -379,7 +379,11 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
 }
 
 lpf_err_t lpf_abort(lpf_t ctx) {
-    std::abort();
+    // Using std::abort is not portable
+    // SIGABRT code 6 is often coverted to code 134.
+    // Therefore, use exit(6) instead
+    //std::abort(); 
+    std::exit(6);
     return LPF_SUCCESS;
 }
 
