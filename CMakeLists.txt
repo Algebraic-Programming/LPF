@@ -333,109 +333,110 @@ function( target_link_exe_with_core target )
 endfunction()
 
 if (LPF_ENABLE_TESTS)
-message(STATUS "Unit and API tests will be built")
+    message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
+    cmake_minimum_required(VERSION 3.29)
 
 
-# Enable testing in CMake
-enable_testing()
-find_package(GTest REQUIRED)
+    # Enable testing in CMake
+    enable_testing()
+    find_package(GTest REQUIRED)
 
-# set testing timeout to 60 seconds
-set(CMAKE_TESTING_TIMEOUT 60)
-
-
-# Have directory to gather all the tests results
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
-set(test_output "${CMAKE_BINARY_DIR}/junit")
-
-# Have a macro to add a unit test
-function(add_gtest testName engines debug testSource)
-    include(GoogleTest)
-    add_executable(${testName} ${testSource})
-    if (debug)
-        target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-        target_link_libraries(${testName} lpf_debug lpf_hl_debug  GTest::gtest GTest::gtest_main)
-    else(debug)
-        target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
-    endif(debug)
-    target_link_exe_with_core(${testName} ${engines})
-    foreach(LPF_IMPL_ID ${engines})
-        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
-    endforeach(LPF_IMPL_ID)
-    gtest_add_tests(TARGET ${testName}
-        EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
-        TEST_LIST seqTests
-        )
-endfunction(add_gtest)
+    # set testing timeout to 60 seconds
+    set(CMAKE_TESTING_TIMEOUT 60)
 
 
+    # Have directory to gather all the tests results
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
+    set(test_output "${CMAKE_BINARY_DIR}/junit")
 
-set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
-configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY )
-if( NOT Python3_FOUND )
-    find_package( Python3 )
-endif()
-set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
-# Have a macro to add a unit test that should run with MPI
-if (MPI_FOUND)
-
-    function(add_gtest_mpi testName ENGINE debug deathTest testSource )
-
-        if ("{$ENGINE}" STREQUAL "")
-            message(FATAL_ERROR "engine cannot be empty, ever!")
-        endif()
+    # Have a macro to add a unit test
+    function(add_gtest testName engines debug testSource)
         include(GoogleTest)
-        add_executable(${testName} ${testSource} ${ARGN})
-        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+        add_executable(${testName} ${testSource})
         if (debug)
             target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-            target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug  GTest::gtest GTest::gtest_main)
         else(debug)
             target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
         endif(debug)
-
-
-        execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
-        execute_process(COMMAND bash -c "grep -m 1 \" P >=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
-        execute_process(COMMAND bash -c "grep -m 1 \" P <=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE maxProcs)
-        execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
-
-        target_link_exe_with_core(${testName} ${ENGINE})
-
-
+        target_link_exe_with_core(${testName} ${engines})
+        foreach(LPF_IMPL_ID ${engines})
+            target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+        endforeach(LPF_IMPL_ID)
         gtest_add_tests(TARGET ${testName}
-            TEST_PREFIX ${ENGINE}_
-            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
+            TEST_LIST seqTests
             )
+    endfunction(add_gtest)
 
 
-        if ("${minProcs}" STREQUAL "")
-            set(minProcs "1")
-        endif()
-        if ("${maxProcs}" STREQUAL "")
-            set(maxProcs "5")
-        endif()
-        if ("${lpfProbeSecs}" STREQUAL "")
-            set(lpfProbeSecs "0.0")
-        endif()
-        if ("${retCode}" STREQUAL "")
-            set(retCode "0")
-        endif()
 
-        set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+    set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
+    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY )
+    if( NOT Python3_FOUND )
+        find_package( Python3 )
+    endif()
+    set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
+    # Have a macro to add a unit test that should run with MPI
+    if (MPI_FOUND)
 
-    endfunction(add_gtest_mpi)
-endif(MPI_FOUND)
+        function(add_gtest_mpi testName ENGINE debug deathTest testSource )
+
+            if ("{$ENGINE}" STREQUAL "")
+                message(FATAL_ERROR "engine cannot be empty, ever!")
+            endif()
+            include(GoogleTest)
+            add_executable(${testName} ${testSource} ${ARGN})
+            target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+            if (debug)
+                target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+                target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
+            else(debug)
+                target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+            endif(debug)
+
+
+            execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
+            execute_process(COMMAND bash -c "grep -m 1 \" P >=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \" P <=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE maxProcs)
+            execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+
+            target_link_exe_with_core(${testName} ${ENGINE})
+
+
+            gtest_add_tests(TARGET ${testName}
+                TEST_PREFIX ${ENGINE}_
+                EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+                )
+
+
+            if ("${minProcs}" STREQUAL "")
+                set(minProcs "1")
+            endif()
+            if ("${maxProcs}" STREQUAL "")
+                set(maxProcs "5")
+            endif()
+            if ("${lpfProbeSecs}" STREQUAL "")
+                set(lpfProbeSecs "0.0")
+            endif()
+            if ("${retCode}" STREQUAL "")
+                set(retCode "0")
+            endif()
+
+            set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+
+        endfunction(add_gtest_mpi)
+    endif(MPI_FOUND)
 
 
 else(LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will *not* be built")
     function(add_gtest testName)
-       # Do nothing because tests are disabled
+        # Do nothing because tests are disabled
     endfunction(add_gtest)
 
     function(add_gtest_mpi testName ENGINE debug deathTest testSource )
-       # DO nothing because tests are disabled
+        # DO nothing because tests are disabled
     endfunction(add_gtest_mpi)
 endif(LPF_ENABLE_TESTS)
 
