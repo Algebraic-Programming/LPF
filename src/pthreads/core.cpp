@@ -418,7 +418,11 @@ lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_
     return LPF_SUCCESS;
 }
 lpf_err_t lpf_abort(lpf_t ctx) {
-    std::abort();
+    // Using std::abort is not portable
+    // SIGABRT code 6 is often coverted to code 134.
+    // Therefore, use exit(6) instead
+    //std::abort(); 
+    std::exit(6);
     return LPF_SUCCESS;
 }
 
