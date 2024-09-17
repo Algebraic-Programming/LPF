@@ -164,9 +164,6 @@ if (MPI_FOUND)
 
         set(lpf_cflags "${lpf_cflags} ${MPI_C_COMPILE_FLAGS} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
         set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
-        if (UNIX AND NOT APPLE)
-          set(lpf_exe_link_flags "${lpf_exe_link_flags} -rdynamic" PARENT_SCOPE)
-        endif()
     endforeach()
   
     include_directories(${MPI_C_INCLUDE_PATH})
