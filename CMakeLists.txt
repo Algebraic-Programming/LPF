@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
 project(LPF C CXX ASM)
 
 # Version info
@@ -305,7 +305,7 @@ endfunction(target_compile_flags)
 # Source
 set(lpf_cflags)
 set(lpf_lib_link_flags)
-set(lpf_exe_link_flags)
+set(lpf_exe_link_flags "-rdynamic")
 
 # Collating all compile & link flags
 set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
