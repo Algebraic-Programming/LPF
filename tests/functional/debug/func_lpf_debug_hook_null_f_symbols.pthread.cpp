@@ -54,11 +54,7 @@ void * pthread_spmd( void * _data ) {
         &init
     );
     EXPECT_EQ( rc, LPF_SUCCESS );
-
-    EXPECT_DEATH(lpf_hook( init, &lpf_spmd, args ), "LOL");
-
-    rc = lpf_pthread_finalize( init );
-    EXPECT_EQ( rc, LPF_SUCCESS );
+    FAIL();
 
     return NULL;
 }
