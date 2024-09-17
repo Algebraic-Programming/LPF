@@ -50,11 +50,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 
     rc = lpf_deregister( lpf, ySlot );
     EXPECT_EQ( LPF_SUCCESS, rc );
-
-    EXPECT_DEATH(lpf_sync( lpf, LPF_SYNC_DEFAULT ), "L");
-
-    EXPECT_EQ( 3, y[0] );
-    EXPECT_EQ( 4, y[1] );
+    FAIL();
 }
 
 /** 
