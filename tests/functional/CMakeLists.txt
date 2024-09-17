@@ -15,16 +15,6 @@
 # limitations under the License.
 #
 
-# All test sources have file names as bla.c
-#file(GLOB AllTestSources "*.cpp" )
-# All test sources which are specific to some engine are of the form
-# bla.pthread.c
-#file(GLOB AllSpecificTestSources "*.*.cpp")
-# All generic test sources don't have the two dots in their name
-#file(GLOB AllGenericTestSources "*.c")
-#file(GLOB AllGenericTestSources "*.cpp")
-#list(REMOVE_ITEM AllGenericTestSources ${AllSpecificTestSources})
-
 set(test_sources
     func_bsplib_example_lpf_sum.cpp
     func_bsplib_example_lpf_sum_unsafemode.cpp
@@ -148,8 +138,6 @@ foreach (LPF_IMPL_ID ${ENGINES})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        gtest_discover_tests(${exeName}
-            TEST_PREFIX ${LPF_IMPL_ID}_)
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 

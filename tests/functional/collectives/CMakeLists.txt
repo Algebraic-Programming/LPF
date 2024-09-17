@@ -55,6 +55,5 @@ foreach (LPF_IMPL_ID ${ENGINES})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        gtest_discover_tests(${exeName} TEST_PREFIX ${LPF_IMPL_ID}_)
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)

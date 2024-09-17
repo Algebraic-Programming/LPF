@@ -83,28 +83,17 @@ if (debug)
 endif(debug)
 foreach (LPF_IMPL_ID ${ENGINES})
     foreach(testSource ${debug_test_sources})
-        #message("minProcs: ${minProcs}")
-        #message("retCode: ${retCode}")
-        # get_filename_component(baseName ${testSource} NAME_WE  )
-        # set(testName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-        # add_executable(${testName} ${testSource}) 
 
         string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        #target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-        #target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
-        #target_link_exe_with_core(${testName})
-        #target_link_libraries(${testName} lpf_debug lpf_hl_debug)
         add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug} TRUE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}" )
-        #add_test(NAME ${testName} COMMAND ${MY_DT_LAUNCHER} ${CMAKE_BINARY_DIR}/lpfrun_build ${minProcs} $<TARGET_FILE:${testName}> ${retCode})
 
         string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${CMAKE_CURRENT_SOURCE_DIR}/${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        gtest_discover_tests(${exeName} TEST_PREFIX ${LPF_IMPL_ID}_)
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 
