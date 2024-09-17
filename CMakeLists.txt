@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 project(LPF C CXX ASM)
 
 # Version info
@@ -334,7 +334,6 @@ endfunction()
 
 if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
-    cmake_minimum_required(VERSION 3.29)
 
 
     # Enable testing in CMake
@@ -413,10 +412,10 @@ if (LPF_ENABLE_TESTS)
             target_link_exe_with_core(${testName} ${ENGINE})
 
 
-            gtest_add_tests(TARGET ${testName}
-                TEST_PREFIX ${ENGINE}_
-                EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
-                )
+             gtest_add_tests(TARGET ${testName}
+                 TEST_PREFIX ${ENGINE}_
+                 EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+                 )
 
 
             if ("${minProcs}" STREQUAL "")
