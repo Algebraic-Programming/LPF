@@ -7,7 +7,7 @@
 #SBATCH -o job-arm-%j.stdout
 #SBATCH -e job-arm-%j.stderr
 source $HOME/spack/share/spack/setup-env.sh
-spack env activate arm 
+spack env activate hicr-arm
 HASH=$(git rev-parse --verify HEAD)
 echo $HASH
 mkdir build-arm ; cd build-arm
