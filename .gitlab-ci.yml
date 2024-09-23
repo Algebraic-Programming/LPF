@@ -1,0 +1,105 @@
+build:
+  image: registry.gitlab.huaweirc.ch/zrc-von-neumann-lab/runtime-system-innovations/hicr/buildenv-x86_64:latest
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  tags:
+  - docker
+  - high-core 
+  - x86
+  - infiniband
+  script:
+  - export HOME=/home/hicr
+  - source /home/hicr/.hicr-env.sh
+  - echo "Compiling LPF..."
+  - mkdir extern/lpf/build; pushd extern/lpf/build; cmake .. -DLPFLIB_MAKE_DOC=false -DCMAKE_INSTALL_PREFIX=/home/hicr/lpf; make -j24; make install; popd
+  - echo "Building..."
+  - mkdir build
+  - meson setup build -Dbuildtype=debug -Db_coverage=true -Dbackends=host/hwloc,host/pthreads,mpi,lpf -Dfrontends=tasking,machineModel,deployer,channel -DbuildTests=true -DbuildExamples=true  -DcompileWarningsAsErrors=true
+  - meson compile -C build
+  - echo "Running tests..."
+  - meson test -C build
+  - echo "Creating coverage report..."
+  - ninja -C build coverage
+  coverage: /^\s*lines:\s*\d+.\d+\%/
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 2 days
+    when: always
+    paths:
+      - build/meson-logs/*
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: build/meson-logs/coverage.xml 
+  only:
+  - master
+  - develop 
+  - merge_requests
+  - tags
+
+build-ascend:
+  image: registry.gitlab.huaweirc.ch/zrc-von-neumann-lab/runtime-system-innovations/hicr/buildenv-ascend-arm64v8:latest
+  tags:
+  - docker
+  - ascend
+  script:
+  - source /home/hicr/.hicr-env.sh
+  - echo "$PATH"
+  - echo "Building..."
+  - mkdir build
+  - meson setup build -Dbackends=host/hwloc,host/pthreads,ascend -Dfrontends=tasking,machineModel,deployer,channel -DbuildTests=true -DbuildExamples=true -DcompileWarningsAsErrors=true
+  - meson compile -C build
+  - echo "Running tests..."
+  - meson test -C build
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 2 days
+    when: always
+    paths:
+      - build/meson-logs/*
+  only:
+  - master
+  - develop 
+  - merge_requests
+  - tags
+
+docs:
+  image: registry.gitlab.huaweirc.ch/zrc-von-neumann-lab/runtime-system-innovations/hicr/docs:latest
+  tags:
+  - docker
+  - tiny
+  script:
+  - echo "Checking HiCR source and test formatting..."
+  - .build-tools/style/check-style.sh check include
+  - .build-tools/style/check-style.sh check tests
+  - .build-tools/style/check-style.sh check examples
+  - echo "Building code documentation..."
+  - make -j1 -C docs
+  only: 
+  - master
+  - develop
+  - merge_requests
+  - tags
+
+pages:
+  image: registry.gitlab.huaweirc.ch/zrc-von-neumann-lab/runtime-system-innovations/hicr/docs:latest
+  tags:
+  - docker
+  - tiny
+  - interactive
+  script:
+  - echo "Building code documentation..."
+  - make -j1 -C docs
+  - mv docs/build/html public
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
+  
+build-slurm:
+  tags:
+  - ssh
+  - slurm
+  script:
+  - sbatch .build-tools/slurm/build-job-arm.sh
