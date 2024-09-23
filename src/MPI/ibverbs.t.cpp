@@ -191,7 +191,7 @@ TEST_F( IBVerbsTests, getAllToAll )
     int nprocs = comm->nprocs();
     int pid = comm->pid();
 
-    const int H = 100.3 * nprocs;
+    const int H = 1000.3 * nprocs;
 
     std::vector< int > a(H);
     std::vector< int > b(H);
