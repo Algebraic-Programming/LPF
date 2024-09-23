@@ -1,6 +1,17 @@
 build-slurm:
   tags:
-  - ssh
   - slurm
   script:
-  - sbatch .build-tools/slurm/build-job-arm.sh
+  - source $HOME/spack/share/spack/setup-env.sh
+  - spack env activate hicr-x86-login
+  - spack load reframe
+  - rm -rf /storage/distscratch/okorak/reframe_lpf_tests
+  - reframe -c .build-tools/reframe/lpf_tests.py -C .build-tools/reframe/settings.py -r --stage=/storage/distscratch/okorak/reframe_lpf_tests
+  - reframe -c .build-tools/reframe/lpf_tests.py -C .build-tools/reframe/settings.py -r --stage=/storage/distscratch/okorak/reframe_lpf_tests --keep-stage-files
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 2 days
+    when: always
+    paths:
+      - /storage/distscratch/okorak/reframe_lpf_tests/BZ/arm-sequential/PrgEnv-default/LPFFuncTests/rfm_job*
+      - /storage/distscratch/okorak/lpf_repo/build/junit/
