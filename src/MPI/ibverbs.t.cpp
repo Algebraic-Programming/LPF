@@ -280,10 +280,7 @@ TEST_F( IBVerbsTests, getHuge )
 
 TEST_F( IBVerbsTests, manyPuts )
 {
-    Comm comm = Lib::instance().world();
 
-    comm.barrier();
-    IBVerbs verbs( comm );
     const unsigned N = 100000;
     std::vector< unsigned char > buf1( N );
     std::vector< unsigned char > buf2( N );
