@@ -1,14 +1,3 @@
-build:
-  image: registry.gitlab.huaweirc.ch/zrc-von-neumann-lab/runtime-system-innovations/hicr/buildenv-x86_64:latest
-  variables:
-    GIT_SUBMODULE_STRATEGY: recursive
-  tags:
-  - docker
-  - high-core 
-  - x86
-  - infiniband
-  script:
-  - echo "Hello"
 build-slurm:
   tags:
   - ssh
