@@ -7,6 +7,7 @@ class LPFFuncTests(rfm.RunOnlyRegressionTest):
     def __init__(self):
         self.maintainers = ['Kiril Dichev']
         self.num_tasks = 64
+        self.num_cpus_per_task = 1
         self.sourcesdir = '.'
         self.prerun_cmds = ['source get_and_build.sh']
         self.valid_systems = ['BZ:arm-sequential']
