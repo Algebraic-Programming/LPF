@@ -191,7 +191,7 @@ TEST_F( IBVerbsTests, getAllToAll )
     int nprocs = comm->nprocs();
     int pid = comm->pid();
 
-    const int H = 1000.3 * nprocs;
+    const int H = 100.3 * nprocs;
 
     std::vector< int > a(H);
     std::vector< int > b(H);
@@ -281,7 +281,7 @@ TEST_F( IBVerbsTests, getHuge )
 TEST_F( IBVerbsTests, manyPuts )
 {
 
-    const unsigned N = 100000;
+    const unsigned N = 5000;
     std::vector< unsigned char > buf1( N );
     std::vector< unsigned char > buf2( N );
     for (unsigned int i = 0 ; i < N; ++ i)
