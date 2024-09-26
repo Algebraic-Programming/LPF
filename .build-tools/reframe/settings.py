@@ -30,7 +30,7 @@ site_configuration = {
                         'PrgEnv-bz',
                         ],
                     'max_jobs': 100,
-                    'prepare_cmds': ['spack env activate hicr-arm'],
+                    'prepare_cmds': ['spack env activate arm'],
                     },
                 {
                     'name': 'arm-sequential',
@@ -42,7 +42,7 @@ site_configuration = {
                         'PrgEnv-default',
                         ],
                     'max_jobs': 100,
-                    'prepare_cmds': ['spack env activate hicr-arm'],
+                    'prepare_cmds': ['spack env activate arm'],
                     },
                 ]
             },
