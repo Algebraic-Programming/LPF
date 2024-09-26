@@ -11,5 +11,4 @@ build-slurm:
     expire_in: 2 days
     when: always
     paths:
-      - /storage/users/gitlab-runner/stage/BZ/arm-sequential/PrgEnv-default/LPFFuncTests/rfm_job*
-      - /storage/users/gitlab-runner/lpf_repo/build/junit/
+      - /storage/users/gitlab-runner/stage/BZ/arm-sequential/PrgEnv-default/LPFFuncTests/
