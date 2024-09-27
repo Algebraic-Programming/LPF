@@ -6,7 +6,7 @@ build-slurm:
   - spack env activate x86-login
   - spack load reframe
   - reframe -c .build-tools/reframe/lpf_tests.py -C .build-tools/reframe/settings.py -r --stage=/storage/users/gitlab-runner/stage/ --keep-stage-files
-  - cp -r /storage/users/gitla-runner/stage/BZ/arm-sequential/PrgEnv-default/LPFFuncTests .
+  - cp -r /storage/users/gitlab-runner/stage/BZ/arm-sequential/PrgEnv-default/LPFFuncTests .
   artifacts:
     name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
     expire_in: 2 days
