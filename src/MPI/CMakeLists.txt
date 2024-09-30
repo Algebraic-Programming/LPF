@@ -24,7 +24,6 @@ if (MPI_FOUND)
 
     if (ENABLE_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
-        list(APPEND MPI_ENGINES hicr)
     endif()
 
     if (MPI_IBARRIER)
@@ -66,7 +65,7 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-                init.cpp
+		init.cpp
                 ${ibverbs_sources}
             )
 
@@ -128,7 +127,7 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs OR engine STREQUAL hicr)
+        if (engine STREQUAL ibverbs)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()

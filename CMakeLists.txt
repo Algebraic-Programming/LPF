@@ -106,7 +106,7 @@ set( INSTALL_HEADERS "${prefix}/include" CACHE PATH
 message( STATUS "Installation directory prefix is ${prefix}")
 
 # Dependencies
-set(ENGINES "")
+set(ENGINES)
 find_library( LIB_POSIX_THREADS
     NAMES "pthread"
     DOC   "Posix Threads"
@@ -176,7 +176,6 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
 
     if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
-        list(APPEND ENGINES "hicr")
     endif()
 
 endif()
@@ -582,7 +581,5 @@ install(DIRECTORY "include/bsp" DESTINATION ${INSTALL_HEADERS})
 install(DIRECTORY "include/debug"  DESTINATION ${INSTALL_HEADERS}/lpf )
 
 # Post install actions
-# Kiril is commenting the post-install runs as they always fail
-# Probably should fix them at some point
-# add_subdirectory(post-install)
+add_subdirectory(post-install)
 
