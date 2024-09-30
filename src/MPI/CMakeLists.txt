@@ -24,7 +24,6 @@ if (MPI_FOUND)
 
     if (LIB_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
-        list(APPEND MPI_ENGINES hicr)
     endif()
 
     if (MPI_OPEN_PORT)
@@ -54,7 +53,7 @@ if (MPI_FOUND)
         set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
         
         set(ibverbs_sources)
-        if (LPF_IMPL_ID STREQUAL ibverbs OR LPF_IMPL_ID STREQUAL hicr)
+        if (LPF_IMPL_ID STREQUAL ibverbs)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -71,7 +70,7 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-                init.cpp
+		init.cpp
                 ${ibverbs_sources}
             )
 
@@ -137,7 +136,7 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs OR engine STREQUAL hicr)
+        if (engine STREQUAL ibverbs)
            target_link_libraries(${target} ${LIB_IBVERBS})
         endif()
     endfunction()
@@ -170,7 +169,6 @@ if (MPI_FOUND)
     include_directories(${MPI_C_INCLUDE_PATH})
     # add a test for dynamichook 
     if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
-
 
         add_gtest_mpi(dynamichook.t "ibverbs" ON FALSE
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.t.cpp 

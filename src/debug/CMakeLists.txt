@@ -38,4 +38,3 @@ install(TARGETS ${libname} EXPORT lpf
        )
 
 add_gtest(rwconflict_test "pthread" rwconflict.t.cpp rwconflict.cpp)
-   #$<TARGET_OBJECTS:${comlib}> )
