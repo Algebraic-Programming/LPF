@@ -385,14 +385,6 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     return t->resizeMemreg(max_regs);
 }
 
-lpf_err_t lpf_abort(lpf_t ctx) {
-    // Using std::abort is not portable
-    // SIGABRT code 6 is often coverted to code 134.
-    // Therefore, use exit(6) instead
-    //std::abort(); 
-    std::exit(6);
-}
-
 lpf_err_t lpf_get_rcvd_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
     *msgs = 0;
     lpf::ThreadLocalData * t = realCtx(ctx);
@@ -417,6 +409,7 @@ lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_
         return LPF_SUCCESS;
     return LPF_SUCCESS;
 }
+
 lpf_err_t lpf_abort(lpf_t ctx) {
     // Using std::abort is not portable
     // SIGABRT code 6 is often coverted to code 134.
