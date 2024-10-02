@@ -405,9 +405,9 @@ public:
 
     bool error() const { return m_error; }
 
-    lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs) {
+    lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs, lpf_memslot_t slot) {
 
-        return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs);
+        return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs, slot);
     }
 
 private:

@@ -41,6 +41,8 @@ namespace lpf {
 
 class _LPFLIB_LOCAL MessageQueue
 {
+
+    typedef size_t SlotID;
 public:
     explicit MessageQueue( Communication & comm );
 
@@ -59,7 +61,7 @@ public:
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 
 
-    void getRcvdMsgCount(size_t * msgs);
+    void getRcvdMsgCount(size_t * msgs, SlotID slot);
 
     // returns how many processes have entered in an aborted state
     int sync( bool abort );

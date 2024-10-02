@@ -70,7 +70,8 @@ public:
 
     static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
 
-    void getRcvdMsgCount(size_t * msgs);
+    typedef size_t SlotID;
+    void getRcvdMsgCount(size_t * msgs, SlotID slot);
 
     err_t rehook( spmd_t spmd, args_t args);
 
