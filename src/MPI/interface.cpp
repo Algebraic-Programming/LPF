@@ -207,7 +207,7 @@ err_t Interface :: resizeMesgQueue( size_t nMsgs )
 void Interface :: abort()
 {
     ASSERT( 0 == m_aborted );
-#ifdef LPF_CORE_MPI_USES_hicr
+#ifdef LPF_CORE_MPI_USES_zero
     int vote = 1;
     int voted;
     m_comm.allreduceSum(&vote, &voted, 1);
