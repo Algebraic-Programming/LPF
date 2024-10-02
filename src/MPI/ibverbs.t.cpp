@@ -64,7 +64,6 @@ IBVerbs * IBVerbsTests::verbs = nullptr;
 TEST_F( IBVerbsTests, init )
 {
 
-    IBVerbs verbs( *comm);
     comm->barrier();
 }
 
@@ -95,10 +94,12 @@ TEST_F( IBVerbsTests, regVars )
 
     verbs->resizeMemreg( 2 );
 
-    verbs->regLocal( buf1, sizeof(buf1) );
-    verbs->regGlobal( buf2, sizeof(buf2) );
+    IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
+    IBVerbs::SlotID b2 = verbs->regGlobal( buf2, sizeof(buf2) );
 
     comm->barrier();
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 
 
@@ -121,6 +122,8 @@ TEST_F( IBVerbsTests, put )
     verbs->sync(true);
     EXPECT_EQ( "Hi", std::string(buf1) );
     EXPECT_EQ( "Hi", std::string(buf2) );
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 
 
@@ -144,6 +147,8 @@ TEST_F( IBVerbsTests, get )
     verbs->sync(true);
     EXPECT_EQ( "Vreemd", std::string(buf1) );
     EXPECT_EQ( "Vreemd", std::string(buf2) );
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 
 
@@ -183,6 +188,8 @@ TEST_F( IBVerbsTests, putAllToAll )
         EXPECT_EQ( i*nprocs + pid, a[i] ) ;
         EXPECT_EQ( i*nprocs + srcPid, b[i] );
     }
+    verbs->dereg(a1);
+    verbs->dereg(b1);
 
 }
 
@@ -222,6 +229,8 @@ TEST_F( IBVerbsTests, getAllToAll )
         EXPECT_EQ( i*nprocs + pid, a[i] ) ;
         EXPECT_EQ( i*nprocs + srcPid, b[i] );
     }
+    verbs->dereg(a1);
+    verbs->dereg(b1);
 
 }
 
@@ -252,6 +261,8 @@ TEST_F( IBVerbsTests, putHuge )
     verbs->sync(true);
 
     EXPECT_EQ( hugeMsg, hugeBuf );
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 
 TEST_F( IBVerbsTests, getHuge )
@@ -276,6 +287,8 @@ TEST_F( IBVerbsTests, getHuge )
     verbs->sync(true);
 
     EXPECT_EQ( hugeMsg, hugeBuf );
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 
 TEST_F( IBVerbsTests, manyPuts )
@@ -305,5 +318,8 @@ TEST_F( IBVerbsTests, manyPuts )
         EXPECT_EQ( b2_exp, buf2[i]);
         EXPECT_EQ( b1_exp, buf1[i] );
     }
+
+    verbs->dereg(b1);
+    verbs->dereg(b2);
 }
 

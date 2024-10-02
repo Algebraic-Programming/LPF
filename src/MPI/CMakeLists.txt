@@ -23,7 +23,7 @@ if (MPI_FOUND)
     endif()
 
     if (LIB_IBVERBS)
-        list(APPEND MPI_ENGINES ibverbs)
+        list(APPEND MPI_ENGINES ibverbs zero)
     endif()
 
     if (MPI_OPEN_PORT)
@@ -55,6 +55,10 @@ if (MPI_FOUND)
         set(ibverbs_sources)
         if (LPF_IMPL_ID STREQUAL ibverbs)
             set(ibverbs_sources ibverbs.cpp)
+        endif()
+
+        if (LPF_IMPL_ID STREQUAL zero)
+            set(ibverbs_sources ibverbsZero.cpp)
         endif()
 
         add_library(raw_${libname} OBJECT
@@ -136,9 +140,9 @@ if (MPI_FOUND)
                 ${LIB_POSIX_THREADS}
         )
 
-        if (engine STREQUAL ibverbs)
-           target_link_libraries(${target} ${LIB_IBVERBS})
-        endif()
+    if (engine STREQUAL ibverbs OR engine STREQUAL zero)
+        target_link_libraries(${target} ${LIB_IBVERBS})
+    endif()
     endfunction()
 
 
@@ -195,6 +199,10 @@ if (MPI_FOUND)
     if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest_mpi( ibverbs_test "ibverbs" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+
+        add_gtest_mpi( zero_test "zero" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 

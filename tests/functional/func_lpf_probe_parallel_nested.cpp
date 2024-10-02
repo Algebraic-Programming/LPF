@@ -117,8 +117,8 @@ void spmd1( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     EXPECT_LT( 0.0, (*(subMachine.g))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT) );
     EXPECT_LT( 0.0, (*(subMachine.l))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT) );
 
-    const int pthread = 1, mpirma = 1, mpimsg = 1, hybrid = 0, ibverbs=1; 
-    (void) pthread; (void) mpirma; (void) mpimsg; (void) hybrid; (void) ibverbs;
+    const int pthread = 1, mpirma = 1, mpimsg = 1, hybrid = 0, ibverbs=1, zero = 1;
+    (void) pthread; (void) mpirma; (void) mpimsg; (void) hybrid; (void) ibverbs; (void) zero;
     if (LPF_CORE_IMPL_ID) // this part is disabled for the hybrid implementation, because
     {                     // that one doesn't do generic nesting of lpf_exec's
         EXPECT_EQ( 1,  subMachine.free_p == 2 || subMachine.free_p == 3 );

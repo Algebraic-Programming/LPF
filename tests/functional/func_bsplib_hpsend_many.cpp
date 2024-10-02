@@ -30,8 +30,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     bsplib_t bsplib;
     size_t maxhpregs = (size_t) -1;
    
-    const int pthread = 1, mpirma = 2, mpimsg = 3, hybrid = 4, ibverbs=5; 
-    (void) pthread; (void) mpirma; (void) mpimsg; (void) hybrid; (void) ibverbs;
+    const int pthread = 1, mpirma = 2, mpimsg = 3, hybrid = 4, ibverbs=5, zero=6; 
+    (void) pthread; (void) mpirma; (void) mpimsg; (void) hybrid; (void) ibverbs; (void) zero;
     if (LPF_CORE_IMPL_ID == mpirma )
     {                     
         maxhpregs = 10; // because MPI RMA only supports a limited number
