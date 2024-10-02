@@ -521,5 +521,5 @@ install(DIRECTORY "include/bsp" DESTINATION ${INSTALL_HEADERS})
 install(DIRECTORY "include/debug"  DESTINATION ${INSTALL_HEADERS}/lpf )
 
 # Post install actions
-add_subdirectory(post-install)
+#add_subdirectory(post-install)
 

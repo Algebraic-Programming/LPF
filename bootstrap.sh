@@ -84,7 +84,7 @@ builddir=`pwd`
 
 # Parse command line parameters
 installdir="$builddir"
-config=Debug #Release
+config=Release
 doc=OFF
 functests=OFF
 perftests=OFF
