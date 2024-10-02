@@ -84,7 +84,7 @@ builddir=`pwd`
 
 # Parse command line parameters
 installdir="$builddir"
-config=Debug #Release
+config=Release
 doc=OFF
 functests=OFF
 googletest_license_agreement=FALSE

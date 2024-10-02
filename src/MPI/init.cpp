@@ -54,10 +54,10 @@ namespace lpf {
 			(engine.compare( "mpirma" ) == 0) ||
 			(engine.compare( "mpimsg" ) == 0) ||
 			(engine.compare( "ibverbs" ) == 0) ||
-			(engine.compare( "hicr" ) == 0) ||
+			(engine.compare( "zero" ) == 0) ||
 			(engine.compare( "hybrid" ) == 0);
 		if( !engine_is_MPI ) {
-			(void) std::fprintf( stderr, "Warning: program was compiled for the mpirma, mpimsg, ibverbs, hicr, or hybrid engine but run-time requests the %s engine instead. For stable results please compile the program into a universal LPF program (by omitting the -engine flag to the lpfcc/lpfcxx utilities).\n", engine.c_str() );
+			(void) std::fprintf( stderr, "Warning: program was compiled for the mpirma, mpimsg, ibverbs, zero, or hybrid engine but run-time requests the %s engine instead. For stable results please compile the program into a universal LPF program (by omitting the -engine flag to the lpfcc/lpfcxx utilities).\n", engine.c_str() );
 		}
 
 		if( mpi_initializer_ran || !engine_is_MPI ) {
