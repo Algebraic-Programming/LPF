@@ -21,6 +21,7 @@
 #include <string>
 #include <atomic>
 #include <vector>
+#include <map>
 #include <memory>
 #include <thread>
 //#if __cplusplus >= 201103L    
@@ -78,7 +79,7 @@ public:
     // 'Reconnect' must be a globally replicated value
     void sync( bool reconnect);
 
-    void get_rcvd_msg_count(size_t * rcvd);
+    void get_rcvd_msg_count(size_t * rcvd_msgs, SlotID slot);
 private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
@@ -102,7 +103,10 @@ private:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
-    std::atomic_size_t m_rcvd_msg_count; // HiCR variable 
+    struct UserContext {
+        size_t lkey;
+    };
+
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
 
@@ -141,6 +145,7 @@ private:
     SparseSet< pid_t >           m_activePeers; // 
     std::vector< pid_t >         m_peerList;
     shared_ptr<std::thread> progressThread;
+    std::map<SlotID, std::atomic_size_t> rcvdMsgCount;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     //std::vector< struct ibv_wc > m_wcs; // array of work completions
