@@ -226,7 +226,6 @@ TEST_F( IBVerbsTests, getAllToAll )
 
     verbs->sync(true);
 
-
     EXPECT_EQ(a, a2);
     EXPECT_EQ(b, b2);
 
