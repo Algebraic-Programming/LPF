@@ -33,7 +33,7 @@
 #include <tr1/memory>
 #endif
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
 #include "ibverbs.hpp"
 #endif
 
@@ -154,13 +154,13 @@ private:
     std::vector< Edge > m_edgeRecv;
     std::vector< Edge > m_edgeSend;
     std::vector< char > m_edgeBuffer;
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     memslot_t m_edgeBufferSlot;
 #endif
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
     mpi::IBVerbs m_ibverbs;
 #endif
     MemoryTable m_memreg;

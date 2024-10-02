@@ -24,7 +24,7 @@
 #include "assert.hpp"
 #include "linkage.hpp"
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
 #include "ibverbs.hpp"
 #endif
 
@@ -44,11 +44,13 @@ class _LPFLIB_LOCAL MemoryTable
 
     struct Memory {
         char *addr; size_t size; 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
         mpi::IBVerbs::SlotID slot;
         Memory( void * a, size_t s, mpi::IBVerbs::SlotID sl)
             : addr(static_cast<char *>(a))
-            , size(s), slot(sl) {}
+            , size(s), slot(sl) {
+                printf("Constructor of memory\n");
+            }
         Memory() : addr(NULL), size(0u), slot(-1) {}
 #else
         Memory( void * a, size_t s)
@@ -65,7 +67,7 @@ public:
     static Slot invalidSlot() 
     { return Register::invalidSlot(); }
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     explicit MemoryTable( Communication & comm, mpi::IBVerbs & verbs );
 #else
     explicit MemoryTable( Communication & comm );
@@ -90,7 +92,7 @@ public:
     { return m_windows[ slot ]; }
 #endif
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     mpi::IBVerbs::SlotID getVerbID( Slot slot ) const
     { return m_memreg.lookup( slot ).slot; }
 #endif
@@ -118,7 +120,7 @@ private:
     Communication & m_comm;
 #endif
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_hicr
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     DirtyList      m_added;
     mpi::IBVerbs  & m_ibverbs;
     Communication & m_comm;
