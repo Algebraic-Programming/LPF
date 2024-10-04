@@ -553,7 +553,15 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
+    ASSERT( m_srs.max_size() > m_minNrMsgs );
 
+    if ( size > m_srs.max_size() - m_minNrMsgs )
+    {
+        LOG(2, "Could not increase message queue, because integer will overflow");
+        throw Exception("Could not increase message queue");
+    }
+    m_srs.reserve( size + m_minNrMsgs );
+    m_sges.reserve( size + m_minNrMsgs );
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
 	if (m_cqLocal) {
@@ -565,6 +573,7 @@ void IBVerbs :: resizeMesgq( size_t size )
 		}
 	}
 	stageQPs(m_cqSize);
+    reconnectQPs();
 	if(remote_size >= m_postCount){
 		if (m_srq) {
 			struct ibv_recv_wr wr;
@@ -764,7 +773,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     struct ibv_send_wr *sr;
     for (int i=0; i < numMsgs; i++) {
         sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
-		sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
+        sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
         const char * localAddr
             = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
         const char * remoteAddr
@@ -773,6 +782,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sge->addr = reinterpret_cast<uintptr_t>( localAddr );
         sge->length =  std::min<size_t>(size, m_maxMsgSize );
         sge->lkey = src.mr->lkey;
+        m_sges.push_back(*sge);
 
         bool lastMsg = (i == numMsgs-1);
         sr->next = lastMsg ? NULL : &m_srs[ i+1];
@@ -788,24 +798,26 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
          */
         sr->imm_data = dstSlot;
 
-        sr->sg_list = sge;
+        sr->sg_list = &m_sges.back();
         sr->num_sge = 1;
         sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
         sr->wr.rdma.rkey = dst.glob[dstPid].rkey;
 
+        //m_srsHeads[ dstPid ] = m_srs.size();
+        m_srs.push_back( *sr );
         size -= sge->length;
         srcOffset += sge->length;
         dstOffset += sge->length;
 
         LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid << " on slot" << dstSlot );
 
-    }
-    struct ibv_send_wr *bad_wr = NULL;
-    ASSERT(m_connectedQps[dstPid] != nullptr);
-    if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[0], &bad_wr ))
-    {
-        LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
-        throw Exception("Error while posting RDMA requests");
+        struct ibv_send_wr *bad_wr = NULL;
+        ASSERT(m_connectedQps[dstPid] != nullptr);
+        if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[i], &bad_wr ))
+        {
+            LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+            throw Exception("Error while posting RDMA requests");
+        }
     }
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 }
@@ -838,11 +850,12 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sge->addr = reinterpret_cast<uintptr_t>( localAddr );
 		sge->length = std::min<size_t>(size, m_maxMsgSize );
 		sge->lkey = dst.mr->lkey;
+        m_sges.push_back( *sge );
 
 		sr->next = NULL; // &srs[i+1];
 		sr->send_flags = IBV_SEND_SIGNALED; //0;
 
-		sr->sg_list = sge;
+		sr->sg_list = &m_sges.back();
 		sr->num_sge = 1;
 		sr->opcode = IBV_WR_RDMA_READ;
 		sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
@@ -851,6 +864,10 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         // (not srcSlot, as this slot is remote)
         sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
         sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
+
+
+        //m_srsHeads[ srcPid ] = m_srs.size();
+        m_srs.push_back( *sr );
 
 		size -= sge->length;
 		srcOffset += sge->length;
@@ -993,7 +1010,6 @@ void IBVerbs :: flushSent()
 
 void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSent, size_t expectedRecvd) {
 
-    if (resized) reconnectQPs();
     size_t actualRecvd;
     size_t actualSent;
     int error;
@@ -1015,7 +1031,6 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
 }
 
 void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
-    if (resized) reconnectQPs();
     int error;
 
     do {
@@ -1047,8 +1062,6 @@ void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
 
 void IBVerbs :: sync(bool resized)
 {
-
-    if (resized) reconnectQPs();
 
     int error = 0;
 
