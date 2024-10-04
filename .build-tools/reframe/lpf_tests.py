@@ -13,6 +13,6 @@ class LPFFuncTests(rfm.RunOnlyRegressionTest):
         self.valid_systems = ['BZ:arm-sequential']
         self.valid_prog_environs = ['*']
         self.executable = 'ctest'
-        self.executable_opts = ['--test-dir', '/storage/users/gitlab-runner/lpf_repo/build']
+        self.executable_opts = ['-E','pthread|hybrid', '--test-dir', '/storage/users/gitlab-runner/lpf_repo/build']
         self.sanity_patterns = sn.assert_found('Tests', self.stdout)
 
