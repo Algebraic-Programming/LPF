@@ -75,6 +75,10 @@ public:
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
 
+    size_t getMaxMsgSize() const {
+        return m_maxMsgSize;
+    }
+
     void blockingCompareAndSwap(SlotID srSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap);
 
     void put( SlotID srcSlot, size_t srcOffset, 
@@ -171,6 +175,7 @@ private:
 
     std::vector<size_t> rcvdMsgCount;
     std::vector<size_t> sentMsgCount;
+    std::vector<size_t> getMsgCount;
     std::vector<bool> slotActive;
 
 

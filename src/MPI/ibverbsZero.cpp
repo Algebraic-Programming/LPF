@@ -83,7 +83,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_postCount(0)
     , m_recvCount(0)
     , m_numMsgs(0)
-    //, m_sendTotalInitMsgCount(0)
     , m_recvTotalInitMsgCount(0)
     , m_sentMsgs(0)
     , m_recvdMsgs(0)
@@ -94,6 +93,7 @@ IBVerbs :: IBVerbs( Communication & comm )
     m_getInitMsgCount.resize(ARRAY_SIZE, 0);
     m_sendInitMsgCount.resize(ARRAY_SIZE, 0);
     rcvdMsgCount.resize(ARRAY_SIZE, 0);
+    getMsgCount.resize(ARRAY_SIZE, 0);
     sentMsgCount.resize(ARRAY_SIZE, 0);
     slotActive.resize(ARRAY_SIZE, 0);
 
@@ -264,6 +264,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
     switch (phase) {
         case Phase::INIT:
             rcvdMsgCount[slot] = 0;
+            getMsgCount[slot] = 0;
             m_recvInitMsgCount[slot] = 0;
             m_getInitMsgCount[slot] = 0;
             sentMsgCount[slot] = 0;
@@ -276,16 +277,23 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
                 //m_sendTotalInitMsgCount++;
                 m_sendInitMsgCount[slot]++;
             }
-            if (op == Op::RECV || op == Op::GET) {
+            if (op == Op::RECV) {
                 m_recvTotalInitMsgCount++;
                 m_recvInitMsgCount[slot]++;
             }
+            if  (op == Op::GET) {
+                m_recvTotalInitMsgCount++;
+                m_getInitMsgCount[slot]++;
+            }
             break;
         case Phase::POST:
-            if (op == Op::RECV || op == Op::GET) {
-                m_recvTotalInitMsgCount++;
+            if (op == Op::RECV) {
                 m_recvdMsgs ++;
                 rcvdMsgCount[slot]++;
+            }
+            if (op == Op::GET) {
+                m_recvdMsgs++;
+                getMsgCount[slot]++;
             }
             if (op == Op::SEND) {
                 m_sentMsgs++;
@@ -553,15 +561,7 @@ void IBVerbs :: resizeMemreg( size_t size )
 
 void IBVerbs :: resizeMesgq( size_t size )
 {
-    ASSERT( m_srs.max_size() > m_minNrMsgs );
 
-    if ( size > m_srs.max_size() - m_minNrMsgs )
-    {
-        LOG(2, "Could not increase message queue, because integer will overflow");
-        throw Exception("Could not increase message queue");
-    }
-    m_srs.reserve( size + m_minNrMsgs );
-    m_sges.reserve( size + m_minNrMsgs );
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
 	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
 	if (m_cqLocal) {
@@ -782,10 +782,10 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sge->addr = reinterpret_cast<uintptr_t>( localAddr );
         sge->length =  std::min<size_t>(size, m_maxMsgSize );
         sge->lkey = src.mr->lkey;
-        m_sges.push_back(*sge);
+        sges[i] = *sge;
 
         bool lastMsg = (i == numMsgs-1);
-        sr->next = lastMsg ? NULL : &m_srs[ i+1];
+        sr->next = lastMsg ? NULL : &srs[ i+1];
         // since reliable connection guarantees keeps packets in order,
         // we only need a signal from the last message in the queue
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
@@ -798,27 +798,27 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
          */
         sr->imm_data = dstSlot;
 
-        sr->sg_list = &m_sges.back();
+        sr->sg_list = &sges[i];
         sr->num_sge = 1;
         sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
         sr->wr.rdma.rkey = dst.glob[dstPid].rkey;
 
-        //m_srsHeads[ dstPid ] = m_srs.size();
-        m_srs.push_back( *sr );
+        srs[i] = *sr;
         size -= sge->length;
         srcOffset += sge->length;
         dstOffset += sge->length;
 
         LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid << " on slot" << dstSlot );
 
-        struct ibv_send_wr *bad_wr = NULL;
-        ASSERT(m_connectedQps[dstPid] != nullptr);
-        if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[i], &bad_wr ))
-        {
-            LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
-            throw Exception("Error while posting RDMA requests");
-        }
     }
+    struct ibv_send_wr *bad_wr = NULL;
+    // srs[0] should be sufficient because the rest of srs are on a chain
+    if (int err = ibv_post_send(m_connectedQps[dstPid].get(), &srs[0], &bad_wr ))
+    {
+        LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+        throw Exception("Error while posting RDMA requests");
+    }
+
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 }
 
@@ -850,12 +850,14 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sge->addr = reinterpret_cast<uintptr_t>( localAddr );
 		sge->length = std::min<size_t>(size, m_maxMsgSize );
 		sge->lkey = dst.mr->lkey;
-        m_sges.push_back( *sge );
+        sges[i] = *sge;
+        LOG(4, "PID " << m_pid << ": Enqueued get message of " << sge->length << " bytes from " << srcPid << " on slot" << srcSlot );
 
-		sr->next = NULL; // &srs[i+1];
-		sr->send_flags = IBV_SEND_SIGNALED; //0;
+        bool lastMsg = (i == numMsgs-1);
+        sr->next = lastMsg ? NULL : &srs[ i+1];
+		sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
 
-		sr->sg_list = &m_sges.back();
+		sr->sg_list = &sges[i];
 		sr->num_sge = 1;
 		sr->opcode = IBV_WR_RDMA_READ;
 		sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
@@ -864,43 +866,12 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         // (not srcSlot, as this slot is remote)
         sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
         sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
-
-
-        //m_srsHeads[ srcPid ] = m_srs.size();
-        m_srs.push_back( *sr );
-
+        srs[i] = *sr;
 		size -= sge->length;
 		srcOffset += sge->length;
 		dstOffset += sge->length;
 	}
 
-	// add extra "message" to do the local and remote completion
-	//sge = &sges[numMsgs]; std::memset(sge, 0, sizeof(ibv_sge));
-	//sr = &srs[numMsgs]; std::memset(sr, 0, sizeof(ibv_send_wr));
-
-    /*
-	const char * localAddr = static_cast<const char *>(dst.glob[m_pid].addr);
-	const char * remoteAddr = static_cast<const char *>(src.glob[srcPid].addr);
-
-	sge->addr = reinterpret_cast<uintptr_t>( localAddr );
-	sge->length = 0;
-	sge->lkey = dst.mr->lkey;
-
-	sr->next = NULL;
-	// since reliable connection guarantees keeps packets in order,
-	// we only need a signal from the last message in the queue
-	sr->send_flags = IBV_SEND_SIGNALED;
-	sr->opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
-	sr->sg_list = sge;
-	sr->num_sge = 0;
-    // Should srcSlot and dstSlot be reversed for get?
-    sr->wr_id = srcSlot;
-	sr->imm_data = dstSlot;
-	sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-	sr->wr.rdma.rkey = src.glob[srcPid].rkey;
-
-	//Send
-    */
 	struct ibv_send_wr *bad_wr = NULL;
 	if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
 	{
@@ -962,10 +933,11 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
             opcodes.push_back(wcs[i].opcode);
             // Ignore compare-and-swap atomics!
             if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
-                // This receive is from a GET call!
+                // This is a get call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_READ) {
                     tryIncrement(Op::GET, Phase::POST, slot);
                 }
+                // This is a put call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_WRITE)
                     tryIncrement(Op::SEND, Phase::POST, slot);
 
@@ -987,17 +959,17 @@ void IBVerbs :: flushReceived() {
 
 void IBVerbs :: flushSent()
 {
-    int error = 0;
+    int isError = 0;
 
     bool sendsComplete;
     do {
         sendsComplete = true;
         for (size_t i = 0; i<ARRAY_SIZE; i++) {
             if (slotActive[i]) {
-                if (m_sendInitMsgCount[i] > sentMsgCount[i]) {
+                if (m_sendInitMsgCount[i] > sentMsgCount[i] || m_getInitMsgCount[i] > getMsgCount[i]) {
                     sendsComplete = false;
-                    wait_completion(error);
-                    if (error) {
+                    wait_completion(isError);
+                    if (isError) {
                         LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
                         std::abort();
                     }
