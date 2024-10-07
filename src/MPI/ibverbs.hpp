@@ -175,6 +175,7 @@ private:
 
     std::vector<size_t> rcvdMsgCount;
     std::vector<size_t> sentMsgCount;
+    std::vector<size_t> getMsgCount;
     std::vector<bool> slotActive;
 
 
