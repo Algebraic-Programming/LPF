@@ -703,7 +703,7 @@ extern "C" {
  * released, and NN the number of the specifications released before this one in
  * the same year.
  */
-#define _LPF_VERSION 202000L
+#define _LPF_VERSION 202400L
 
 /**
  * An implementation that has defined this macro may never define the
@@ -988,7 +988,7 @@ typedef struct lpf_machine {
      *                         both bounds are inclusive.
      * \param[in] min_msg_size A byte size value that is larger or equal to 0.
      * \param[in] attr         A #lpf_sync_attr_t value. When in doubt, always
-     *                         use #LPF_SYNC_DEFAULT.
+     *                         use #LPF_SYNC_DEFAULT
      *
      * \returns The guaranteed value for the message gap given an LPF SPMD
      *          section using \a p processes, for a superstep in which a user
@@ -2059,7 +2059,7 @@ extern _LPFLIB_API
 lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
 
 /**
- * This synchronisation waits on memory slot @slot to complete sending
+ * This synchronisation waits on memory slot #slot to complete sending
  * and receiving @expected_sent and @expected_rcvd messages. The counts are
  * checked in the ibv_poll_cq calls and associated to certain LPF slots.
  * This call is only implemented for IB verbs at the moment.
@@ -2068,7 +2068,7 @@ extern _LPFLIB_API
 lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd);
 
 /**
- * This synchronisation waits on memory slot @slot to complete sending
+ * This synchronisation waits on memory slot #slot to complete sending
  * or receiving all outstanding messages. For the current implementation 
  * in IB verbs, this means all scheduled sends via ibv_post_send are 
  * checked for completion via ibv_poll_cq. Currently, there is no logic
@@ -2334,9 +2334,25 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs );
 extern _LPFLIB_API
 lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
 
-extern _LPFLIB_API 
-lpf_err_t lpf_abort(lpf_t ctx);
-
+/**
+ * This call blockingly locks a destination slot #dst_slot, relying
+ * on IBVerbs Compare-and-Swap atomics.
+ * For an example, check tests/functional/func_lpf_compare_and_swap.ibverbs.c
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[in] src_slot Local slot used as source for the 
+ * operation to lock the destination slot, registered via lpf_register_local()
+ * \param[in] src_offset Source offset to use (0 in most cases)
+ * \param[in] dst_pid The process ID of the destination process
+ * \param[in] dst_slot The memory slot of the remote destination memory area
+ * registered via lpf_register_global().
+ * \param[in] dst_offset Destinaton offset (0 in most cases)
+ * \param[in] size The number of bytes to copy from the source memory area to
+ *                 the destination memory area (#lpf_memslot_t in most cases)
+ * \param[in] attr A #lpf_sync_attr_t value (use #LPF_MSG_DEFAULT)
+ * \returns #LPF_SUCCESS
+ *            When this process successfully locks the slot
+ */
 extern _LPFLIB_API
 lpf_err_t lpf_lock_slot(
     lpf_t ctx,
@@ -2349,6 +2365,25 @@ lpf_err_t lpf_lock_slot(
     lpf_msg_attr_t attr
 );
 
+/**
+ * This call blockingly unlocks a destination slot #dst_slot, relying
+ * on IBVerbs Compare-and-Swap atomics.
+ * For an example, check tests/functional/func_lpf_compare_and_swap.ibverbs.c
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[in] src_slot Local slot used as source for the 
+ * operation to lock the destination slot, registered via lpf_register_local()
+ * \param[in] src_offset Source offset to use (0 in most cases)
+ * \param[in] dst_pid The process ID of the destination process
+ * \param[in] dst_slot The memory slot of the remote destination memory area
+ * registered via lpf_register_global().
+ * \param[in] dst_offset Destinaton offset (0 in most cases)
+ * \param[in] size The number of bytes to copy from the source memory area to
+ *                 the destination memory area (#lpf_memslot_t in most cases)
+ * \param[in] attr A #lpf_sync_attr_t value (use #LPF_MSG_DEFAULT)
+ * \returns #LPF_SUCCESS
+ *            When this process successfully locks the slot
+ */
 extern _LPFLIB_API
 lpf_err_t lpf_unlock_slot(
     lpf_t ctx,
@@ -2362,29 +2397,43 @@ lpf_err_t lpf_unlock_slot(
 );
 
 /**
- * This function returns in @rcvd_msgs the received message count on LPF slot @slot
+ * This function returns in @rcvd_msgs the received message count on 
+ * LPF slot #slot. It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[out] rcvd_msgs Received message count
+ * \param[in] slot LPF slot to check received messages for
  */
 extern _LPFLIB_API
 lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t *rcvd_msgs, lpf_memslot_t slot);
 
 /**
- * This function returns in @rcvd_msgs the total received message count
+ * This function returns in @rcvd_msgs the total received message count.
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[out] rcvd_msgs Received message count
  */
 extern _LPFLIB_API
 lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
 
 /**
- * This function returns in @sent_msgs the sent message count on LPF slot @slot
+ * This function returns in @sent_msgs the sent message count on LPF
+ * slot #slot. It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[out] sent_msgs Total messages sent on #slot
+ * \param[in] slot
  */
 extern _LPFLIB_API
 lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_memslot_t slot);
 
 /**
- * This function blocks until all the scheduled send messages
- * (via ibv_post_send) are actually registered as sent (via ibv_poll_cq).
+ * This function blocks until all the scheduled messages via
+ * ibv_post_send are completed (via ibv_poll_cq). This includes
+ * both put and get calls on the local process.
  * No concept of slots is used here.
  * This allows to reuse the send buffers e.g. in higher-level channel
  * libraries.
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
  */
 extern _LPFLIB_API
 lpf_err_t lpf_flush_sent( lpf_t ctx);
@@ -2395,10 +2444,19 @@ lpf_err_t lpf_flush_sent( lpf_t ctx);
  * No concept of slots is used here.
  * This allows to reuse the send buffers e.g. in higher-level channel
  * libraries.
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
  */
 extern _LPFLIB_API
 lpf_err_t lpf_flush_received( lpf_t ctx);
 
+/**
+ * This function portably aborts the application in different ways
+ * for different backends. It never calls std::abort
+ * \param[in] ctx The LPF context
+ * \returns The return code #LPF_SUCCESS (or any other code)
+ * is never reached, as this function aborts the execution.
+ */
 extern _LPFLIB_API 
 lpf_err_t lpf_abort(lpf_t ctx);
 
