@@ -1,4 +1,3 @@
-
 /*
  *   Copyright 2021 Huawei Technologies Co., Ltd.
  *
@@ -48,9 +47,7 @@ class _LPFLIB_LOCAL MemoryTable
         mpi::IBVerbs::SlotID slot;
         Memory( void * a, size_t s, mpi::IBVerbs::SlotID sl)
             : addr(static_cast<char *>(a))
-            , size(s), slot(sl) {
-                printf("Constructor of memory\n");
-            }
+            , size(s), slot(sl) {}
         Memory() : addr(NULL), size(0u), slot(-1) {}
 #else
         Memory( void * a, size_t s)
