@@ -338,8 +338,18 @@ if (LPF_ENABLE_TESTS)
 
     # Enable testing in CMake
     enable_testing()
-    find_package(GTest REQUIRED)
+    find_package(GTest)
+    if(NOT GTest_FOUND) # if not found, download it and pull it in
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            # This tag corresponds to GoogleTest 1.15.0 release
+            GIT_TAG        e397860
+            )
+        FetchContent_MakeAvailable(googletest)
 
+    endif()
     # set testing timeout to 60 seconds
     set(CMAKE_TESTING_TIMEOUT 60)
 
