@@ -1006,8 +1006,9 @@ public:
         return LPF_SUCCESS;
     }
 
-
     lpf_err_t abort(const char * file, int line) {
+        (void) file;
+        (void) line;
         lpf_abort(m_ctx);
         return LPF_SUCCESS;
     }
