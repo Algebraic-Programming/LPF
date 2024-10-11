@@ -335,14 +335,22 @@ endfunction()
 if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
 
-
     # Enable testing in CMake
     enable_testing()
-    find_package(GTest REQUIRED)
+    find_package(GTest)
+    if(NOT GTest_FOUND) # if not found, download it and pull it in
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            # This tag corresponds to GoogleTest 1.15.0 release
+            GIT_TAG        e397860
+            )
+        FetchContent_MakeAvailable(googletest)
 
+    endif()
     # set testing timeout to 60 seconds
     set(CMAKE_TESTING_TIMEOUT 60)
-
 
     # Have directory to gather all the tests results
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
@@ -384,18 +392,19 @@ if (LPF_ENABLE_TESTS)
     #else()
     #    message( "compilation of test runner successful" )
     #endif()
+
     set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
     # Have a macro to add a unit test that should run with MPI
     if (MPI_FOUND)
 
         function(add_gtest_mpi testName ENGINE debug deathTest testSource )
-
             if ("{$ENGINE}" STREQUAL "")
                 message(FATAL_ERROR "engine cannot be empty, ever!")
             endif()
             include(GoogleTest)
             add_executable(${testName} ${testSource} ${ARGN})
-            target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
+            target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
+            target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
             if (debug)
                 target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
                 target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
@@ -435,7 +444,6 @@ if (LPF_ENABLE_TESTS)
 
         endfunction(add_gtest_mpi)
     endif(MPI_FOUND)
-
 
 else(LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will *not* be built")
