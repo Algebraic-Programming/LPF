@@ -140,6 +140,7 @@ find_library( LIB_RT
 find_library( LIB_IBVERBS
         NAMES ibverbs
         DOC "Infiniband verbs" )
+set(LIB_IBVERBS FALSE)
 
 include(cmake/hwloc.cmake)
 
@@ -164,9 +165,6 @@ if ( MPI_FOUND )
    endif()
    if ( NOT MPI_IS_THREAD_COMPAT OR NOT MPI_IS_NOT_OPENMPI1 )
       message( WARNING "MPI implementation does not tolerate any threading. Hybrid implementation will not be built")
-   endif()
-   if ( NOT MPI_OPEN_PORT )
-      message( WARNING "MPI implementation does not support dynamically connecting separate MPI processes. Hence, lpf_mpi_initialize_over_tcp will always fail.")
    endif()
    if ( NOT MPI_IBARRIER )
       message( WARNING "MPI implementation does not have MPI_Ibarrier, which is required to use the dense all-to-all algorithm on large (> 2 GB) meta-data exchanges")
