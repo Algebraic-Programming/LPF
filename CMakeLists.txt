@@ -140,7 +140,6 @@ find_library( LIB_RT
 find_library( LIB_IBVERBS
         NAMES ibverbs
         DOC "Infiniband verbs" )
-set(LIB_IBVERBS FALSE)
 
 include(cmake/hwloc.cmake)
 
