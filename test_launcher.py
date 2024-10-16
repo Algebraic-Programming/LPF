@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import subprocess
 import sys
@@ -11,10 +12,10 @@ parser.add_argument("-t", "--lpf_probe_timer", type=float)
 parser.add_argument("-R", "--expected_return_code", type=int)
 parser.add_argument( 'cmd', nargs=argparse.REMAINDER )
 args = parser.parse_args()
+
 # This is only for passing Gtest info to CMake
-if args.cmd[1] == "--gtest_list_tests":
-    run_cmd = [args.cmd[0], args.cmd[1]]
-    cmd = subprocess.run( run_cmd, capture_output=True)
+if args.cmd[-1] == '--gtest_list_tests':
+    cmd = subprocess.run( args.cmd)
     sys.exit(cmd.returncode)
 # Actual use of our launcher
 else:
@@ -25,7 +26,7 @@ else:
             run_cmd = [args.parallel_launcher, '-engine', args.engine, '-n', str(i)] + args.cmd
         print("Run command: ")
         print(run_cmd)
-        cmd = subprocess.run( run_cmd, capture_output=True)
+        cmd = subprocess.run( run_cmd)
         print("Test returned code = " + str(cmd.returncode))
         retcode = cmd.returncode
         if (retcode != args.expected_return_code):

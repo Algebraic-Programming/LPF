@@ -335,6 +335,7 @@ if (LPF_ENABLE_TESTS)
     # Enable testing in CMake
     enable_testing()
     find_package(GTest)
+    include(GoogleTest)
     if(NOT GTest_FOUND) # if not found, download it and pull it in
         include(FetchContent)
         FetchContent_Declare(
@@ -353,9 +354,8 @@ if (LPF_ENABLE_TESTS)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
     set(test_output "${CMAKE_BINARY_DIR}/junit")
 
-    # Have a macro to add a unit test
-    function(add_gtest testName engines debug testSource)
-        include(GoogleTest)
+    # Non-MPI test macro for trivial tests
+    function(add_gtest testName ENGINE debug testSource)
         add_executable(${testName} ${testSource})
         if (debug)
             target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
@@ -363,34 +363,30 @@ if (LPF_ENABLE_TESTS)
         else(debug)
             target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
         endif(debug)
-        target_link_exe_with_core(${testName} ${engines})
-        foreach(LPF_IMPL_ID ${engines})
+        target_link_exe_with_core(${testName} ${ENGINE})
+        foreach(LPF_IMPL_ID ${ENGINE})
             target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${LPF_IMPL_ID})
         endforeach(LPF_IMPL_ID)
-        gtest_add_tests(TARGET ${testName}
-            EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
-            TEST_LIST seqTests
-            )
+
+        # Old approach to Gtests, not recommended!
+        #gtest_add_tests(TARGET ${testName}
+        #    EXTRA_ARGS  --gtest_output=xml:${test_output}/${testName}
+        #    TEST_LIST seqTests
+        #    )
+
+        # Most recent approach to Gtests, recommended!
+        gtest_discover_tests(${testName}
+            TEST_PREFIX ${ENGINE}_
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+        )
     endfunction(add_gtest)
 
-
-
     set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
-    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY )
+    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY FILE_PERMISSIONS WORLD_EXECUTE OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
     if( NOT Python3_FOUND )
-        find_package( Python3 )
+        find_package( Python3 REQUIRED)
     endif()
-    # Proposed optimisation by Albert
-    #execute_process( COMMAND ${Python3_EXECUTABLE} -OO -m py_compile ${MY_TEST_LAUNCHER}
-    #    OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE python_opt
-    #)
-    #if ( NOT python_opt EQUAL "0" )
-    #    message( FATAL_ERROR "cannot compile test runner" )
-    #else()
-    #    message( "compilation of test runner successful" )
-    #endif()
 
-    set(MY_DT_LAUNCHER ${Python3_EXECUTABLE} ${MY_TEST_LAUNCHER})
     # Have a macro to add a unit test that should run with MPI
     if (MPI_FOUND)
 
@@ -398,7 +394,6 @@ if (LPF_ENABLE_TESTS)
             if ("{$ENGINE}" STREQUAL "")
                 message(FATAL_ERROR "engine cannot be empty, ever!")
             endif()
-            include(GoogleTest)
             add_executable(${testName} ${testSource} ${ARGN})
             target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
             target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
@@ -410,18 +405,18 @@ if (LPF_ENABLE_TESTS)
             endif(debug)
 
 
-            execute_process(COMMAND bash -c "grep -m 1 \"Exit code\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE retCode)
-            execute_process(COMMAND bash -c "grep -m 1 \" P >=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE minProcs)
-            execute_process(COMMAND bash -c "grep -m 1 \" P <=\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE maxProcs)
-            execute_process(COMMAND bash -c "grep -m 1 \"\\-probe\" ${testSource} | awk 'NF>1{print $NF}' | tr -d '[:cntrl:]'" OUTPUT_VARIABLE lpfProbeSecs)
+            # Extract test-specific information from comments of tests
+            file(READ ${testSource} fileContents)
+            string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
+            set(retCode ${CMAKE_MATCH_1})
+            string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
+            set(minProcs ${CMAKE_MATCH_1})
+            string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
+            set(maxProcs ${CMAKE_MATCH_1})
+            string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
+            set(lpfProbeSecs ${CMAKE_MATCH_1})
 
             target_link_exe_with_core(${testName} ${ENGINE})
-
-
-             gtest_add_tests(TARGET ${testName}
-                 TEST_PREFIX ${ENGINE}_
-                 EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
-                 )
 
 
             if ("${minProcs}" STREQUAL "")
@@ -437,7 +432,19 @@ if (LPF_ENABLE_TESTS)
                 set(retCode "0")
             endif()
 
-            set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_DT_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+            # Old approach to Gtests, not recommended!
+            # gtest_add_tests(TARGET ${testName}
+            #     TEST_PREFIX ${ENGINE}_
+            #     EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            #     )
+
+            # Most recent approach to Gtests, recommended!
+            set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+            gtest_discover_tests(${testName}
+                TEST_PREFIX ${ENGINE}_
+                EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            )
+
 
         endfunction(add_gtest_mpi)
     endif(MPI_FOUND)
