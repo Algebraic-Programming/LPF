@@ -16,6 +16,7 @@
  */
 
 #include "debug/lpf/core.h"
+
 #undef lpf_get
 #undef lpf_put
 #undef lpf_sync
@@ -28,6 +29,7 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
+#undef lpf_abort
 
 #undef lpf_init_t
 #undef lpf_pid_t
@@ -77,8 +79,6 @@
 #include "sparseset.hpp"
 #include "memreg.hpp"
 #include "rwconflict.hpp"
-
-
 
 namespace lpf { namespace debug {
 
@@ -220,7 +220,6 @@ public:
         }
     }
 
-
     Interface( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs )
         : m_ctx( ctx )
         , m_pid( pid )
@@ -267,6 +266,7 @@ public:
         , m_resized_slot( LPF_INVALID_MEMSLOT )
     {
     }
+
 
     void cleanup()
     {
@@ -429,27 +429,27 @@ public:
         if  ( P <= 0 && P != LPF_MAX_P ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_exec: P = " << P );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( spmd == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_exec: NULL spmd argument" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.input_size != 0 && args.input == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL input argument while input_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.output_size != 0 && args.output == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL output argument while output_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.f_size != 0 && args.f_symbols == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL f_symbols argument while f_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         lpf_args_t new_args;
@@ -545,22 +545,22 @@ public:
         if ( spmd == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_rehook: NULL spmd argument" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.input_size != 0 && args.input == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL input argument while input_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.output_size != 0 && args.output == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL output argument while output_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         if ( args.f_size != 0 && args.f_symbols == NULL ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid argument passed to lpf_spmd_t: NULL f_symbols argument while f_size is non-zero" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         lpf_args_t new_args;
@@ -676,7 +676,7 @@ public:
                     "which would have taken the " << (m_memreg_size+1)
                     << "-th slot, while only space for " << m_memreg_reserved
                     << " slots has been reserved" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         Memslot slot;
         slot.file = file;
@@ -707,7 +707,7 @@ public:
                     "which would have taken the " << (m_memreg_size+1)
                     << "-th slot, while only space for " << m_memreg_reserved
                     << " slots has been reserved" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         Memslot slot;
@@ -732,7 +732,7 @@ public:
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": Invalid attempt to deregister a memory slot, "
                     "because it has not been registered before" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_used_regs.find( slot ) != m_used_regs.end() ) {
@@ -741,7 +741,7 @@ public:
                     "because it is in use by the primitive on "
                     << m_used_regs[slot].first << ":"
                     << m_used_regs[slot].second );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_memreg.lookup( slot ).kind == Memslot::Global ) {
@@ -778,7 +778,7 @@ public:
         if ( dst_pid < 0 || dst_pid >= m_nprocs ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": unknown process ID " << dst_pid << " for data destination " );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         LPFLIB_RESTORE_WARNINGS
 
@@ -786,26 +786,26 @@ public:
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": numerical overflow while computing src_offset + size = "
                     << src_offset << " + " << size << " > SIZE_MAX" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( dst_offset > std::numeric_limits<size_t>::max() - size ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": numerical overflow while computing dst_offset + size = "
                     << dst_offset << " + " << size << " > SIZE_MAX" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_active_regs.find( src_slot ) == m_active_regs.end() ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": source memory slot does not exist" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_active_regs.find( dst_slot ) == m_active_regs.end() ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": destination memory slot does not exist" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         const Memslot & ss = m_memreg.lookup( src_slot );
@@ -818,7 +818,7 @@ public:
                        " A synchronisation is necessary to active"
                        " the memory registration at "
                     << ss.file << ":" << ss.line );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ss.kind == Memslot::Local && ss.size[0] < src_offset + size ) {
@@ -827,7 +827,7 @@ public:
                     << ss.file << ":" << ss.line
                     << " ) is read past the end by "
                     << ( src_offset + size - ss.size[0] ) << " bytes. ");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ss.kind == Memslot::Global && ss.size[m_pid] < src_offset + size ) {
@@ -836,7 +836,7 @@ public:
                     << ss.file << ":" << ss.line
                     << " ) is read past the end by "
                     << ( src_offset + size - ss.size[m_pid] ) << " bytes");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ! ds.active ) {
@@ -846,7 +846,7 @@ public:
                        "missing. A synchronisation is necessary "
                        "to active the memory registration at "
                     << ds.file << ":" << ds.line );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ds.kind == Memslot::Local ) {
@@ -854,7 +854,7 @@ public:
                     << ": destination memory must be globally registered. "
                     << "Instead, it was only locally registered at "
                     << ds.file << ":" << ds.line );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ds.kind == Memslot::Global && ds.size[dst_pid] != size_t(-1)
@@ -864,7 +864,7 @@ public:
                     << ds.file << ":" << ds.line
                     << " ) is written past the end by "
                     << ( dst_offset + size - ds.size[dst_pid] ) << " bytes");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_puts.size() + m_gets.size() >= m_mesgq_reserved ) {
@@ -874,7 +874,7 @@ public:
                     << ": This is the " << (m_puts.size() + m_gets.size() + 1)
                     << "-th message, while space for only " << m_mesgq_reserved
                     << " has been reserved. Request queue follows\n" << t.str() );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         m_used_regs[src_slot] = std::make_pair( file, line );
@@ -896,7 +896,7 @@ public:
         if ( src_pid < 0 || src_pid >= m_nprocs ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": unknown process ID " << src_pid << " for data source" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
         LPFLIB_RESTORE_WARNINGS
 
@@ -904,26 +904,26 @@ public:
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": numerical overflow while computing src_offset + size = "
                     << src_offset << " + " << size << " > SIZE_MAX" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( dst_offset > std::numeric_limits<size_t>::max() - size ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": numerical overflow while computing dst_offset + size = "
                     << dst_offset << " + " << size << " > SIZE_MAX" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_active_regs.find( src_slot ) == m_active_regs.end() ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": source memory slot does not exist" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_active_regs.find( dst_slot ) == m_active_regs.end() ) {
             LOG( 0, file << ":" << line << ": pid " << m_pid
                     << ": destination memory slot does not exist" );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         const Memslot & ss = m_memreg.lookup( src_slot );
@@ -936,7 +936,7 @@ public:
                        " A synchronisation is necessary to active"
                        " the memory registration at "
                     << ss.file << ":" << ss.line );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ss.kind == Memslot::Local ) {
@@ -945,7 +945,7 @@ public:
                        "Instead, it was registered only locally at "
                       << ss.file << ":" << ss.line );
 
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ss.kind == Memslot::Global && ss.size[src_pid] != size_t(-1)
@@ -955,7 +955,7 @@ public:
                     << ss.file << ":" << ss.line
                     << " ) is read past the end by "
                     << ( src_offset + size - ss.size[src_pid] ) << " bytes");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ! ds.active ) {
@@ -965,7 +965,7 @@ public:
                        "missing. A synchronisation is necessary"
                        "to active the memory registration at "
                     << ds.file << ":" << ds.line );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ds.kind == Memslot::Local && ds.size[0] < dst_offset + size ) {
@@ -974,7 +974,7 @@ public:
                     << ds.file << ":" << ds.line
                     << " ) is written past the end by "
                     << ( dst_offset + size - ds.size[0] ) << " bytes");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( ds.kind == Memslot::Global && ds.size[m_pid] < dst_offset + size ) {
@@ -983,7 +983,7 @@ public:
                     << ds.file << ":" << ds.line
                     << " ) is written past the end by "
                     << ( dst_offset + size - ds.size[m_pid] ) << " bytes");
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         if ( m_puts.size() + m_gets.size() >= m_mesgq_reserved ) {
@@ -993,7 +993,7 @@ public:
                     << ": This is the " << (m_puts.size() + m_gets.size() + 1)
                     << "-th message, while space for only " << m_mesgq_reserved
                     << " has been reserved. Request queue follows\n" << t.str() );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         m_used_regs[src_slot] = std::make_pair( file, line );
@@ -1003,6 +1003,13 @@ public:
             src_slot, dst_slot, src_offset, dst_offset, size, attr};
         m_gets.push_back( get );
 
+        return LPF_SUCCESS;
+    }
+
+    lpf_err_t abort(const char * file, int line) {
+        (void) file;
+        (void) line;
+        lpf_abort(m_ctx);
         return LPF_SUCCESS;
     }
 
@@ -1019,7 +1026,7 @@ public:
                     LOG( 0, file << ":" << line << ": pid " << m_pid
                             << ": Could not allocate extra debug messages in message queue"
                        );
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
             }
 
@@ -1029,7 +1036,7 @@ public:
                     LOG( 0, file << ":" << line << ": pid " << m_pid
                            << ": Could not allocate extra debug memory slots in memory registration table"
                        );
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
             }
 
@@ -1089,7 +1096,7 @@ public:
                     << ": Number of global registrations does not match."
                     " I have " << globregs << ", while pid " << p <<
                     " has " << m_glob_regs[p] << " global registrations" );
-                std::abort();
+                lpf_abort(m_ctx);
             }
 
             if (globderegs != m_glob_deregs[p] ) {
@@ -1097,7 +1104,7 @@ public:
                     << ": Number of deregistrations of global slots does not match."
                     " I have " << globderegs << ", while pid " << p <<
                     " has " << m_glob_deregs[p] << " deregistrations" );
-                std::abort();
+                lpf_abort(m_ctx);
             }
         }
 
@@ -1128,7 +1135,7 @@ public:
                     LOG( 0, file << ":" << line << ": pid " << m_pid
                             << ": the " << i << "-th global deregistration mismatches "
                             " on pid " << p << " and " << m_pid );
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
             }
 
@@ -1181,7 +1188,7 @@ public:
                                "somehow (other confused pid " << p << " )"
                                ", which makes me think that this is "
                                "an internal error in the debug layer. Sorry!");
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
             }
 
@@ -1272,7 +1279,7 @@ public:
                 "Incoming requests from PIDs 0.." << m_nprocs << " = " << s.str()
                 << ". Local request queue follows (" << m_puts.size() << " puts "
                 << "and " << m_gets.size() << " gets )\n" << t.str() );
-            std::abort();
+            lpf_abort(m_ctx);
         }
 
         // reallocate access buffers if they were resized.
@@ -1316,7 +1323,7 @@ public:
                             << " ) is written past the end by "
                             << ( put.dstOffset + put.size - ds.size[m_pid] )
                             << " bytes");
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
 
                 m_rwconflict.insertRead(
@@ -1344,7 +1351,7 @@ public:
                             << " ) is read past the end by "
                             << ( get.srcOffset + get.size - ss.size[m_pid] )
                             << " bytes");
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
 
                 size_t & index = m_remote_access_by_me_offsets_local[ get.srcPid ];
@@ -1398,7 +1405,7 @@ public:
                                 << static_cast<void *>(ptr+a.offset+a.size)
                                 << "); Reads are " << s.str() ;
                            );
-                        std::abort();
+                        lpf_abort(m_ctx);
                     }
                 }
             }
@@ -1422,7 +1429,7 @@ public:
                             << static_cast<void *>(ptr+get.dstOffset+get.size)
                             << "); Reads are " << s.str() ;
                        );
-                    std::abort();
+                    lpf_abort(m_ctx);
                 }
             }
 
@@ -1610,6 +1617,10 @@ lpf_err_t lpf_debug_register_local( const char * file, int line,
 { return Interface::lookupCtx( file, line, ctx )->register_local( file, line, pointer, size, memslot); }
 
 extern _LPFLIB_API
+lpf_err_t lpf_debug_abort( const char * file, int line, lpf_t ctx)
+{ return Interface::lookupCtx( file, line, ctx )->abort( file, line); }
+
+extern _LPFLIB_API
 lpf_err_t lpf_debug_deregister( const char * file, int line,
     lpf_t ctx, lpf_memslot_t memslot
 )
@@ -1655,7 +1666,6 @@ extern _LPFLIB_API
 lpf_err_t lpf_debug_sync( const char * file, int line,
         lpf_t ctx, lpf_sync_attr_t attr )
 { return Interface::lookupCtx( file, line, ctx )->sync( file, line, attr ); }
-
 
 } // extern "C"
 

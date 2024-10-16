@@ -78,6 +78,14 @@ if (MPI_FOUND)
                 -DINCLUDE_DIRECTORIES:STRING=${MPI_C_INCLUDE_PATH}
            )
 
+   try_compile( IS_OPENMPI "${CMAKE_BINARY_DIR}"
+           "${CMAKE_CURRENT_SOURCE_DIR}/cmake/is_openmpi.c"
+           LINK_LIBRARIES ${MPI_C_LIBRARIES}
+           CMAKE_FLAGS 
+               -DCMAKE_C_FLAGS:STRING=${MPI_C_COMPILE_FLAGS}
+               -DCMAKE_EXE_LINKER_FLAGS:STRING=${MPI_C_LINK_FLAGS}
+               -DINCLUDE_DIRECTORIES:STRING=${MPI_C_INCLUDE_PATH}
+           )
 
     try_run( MPI_IS_THREAD_COMPAT_RC MPI_IS_THREAD_COMPAT_COMPILES
            ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/mpi_is_thread_compat.c

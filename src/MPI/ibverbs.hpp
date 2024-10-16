@@ -62,6 +62,10 @@ public:
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
 
+    size_t getMaxMsgSize() const {
+        return m_maxMsgSize;
+    }
+
     void put( SlotID srcSlot, size_t srcOffset, 
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
 

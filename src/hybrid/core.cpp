@@ -35,7 +35,6 @@
 #endif
 
 
-
 extern "C" {
 
 _LPFLIB_VAR const lpf_err_t LPF_SUCCESS = 0;
@@ -382,6 +381,15 @@ _LPFLIB_API lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
         return t->resizeMemreg( max_regs);
     else
         return LPF_SUCCESS;
+}
+
+_LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx)
+{
+    using namespace lpf::hybrid;
+    ThreadState * t = realContext(ctx);
+    MPI mpi = t->nodeState().mpi();
+    mpi.abort();
+    return LPF_SUCCESS;
 }
 
 } // extern "C"

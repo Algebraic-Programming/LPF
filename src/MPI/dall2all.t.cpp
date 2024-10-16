@@ -23,28 +23,51 @@
 
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=1;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
 
 
+/** 
+ * \pre P >= 1
+ * \pre P <= 2
+ */
+class DenseAll2AllTests : public testing::Test {
 
-TEST( Dall2all, Create )
+    protected:
+
+    static void SetUpTestSuite() {
+
+       MPI_Init(NULL, NULL);
+       Lib::instance();
+
+        MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
+        MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+
+    }
+
+    static void TearDownTestSuite() {
+        MPI_Finalize();
+    }
+
+    static int my_pid;
+    static int nprocs;
+};
+
+int DenseAll2AllTests::my_pid = -1;
+int DenseAll2AllTests::nprocs = -1;
+
+TEST_F( DenseAll2AllTests, Create )
 {
     DenseAllToAll x(9, 10);
 }
 
-TEST( Dall2all, Reserve )
+TEST_F( DenseAll2AllTests, Reserve )
 {
     DenseAllToAll x( 4,10);
     x.reserve( 50 , 100);
 }
 
-TEST( Dall2all, Send )
+TEST_F( DenseAll2AllTests, Send )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
 
     DenseAllToAll x( my_pid, nprocs );
     x.reserve( nprocs , sizeof(int));
@@ -56,13 +79,8 @@ TEST( Dall2all, Send )
     EXPECT_TRUE( !error );
 }
 
-TEST( Dall2all, Ring )
+TEST_F( DenseAll2AllTests, Ring )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     DenseAllToAll x(my_pid, nprocs);
     x.reserve( nprocs , sizeof(int));
     x.send( (my_pid + 1) % nprocs, &my_pid, sizeof(my_pid) );
@@ -84,14 +102,8 @@ TEST( Dall2all, Ring )
 }
 
 
-TEST( Dall2all, ManyMsgs )
+TEST_F( DenseAll2AllTests, ManyMsgs )
 {
-    Lib::instance();
-
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     DenseAllToAll x(my_pid, nprocs );
     const int nMsgs = 10000;
     x.reserve( nMsgs , sizeof(int));
@@ -122,13 +134,8 @@ TEST( Dall2all, ManyMsgs )
     }
 }
 
-TEST( Dall2all, LargeSend )
+TEST_F( DenseAll2AllTests, LargeSend )
 {
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
     DenseAllToAll x( my_pid, nprocs );
 
     size_t bigNum =  size_t(std::numeric_limits<int>::max()) + 10u ;
