@@ -14,8 +14,12 @@ parser.add_argument( 'cmd', nargs=argparse.REMAINDER )
 args = parser.parse_args()
 
 # This is only for passing Gtest info to CMake
+# The parallel launcher is still needed as Open MPI
+# binaries terminate without the launcher on our cluster,
+# even for single process runs
 if args.cmd[-1] == '--gtest_list_tests':
-    cmd = subprocess.run( args.cmd)
+    run_cmd = [args.parallel_launcher] + ['-n'] + ['1'] + args.cmd
+    cmd = subprocess.run( run_cmd)
     sys.exit(cmd.returncode)
 # Actual use of our launcher
 else:
