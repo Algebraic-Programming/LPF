@@ -22,7 +22,7 @@ if (MPI_FOUND)
         list(APPEND MPI_ENGINES mpirma)
     endif()
 
-    if (LIB_IBVERBS)
+    if (ENABLE_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
     endif()
 
@@ -188,7 +188,7 @@ if (MPI_FOUND)
     endif()
 
 # Other unit tests
-    if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
+    if (ENABLE_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest_mpi( ibverbs_test "ibverbs" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)

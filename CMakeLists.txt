@@ -178,7 +178,7 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
         list(APPEND ENGINES "mpirma")
     endif()
 
-    if (LIB_IBVERBS)
+    if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
     endif()
 
@@ -187,7 +187,7 @@ endif()
 #enable the hybrid engine
 if ( LIB_POSIX_THREADS AND LIB_MATH AND LIB_DL AND MPI_FOUND
         AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1
-	AND LIB_IBVERBS )
+	AND ENABLE_IBVERBS )
     list(APPEND ENGINES "hybrid")
     set(HYBRID_ENGINE_ENABLED on)
 endif()
@@ -378,6 +378,8 @@ if (LPF_ENABLE_TESTS)
         gtest_discover_tests(${testName}
             TEST_PREFIX ${ENGINE}_
             EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+	    DISCOVERY_MODE POST_BUILD
+	    DISCOVERY_TIMEOUT 15
         )
     endfunction(add_gtest)
 
@@ -443,6 +445,8 @@ if (LPF_ENABLE_TESTS)
             gtest_discover_tests(${testName}
                 TEST_PREFIX ${ENGINE}_
                 EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+		DISCOVERY_MODE POST_BUILD
+		DISCOVERY_TIMEOUT 15
             )
 
 
