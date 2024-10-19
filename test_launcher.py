@@ -18,7 +18,7 @@ args = parser.parse_args()
 # binaries terminate without the launcher on our cluster,
 # even for single process runs
 if args.cmd[-1] == '--gtest_list_tests':
-    run_cmd = [args.parallel_launcher] + ['-n'] + ['1'] + args.cmd
+    run_cmd = [args.parallel_launcher, '-engine', args.engine, '-n', '1'] + args.cmd
     cmd = subprocess.run( run_cmd)
     sys.exit(cmd.returncode)
 # Actual use of our launcher
