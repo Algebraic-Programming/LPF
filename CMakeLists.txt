@@ -105,10 +105,6 @@ set( INSTALL_HEADERS "${prefix}/include" CACHE PATH
         "Installation path for header files" )
 message( STATUS "Installation directory prefix is ${prefix}")
 
-# C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED YES)
-
 # Dependencies
 set(ENGINES)
 find_library( LIB_POSIX_THREADS
@@ -235,6 +231,16 @@ add_definitions(-DBSPLIB_DLL=1)
 option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
+
+# C++ standard -- Google tests require newer C++ standard than C++11
+if (LPF_ENABLE_TESTS)
+   set(CMAKE_CXX_STANDARD 17)
+   set(CMAKE_CXX_STANDARD_REQUIRED YES)
+else()
+   set(CMAKE_CXX_STANDARD 11)
+   set(CMAKE_CXX_STANDARD_REQUIRED YES)
+endif()
+
 
 # Handling of compiler flags
 function(target_add_compilation_flags target visibility)
