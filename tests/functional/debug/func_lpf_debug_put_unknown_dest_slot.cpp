@@ -23,6 +23,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) args;
     int x = 3, y = 6;
+    (void) y; // this field is (erroneously) not used, and the test checks for
+              // finding precisely that error
     lpf_memslot_t xSlot = LPF_INVALID_MEMSLOT;
     lpf_memslot_t ySlot = xSlot + 2;
 
