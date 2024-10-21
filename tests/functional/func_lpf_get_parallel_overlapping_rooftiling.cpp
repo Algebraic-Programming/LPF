@@ -117,8 +117,9 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
                     fromPid2 = (fromPid2 + nprocs*MTU)%nprocs;
                     EXPECT_EQ( fromPid, fromPid2 );
 
-                    if (fromPid == i)
-                        EXPECT_EQ( (5*i+j)*nprocs*MTU + fromPid, ys[(4*i+j)*MTU] ); 
+                    if (fromPid == i) {
+                        EXPECT_EQ( (5*i+j)*nprocs*MTU + fromPid, ys[(4*i+j)*MTU] );
+		    }
                 }
 
                 if (0 == j && i > 0)
