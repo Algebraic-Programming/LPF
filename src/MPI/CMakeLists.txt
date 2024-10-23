@@ -22,13 +22,10 @@ if (MPI_FOUND)
         list(APPEND MPI_ENGINES mpirma)
     endif()
 
-    if (LIB_IBVERBS)
+    if (ENABLE_IBVERBS)
         list(APPEND MPI_ENGINES ibverbs)
     endif()
 
-    if (MPI_OPEN_PORT)
-      add_definitions("-DMPI_HAS_OPEN_PORT=1")
-    endif()
     if (MPI_IBARRIER)
       add_definitions("-DMPI_HAS_IBARRIER=1")
     endif()
@@ -164,65 +161,63 @@ if (MPI_FOUND)
 
         set(lpf_cflags "${lpf_cflags} ${MPI_C_COMPILE_FLAGS} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
         set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
-        if (UNIX AND NOT APPLE)
-          set(lpf_exe_link_flags "${lpf_exe_link_flags} -rdynamic" PARENT_SCOPE)
-        endif()
     endforeach()
   
     include_directories(${MPI_C_INCLUDE_PATH})
     # add a test for dynamichook 
-    if (MPI_OPEN_PORT AND LPF_ENABLE_TESTS)
-        add_executable(dynamichook.t dynamichook.t.cpp dynamichook.cpp
-                $<TARGET_OBJECTS:${comlib}> )
-
-        target_include_directories(dynamichook.t PRIVATE ${GTEST_INCLUDE_PATH})
-        target_link_libraries(dynamichook.t ${MPI_C_LIBRARIES} gtest)
-        set_target_properties(dynamichook.t PROPERTIES
-                COMPILE_FLAGS "${MPI_C_COMPILE_FLAGS}"
-                LINK_FLAGS "${MPI_C_LINK_FLAGS}"
-        )
-        configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
-        set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
-        add_test(NAME dynamichook_1proc
-                 COMMAND bash ${dynamic_hook_t_sh} 1)
-        set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 120 )
-        add_test(NAME dynamichook_2proc
-                 COMMAND bash ${dynamic_hook_t_sh} 2)
-        set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 240 )
-        add_test(NAME dynamichook_3proc
-                 COMMAND bash ${dynamic_hook_t_sh} 3)
-        set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 360 )
-        add_test(NAME dynamichook_10proc
-                 COMMAND bash ${dynamic_hook_t_sh} 10)
-        set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 1200 )
+    if (NOT IS_OPENMPI AND LPF_ENABLE_TESTS)
+        add_gtest(dynamichook.t "mpimsg" ON
+            ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+        
+                configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
+                set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
+                add_test(NAME dynamichook_1proc
+                         COMMAND bash ${dynamic_hook_t_sh} 1)
+                set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 )
+                add_test(NAME dynamichook_2proc
+                         COMMAND bash ${dynamic_hook_t_sh} 2)
+                set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 )
+                add_test(NAME dynamichook_3proc
+                         COMMAND bash ${dynamic_hook_t_sh} 3)
+                set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 )
+                add_test(NAME dynamichook_10proc
+                         COMMAND bash ${dynamic_hook_t_sh} 10)
+                set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 )
     endif()
 
 # Other unit tests
-    if (LIB_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "1;2;5;10" ibverbs.t.cpp ibverbs.cpp
-                    $<TARGET_OBJECTS:${comlib}> mpilib.cpp)
-        target_link_libraries( ibverbs_test ${LIB_IBVERBS})
+    if (ENABLE_IBVERBS AND LPF_ENABLE_TESTS)
+        add_gtest( ibverbs_test "ibverbs" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
-    add_gtest_mpi( spall2all_test "1;2;5;10" spall2all.t.cpp spall2all.c
-            spall2all.cpp mpilib.cpp
-            $<TARGET_OBJECTS:${comlib}> 
-            )
+    foreach (engine ${MPI_ENGINES})
+        add_gtest( spall2all_test_${engine} ${engine} ON
+            ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.c 
+            ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
-    add_gtest_mpi( dall2all_test "1;2;5;10" dall2all.t.cpp
-            mpilib.cpp $<TARGET_OBJECTS:${comlib}> 
-            )
+        add_gtest( dall2all_test_${engine} ${engine} ON
+            ${CMAKE_CURRENT_SOURCE_DIR}/dall2all.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
-    if (MPI_IBARRIER)
-       add_gtest_mpi( hall2all_test "1;2;5;10" hall2all.t.cpp
-            mpilib.cpp $<TARGET_OBJECTS:${comlib}> )
-    endif()
+        if (MPI_IBARRIER)
+            add_gtest( hall2all_test_${engine} ${engine} ON
+                ${CMAKE_CURRENT_SOURCE_DIR}/hall2all.t.cpp 
+                ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+        endif()
 
-    add_gtest( messagesort_test messagesort.t.cpp messagesort.cpp
-            $<TARGET_OBJECTS:${comlib}> )
+        add_gtest( messagesort_test_${engine} ${engine} ON
+            ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.t.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.cpp)
 
-    add_gtest( ipcmesg_test ipcmesg.t.cpp 
-            $<TARGET_OBJECTS:${comlib}> )
+        add_gtest( ipcmesg_test_${engine} ${engine} ON
+            ${CMAKE_CURRENT_SOURCE_DIR}/ipcmesg.t.cpp)
+    endforeach()
 
 endif(MPI_FOUND)
 

@@ -25,6 +25,11 @@ using namespace lpf;
 
 const double eps = std::numeric_limits<double>::epsilon();
 
+/** 
+ * \test Time tests
+ * \pre P <= 1
+ * \return Exit code: 0
+ */
 TEST( Time, zero)
 {
     Time zero = Time::fromSeconds(0.0);

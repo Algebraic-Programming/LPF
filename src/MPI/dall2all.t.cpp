@@ -20,121 +20,106 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=1;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE = 0;
 
+/**
+ * \pre P >= 1
+ * \pre P <= 2
+ */
+class DenseAll2AllTests : public testing::Test {
 
+protected:
+  static void SetUpTestSuite() {
 
-TEST( Dall2all, Create )
-{
-    DenseAllToAll x(9, 10);
-}
-
-TEST( Dall2all, Reserve )
-{
-    DenseAllToAll x( 4,10);
-    x.reserve( 50 , 100);
-}
-
-TEST( Dall2all, Send )
-{
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
-
-    DenseAllToAll x( my_pid, nprocs );
-    x.reserve( nprocs , sizeof(int));
-    for (int i = 0; i <= my_pid ; ++i)
-        x.send( (my_pid + 1) % nprocs, &i, sizeof(int) );
-
-    bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
-}
-
-TEST( Dall2all, Ring )
-{
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
-
-    DenseAllToAll x(my_pid, nprocs);
-    x.reserve( nprocs , sizeof(int));
-    x.send( (my_pid + 1) % nprocs, &my_pid, sizeof(my_pid) );
-
-    EXPECT_FALSE(  x.empty() );
-
-    bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
-
-    EXPECT_FALSE(  x.empty() );
-   
-    int y = -1;
-    x.recv( &y, sizeof(y)); 
-    EXPECT_EQ( (my_pid + nprocs -1) % nprocs, y );
-
-    EXPECT_TRUE(  x.empty() );
-
-}
-
-
-TEST( Dall2all, ManyMsgs )
-{
+    MPI_Init(NULL, NULL);
     Lib::instance();
 
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  }
 
-    DenseAllToAll x(my_pid, nprocs );
-    const int nMsgs = 10000;
-    x.reserve( nMsgs , sizeof(int));
+  static void TearDownTestSuite() { MPI_Finalize(); }
 
-    for (int j = 0; j < 10 ; ++j) {
-        x.clear();
+  static int my_pid;
+  static int nprocs;
+};
 
-        for (int i = 0; i < nMsgs; ++i)
-        {
-            x.send( (my_pid + i) % nprocs, & i, sizeof(i) );
-        }
+int DenseAll2AllTests::my_pid = -1;
+int DenseAll2AllTests::nprocs = -1;
 
-        bool prerandomize = true;
-        int trials = 5;
-        int error = x.exchange( Lib::instance().world(), prerandomize, 
-                NULL, trials);
-        EXPECT_FALSE( error );
+TEST_F(DenseAll2AllTests, Create) { DenseAllToAll x(9, 10); }
 
-        for (int i = 0; i < nMsgs; ++i)
-        {
-            EXPECT_FALSE( x.empty() );
-            int k = -1;
-            x.recv( &k, sizeof(k));
-            EXPECT_GE( k, 0 );
-            EXPECT_LT( k, nMsgs );
-        }
-        EXPECT_TRUE( x.empty() );
+TEST_F(DenseAll2AllTests, Reserve) {
+  DenseAllToAll x(4, 10);
+  x.reserve(50, 100);
+}
+
+TEST_F(DenseAll2AllTests, Send) {
+
+  DenseAllToAll x(my_pid, nprocs);
+  x.reserve(nprocs, sizeof(int));
+  for (int i = 0; i <= my_pid; ++i)
+    x.send((my_pid + 1) % nprocs, &i, sizeof(int));
+
+  bool prerandomize = true;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
+}
+
+TEST_F(DenseAll2AllTests, Ring) {
+  DenseAllToAll x(my_pid, nprocs);
+  x.reserve(nprocs, sizeof(int));
+  x.send((my_pid + 1) % nprocs, &my_pid, sizeof(my_pid));
+
+  EXPECT_FALSE(x.empty());
+
+  bool prerandomize = true;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
+
+  EXPECT_FALSE(x.empty());
+
+  int y = -1;
+  x.recv(&y, sizeof(y));
+  EXPECT_EQ((my_pid + nprocs - 1) % nprocs, y);
+
+  EXPECT_TRUE(x.empty());
+}
+
+TEST_F(DenseAll2AllTests, ManyMsgs) {
+  DenseAllToAll x(my_pid, nprocs);
+  const int nMsgs = 10000;
+  x.reserve(nMsgs, sizeof(int));
+
+  for (int j = 0; j < 10; ++j) {
+    x.clear();
+
+    for (int i = 0; i < nMsgs; ++i) {
+      x.send((my_pid + i) % nprocs, &i, sizeof(i));
     }
+
+    bool prerandomize = true;
+    int trials = 5;
+    int error = x.exchange(Lib::instance().world(), prerandomize, NULL, trials);
+    EXPECT_FALSE(error);
+
+    for (int i = 0; i < nMsgs; ++i) {
+      EXPECT_FALSE(x.empty());
+      int k = -1;
+      x.recv(&k, sizeof(k));
+      EXPECT_GE(k, 0);
+      EXPECT_LT(k, nMsgs);
+    }
+    EXPECT_TRUE(x.empty());
+  }
 }
 
-TEST( Dall2all, LargeSend )
-{
-    Lib::instance();
-    int my_pid = -1, nprocs = -1;
-    MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-    MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+TEST_F(DenseAll2AllTests, LargeSend) {
+  DenseAllToAll x(my_pid, nprocs);
 
-    DenseAllToAll x( my_pid, nprocs );
+  size_t bigNum = size_t(std::numeric_limits<int>::max()) + 10u;
 
-    size_t bigNum =  size_t(std::numeric_limits<int>::max()) + 10u ;
-
-    EXPECT_THROW( x.reserve( 1 , bigNum ), std::bad_alloc );
-
+  EXPECT_THROW(x.reserve(1, bigNum), std::bad_alloc);
 }
-
-

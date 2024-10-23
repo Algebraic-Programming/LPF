@@ -378,3 +378,15 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     return t->resizeMemreg(max_regs);
 }
 
+lpf_err_t lpf_debug_abort() {
+    // Using std::abort is not portable
+    // SIGABRT code 6 is often coverted to code 134.
+    // Therefore, use std::quick_exit(6) instead
+    // The reason we do not use std::exit is that
+    // it implies calling destructors, and this leads to 
+    // segmentation faults for pthread backend and abnormal
+    // programs. std::quick_exit does not call destructors
+    std::quick_exit(6);
+    return LPF_SUCCESS;
+}
+

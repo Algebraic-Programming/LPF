@@ -25,6 +25,11 @@ using namespace lpf;
 typedef MemoryRegister<char> Memreg;
 typedef Memreg::Slot Slot;
 
+/** 
+ * \test Memreg tests
+ * \pre P <= 1
+ * \return Exit code: 0
+ */
 TEST( MemoryRegister, Empty )
 {
     Memreg empty;

@@ -49,6 +49,7 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
+#undef lpf_abort
 
 #undef lpf_init_t
 #undef lpf_pid_t
@@ -92,6 +93,7 @@
 #define lpf_exec            LPF_FUNC(exec)
 #define lpf_hook            LPF_FUNC(hook)
 #define lpf_rehook          LPF_FUNC(rehook)
+#define lpf_abort           LPF_FUNC(abort)
 
 #define lpf_init_t      LPF_TYPE(init_t)
 #define lpf_pid_t       LPF_TYPE(pid_t)

@@ -76,6 +76,8 @@ public:
 
     static void doProbe(const mpi::Comm & comm);
 
+    void lpf_internal_abort();
+
 private:
     mpi::Comm m_comm;
     Process & m_subprocess;

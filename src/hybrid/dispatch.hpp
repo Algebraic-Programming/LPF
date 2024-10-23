@@ -226,6 +226,9 @@ namespace lpf { namespace hybrid {
         err_t resize_memory_register( size_t max_regs )
         { return USE_MPI(resize_memory_register)(m_ctx, max_regs); }
 
+        err_t abort( )
+        { return USE_MPI(abort)(m_ctx); }
+
         static bool is_linked_correctly() 
         { 
             return SUCCESS != ERR_OUT_OF_MEMORY
