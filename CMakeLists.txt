@@ -231,6 +231,9 @@ add_definitions(-DBSPLIB_DLL=1)
 option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
+option(GTEST_AGREE_TO_LICENSE
+	"Does the user agree to the GoogleTest license"
+	OFF)
 
 # C++ standard -- Google tests require newer C++ standard than C++11
 if (LPF_ENABLE_TESTS)
@@ -338,6 +341,9 @@ endfunction()
 if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
 
+    if (NOT GTEST_AGREE_TO_LICENSE)
+	    message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
+    endif()
     # Enable testing in CMake
     enable_testing()
     find_package(GTest)
