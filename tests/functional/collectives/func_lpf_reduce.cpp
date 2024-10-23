@@ -15,85 +15,82 @@
  * limitations under the License.
  */
 
-
-#include <lpf/core.h>
-#include <lpf/collectives.h>
 #include "gtest/gtest.h"
+#include <lpf/collectives.h>
+#include <lpf/core.h>
 
 #include <math.h>
 
-void min( const size_t n, const void * const _in, void * const _out ) {
-    double * const out = (double*) _out;
-    const double * const array = (const double*) _in;
-    for( size_t i = 0; i < n; ++i ) {
-        if( array[ i ] < *out ) {
-            *out = array[ i ];
-        } 
+void min(const size_t n, const void *const _in, void *const _out) {
+  double *const out = (double *)_out;
+  const double *const array = (const double *)_in;
+  for (size_t i = 0; i < n; ++i) {
+    if (array[i] < *out) {
+      *out = array[i];
     }
+  }
 }
 
-void spmd( lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p, const lpf_args_t args )
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
-    lpf_memslot_t element_slot;
-    lpf_coll_t coll;
-    lpf_err_t rc;
+void spmd(lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p,
+          const lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
+  lpf_memslot_t element_slot;
+  lpf_coll_t coll;
+  lpf_err_t rc;
 
-    rc = lpf_resize_message_queue( ctx, p - 1);
-    EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_resize_memory_register( ctx, 2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_resize_message_queue(ctx, p - 1);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+  rc = lpf_resize_memory_register(ctx, 2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    double       reduced_value = INFINITY;
-    const size_t byte_size     = (1 << 19) / sizeof(double);
-    const size_t size          = byte_size / sizeof(double);
-    double *     data          = new double[size];
-    EXPECT_NE( nullptr, data );
+  double reduced_value = INFINITY;
+  const size_t byte_size = (1 << 19) / sizeof(double);
+  const size_t size = byte_size / sizeof(double);
+  double *data = new double[size];
+  EXPECT_NE(nullptr, data);
 
-    for( size_t i = 0; i < size; ++i ) {
-        data[ i ] = s * size + i;
-    }
+  for (size_t i = 0; i < size; ++i) {
+    data[i] = s * size + i;
+  }
 
-    rc = lpf_register_global( ctx, &reduced_value, sizeof(double), &element_slot );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_register_global(ctx, &reduced_value, sizeof(double), &element_slot);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, 1, sizeof(double), 0, &coll );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_init(ctx, s, p, 1, sizeof(double), 0, &coll);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    min( size, data, &reduced_value );
-    const double local_reduce_value = reduced_value;
-    rc = lpf_reduce( coll, &reduced_value, element_slot, sizeof(double), &min, p / 2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  min(size, data, &reduced_value);
+  const double local_reduce_value = reduced_value;
+  rc = lpf_reduce(coll, &reduced_value, element_slot, sizeof(double), &min,
+                  p / 2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    if( s == p / 2 ) {
-         EXPECT_EQ( 0.0, reduced_value );
-    } else {
-         EXPECT_EQ( local_reduce_value, reduced_value );
-    }
+  if (s == p / 2) {
+    EXPECT_EQ(0.0, reduced_value);
+  } else {
+    EXPECT_EQ(local_reduce_value, reduced_value);
+  }
 
-    rc = lpf_collectives_destroy( coll );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_deregister( ctx, element_slot );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_deregister(ctx, element_slot);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    delete[] data;
+  delete[] data;
 }
 
-/** 
- * \test Initialises one \a lpf_coll_t objects, performs a reduce, and deletes the \a lpf_coll_t object.
- * \pre P >= 1
- * \return Exit code: 0
+/**
+ * \test Initialises one \a lpf_coll_t objects, performs a reduce, and deletes
+ * the \a lpf_coll_t object. \pre P >= 1 \return Exit code: 0
  */
-TEST( COLL, func_lpf_reduce )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(COLL, func_lpf_reduce) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

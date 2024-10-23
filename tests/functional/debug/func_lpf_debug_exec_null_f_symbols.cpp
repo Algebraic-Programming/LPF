@@ -15,29 +15,30 @@
  * limitations under the License.
  */
 
+#include "gtest/gtest.h"
 #include <lpf/core.h>
 #include <string.h>
-#include "gtest/gtest.h"
 
-void spmd( lpf_t a, lpf_pid_t b, lpf_pid_t c, lpf_args_t d)
-{
-    (void) a; (void) b; (void) c; (void) d;
+void spmd(lpf_t a, lpf_pid_t b, lpf_pid_t c, lpf_args_t d) {
+  (void)a;
+  (void)b;
+  (void)c;
+  (void)d;
 }
 
-/** 
+/**
  * \test Test lpf_exec error of using NULL output with nonzero size
  * \pre P >= 1
  * \return Message: NULL f_symbols argument while f_size is non-zero
  * \return Exit code: 6
  */
-TEST(API, func_lpf_debug_exec_null_f_symbols )
-{
-    lpf_args_t args;
-    args.input = NULL;
-    args.input_size = 0;
-    args.output = NULL;
-    args.output_size = 0;
-    args.f_symbols = NULL;
-    args.f_size = 4;
-    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, args ), LPF_SUCCESS);
+TEST(API, func_lpf_debug_exec_null_f_symbols) {
+  lpf_args_t args;
+  args.input = NULL;
+  args.input_size = 0;
+  args.output = NULL;
+  args.output_size = 0;
+  args.f_symbols = NULL;
+  args.f_size = 4;
+  EXPECT_EQ(lpf_exec(LPF_ROOT, LPF_MAX_P, &spmd, args), LPF_SUCCESS);
 }

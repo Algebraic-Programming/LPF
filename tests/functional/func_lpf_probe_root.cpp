@@ -15,31 +15,29 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
-/** 
- * \test Test lpf_probe function on LPF_ROOT 
+/**
+ * \test Test lpf_probe function on LPF_ROOT
  * \note Extra lpfrun parameters: -probe 1.0
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_lpf_probe_root )
-{
-    lpf_err_t rc = LPF_SUCCESS;
+TEST(API, func_lpf_probe_root) {
+  lpf_err_t rc = LPF_SUCCESS;
 
-    lpf_machine_t machine = LPF_INVALID_MACHINE;
+  lpf_machine_t machine = LPF_INVALID_MACHINE;
 
-    rc = lpf_probe( LPF_ROOT, &machine );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_probe(LPF_ROOT, &machine);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    EXPECT_LE( 1u, machine.p );
-    EXPECT_LE( 1u, machine.free_p );
-    EXPECT_LT( 0.0, (*(machine.g))(1, 0, LPF_SYNC_DEFAULT) );
-    EXPECT_LT( 0.0, (*(machine.l))(1, 0, LPF_SYNC_DEFAULT) );
-    EXPECT_LT( 0.0, (*(machine.g))(machine.p, 0, LPF_SYNC_DEFAULT) );
-    EXPECT_LT( 0.0, (*(machine.l))(machine.p, 0, LPF_SYNC_DEFAULT) );
-    EXPECT_LT( 0.0, (*(machine.g))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT) );
-    EXPECT_LT( 0.0, (*(machine.l))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT) );
-
+  EXPECT_LE(1u, machine.p);
+  EXPECT_LE(1u, machine.free_p);
+  EXPECT_LT(0.0, (*(machine.g))(1, 0, LPF_SYNC_DEFAULT));
+  EXPECT_LT(0.0, (*(machine.l))(1, 0, LPF_SYNC_DEFAULT));
+  EXPECT_LT(0.0, (*(machine.g))(machine.p, 0, LPF_SYNC_DEFAULT));
+  EXPECT_LT(0.0, (*(machine.l))(machine.p, 0, LPF_SYNC_DEFAULT));
+  EXPECT_LT(0.0, (*(machine.g))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT));
+  EXPECT_LT(0.0, (*(machine.l))(machine.p, (size_t)(-1), LPF_SYNC_DEFAULT));
 }

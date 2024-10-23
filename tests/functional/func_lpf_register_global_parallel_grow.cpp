@@ -15,70 +15,67 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore args parameter
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore args parameter
 
-    lpf_err_t rc = LPF_SUCCESS;
-        
-    size_t maxMsgs = 20 , maxRegs = 7;
-    rc = lpf_resize_message_queue( lpf, maxMsgs);
-    EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_resize_memory_register( lpf, maxRegs );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  lpf_err_t rc = LPF_SUCCESS;
 
-    char buffer[21] = "Ditiseentestmettandr";
-    lpf_memslot_t slots[10];
+  size_t maxMsgs = 20, maxRegs = 7;
+  rc = lpf_resize_message_queue(lpf, maxMsgs);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+  rc = lpf_resize_memory_register(lpf, maxRegs);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+  rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    int i;
-    for ( i = 0; i < 5; ++i)
-    {
-        rc = lpf_register_global( lpf, &buffer[i*2], sizeof(buffer[0])*2, &slots[i] );
-        EXPECT_EQ( LPF_SUCCESS, rc );
-    }
+  char buffer[21] = "Ditiseentestmettandr";
+  lpf_memslot_t slots[10];
 
-    rc = lpf_resize_memory_register( lpf, maxRegs + 3 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  int i;
+  for (i = 0; i < 5; ++i) {
+    rc = lpf_register_global(lpf, &buffer[i * 2], sizeof(buffer[0]) * 2,
+                             &slots[i]);
+    EXPECT_EQ(LPF_SUCCESS, rc);
+  }
 
-    for ( i = 0; i < 5; ++i)
-    {
-        rc = lpf_register_global( lpf, &buffer[(i+5)*2], sizeof(buffer[0])*2, &slots[i+5] );
-        EXPECT_EQ( LPF_SUCCESS, rc );
-    }
+  rc = lpf_resize_memory_register(lpf, maxRegs + 3);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+  rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    EXPECT_STREQ( "Ditiseentestmettandr", buffer );
+  for (i = 0; i < 5; ++i) {
+    rc = lpf_register_global(lpf, &buffer[(i + 5) * 2], sizeof(buffer[0]) * 2,
+                             &slots[i + 5]);
+    EXPECT_EQ(LPF_SUCCESS, rc);
+  }
 
-    rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  EXPECT_STREQ("Ditiseentestmettandr", buffer);
 
-    for (i = 0; i < 10; ++i)
-    {
-        lpf_put( lpf, slots[i], 0u, 
-                (pid+i)%nprocs, slots[i], 1u, sizeof(buffer[0]), LPF_MSG_DEFAULT );
-    }
+  rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    lpf_sync( lpf, LPF_SYNC_DEFAULT );
+  for (i = 0; i < 10; ++i) {
+    lpf_put(lpf, slots[i], 0u, (pid + i) % nprocs, slots[i], 1u,
+            sizeof(buffer[0]), LPF_MSG_DEFAULT);
+  }
 
-    EXPECT_STREQ( "DDttsseettssmmttaadd", buffer );
+  lpf_sync(lpf, LPF_SYNC_DEFAULT);
 
-    for (i = 0; i < 10; ++i)  
-        lpf_deregister( lpf, slots[i] );
+  EXPECT_STREQ("DDttsseettssmmttaadd", buffer);
+
+  for (i = 0; i < 10; ++i)
+    lpf_deregister(lpf, slots[i]);
 }
 
-/** 
+/**
  * \test Allocate some registers, use some, and allocate some more.
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_lpf_register_global_parallel_grow )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_lpf_register_global_parallel_grow) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }

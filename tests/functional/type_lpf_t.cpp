@@ -15,26 +15,24 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
-
-/** 
+/**
  * \test Test the existence of typedef lpf_t and its equivalence to (void *)
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, type_lpf_t )
-{
-    lpf_t var_d = NULL;
+TEST(API, type_lpf_t) {
+  lpf_t var_d = NULL;
 
-    int x = 5;
-    void * y = & x;
+  int x = 5;
+  void *y = &x;
 
-    lpf_t var_e = y;
-    y = var_d;
+  lpf_t var_e = y;
+  y = var_d;
 
-    EXPECT_EQ( sizeof(lpf_t), sizeof(void *));
-    EXPECT_EQ( NULL, y );
-    EXPECT_EQ( (lpf_t) &x, var_e );
+  EXPECT_EQ(sizeof(lpf_t), sizeof(void *));
+  EXPECT_EQ(NULL, y);
+  EXPECT_EQ((lpf_t)&x, var_e);
 }

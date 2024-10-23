@@ -15,84 +15,81 @@
  * limitations under the License.
  */
 
-
-#include <lpf/core.h>
-#include <lpf/collectives.h>
 #include "gtest/gtest.h"
+#include <lpf/collectives.h>
+#include <lpf/core.h>
 
 #include <math.h>
 
-void elementwise_add( const size_t n, const void * const _in, void * const _out ) {
-          double * const out   =       (double*) _out;
-    const double * const array = (const double*) _in;
-    for( size_t i = 0; i < n; ++i ) {
-        out[ i ] += array[ i ];
-    }
+void elementwise_add(const size_t n, const void *const _in, void *const _out) {
+  double *const out = (double *)_out;
+  const double *const array = (const double *)_in;
+  for (size_t i = 0; i < n; ++i) {
+    out[i] += array[i];
+  }
 }
 
-void spmd( lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p, const lpf_args_t args )
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
-    lpf_memslot_t data_slot;
-    lpf_coll_t coll;
-    lpf_err_t rc;
+void spmd(lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p,
+          const lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
+  lpf_memslot_t data_slot;
+  lpf_coll_t coll;
+  lpf_err_t rc;
 
-    rc = lpf_resize_message_queue( ctx, 2*p );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_resize_memory_register( ctx, 2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_resize_message_queue(ctx, 2 * p);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+  rc = lpf_resize_memory_register(ctx, 2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    const size_t byte_size = (1 << 19) / sizeof(double);
-    const size_t      size = byte_size / sizeof(double);
-    double * data = new double[size];
-    EXPECT_NE( nullptr, data );
+  const size_t byte_size = (1 << 19) / sizeof(double);
+  const size_t size = byte_size / sizeof(double);
+  double *data = new double[size];
+  EXPECT_NE(nullptr, data);
 
-    for( size_t i = 0; i < size; ++i ) {
-        data[ i ] = s;
+  for (size_t i = 0; i < size; ++i) {
+    data[i] = s;
+  }
+
+  rc = lpf_register_global(ctx, data, byte_size, &data_slot);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+
+  rc = lpf_collectives_init(ctx, s, p, 1, 0, byte_size, &coll);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+
+  rc = lpf_combine(coll, data, data_slot, size, sizeof(double),
+                   &elementwise_add, p / 2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+
+  rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
+
+  if (s == p / 2) {
+    for (size_t i = 0; i < size; ++i) {
+      const double num = (double)(coll.P) / 2.0;
+      const double max = (double)(coll.P - 1);
+      EXPECT_EQ(num * max, data[i]);
     }
+  } else {
+    // standard declares contents of data as undefined
+  }
 
-    rc = lpf_register_global( ctx, data, byte_size, &data_slot );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, 1, 0, byte_size, &coll );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_deregister(ctx, data_slot);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_combine( coll, data, data_slot, size, sizeof(double), &elementwise_add, p / 2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    if( s == p / 2 ) {
-        for( size_t i = 0; i < size; ++i ) {
-              const double num = (double)(coll.P) / 2.0;
-              const double max = (double)(coll.P-1);
-              EXPECT_EQ( num * max, data[i] );
-        }
-    } else {
-        //standard declares contents of data as undefined
-    }
-
-    rc = lpf_collectives_destroy( coll );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    rc = lpf_deregister( ctx, data_slot );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    delete[] data;
+  delete[] data;
 }
 
-/** 
- * \test Initialises one \a lpf_coll_t objects, performs a combine, and deletes the \a lpf_coll_t object.
- * \pre P >= 1
- * \return Exit code: 0
+/**
+ * \test Initialises one \a lpf_coll_t objects, performs a combine, and deletes
+ * the \a lpf_coll_t object. \pre P >= 1 \return Exit code: 0
  */
-TEST( COLL, func_lpf_combine )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(COLL, func_lpf_combine) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

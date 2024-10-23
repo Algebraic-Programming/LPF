@@ -15,47 +15,43 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 1, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
- 
-    char a = 'a';
-    char b = 'b';
-    rc = bsplib_push_reg( bsplib, &a, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync( bsplib  );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 1, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc =bsplib_put( bsplib, 0, &b, &a, 1, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
-    rc =bsplib_put( bsplib, 0, &b, &a, 0, sizeof( a ) * 2 );
-    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
+  char a = 'a';
+  char b = 'b';
+  rc = bsplib_push_reg(bsplib, &a, sizeof(a));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_put( bsplib, 
-            bsplib_nprocs( bsplib ), &b, &a, 0, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_ERR_PID_OUT_OF_RANGE, rc );
+  rc = bsplib_put(bsplib, 0, &b, &a, 1, sizeof(a));
+  EXPECT_EQ(BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc);
+  rc = bsplib_put(bsplib, 0, &b, &a, 0, sizeof(a) * 2);
+  EXPECT_EQ(BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_put(bsplib, bsplib_nprocs(bsplib), &b, &a, 0, sizeof(a));
+  EXPECT_EQ(BSPLIB_ERR_PID_OUT_OF_RANGE, rc);
+
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
- * \test Tests some common illegal cases with lpf_put. 
+/**
+ * \test Tests some common illegal cases with lpf_put.
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_put_exceptions )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_put_exceptions) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

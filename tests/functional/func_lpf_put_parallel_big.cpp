@@ -24,58 +24,55 @@
 
 #include <gtest/gtest.h>
 
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg) {
+  (void)arg;
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t arg )
-{
-    (void) arg;
+  lpf_resize_message_queue(lpf, 2 * nprocs - 2);
+  lpf_resize_memory_register(lpf, 2);
 
-    lpf_resize_message_queue( lpf, 2*nprocs-2 );
-    lpf_resize_memory_register( lpf, 2);
+  lpf_sync(lpf, LPF_SYNC_DEFAULT);
 
-    lpf_sync( lpf, LPF_SYNC_DEFAULT );
+  const size_t blocksize = 99999;
+  const size_t bufsize = nprocs * blocksize;
+  char *srcbuf = (char *)calloc(bufsize, 1);
+  char *dstbuf = (char *)calloc(bufsize, 1);
 
-    const size_t blocksize = 99999;
-    const size_t bufsize = nprocs * blocksize;
-    char * srcbuf = (char *) calloc( bufsize, 1 );
-    char * dstbuf = (char *) calloc( bufsize, 1 );
+  lpf_memslot_t srcslot = LPF_INVALID_MEMSLOT;
+  lpf_memslot_t dstslot = LPF_INVALID_MEMSLOT;
 
-    lpf_memslot_t srcslot = LPF_INVALID_MEMSLOT;
-    lpf_memslot_t dstslot = LPF_INVALID_MEMSLOT;
+  lpf_register_global(lpf, srcbuf, bufsize, &srcslot);
+  lpf_register_global(lpf, dstbuf, bufsize, &dstslot);
 
-    lpf_register_global( lpf, srcbuf, bufsize, &srcslot);
-    lpf_register_global( lpf, dstbuf, bufsize, &dstslot);
-
-    int i = 0;
-    for (i= 0; i < 3; ++i ) {
-       lpf_err_t rc = lpf_sync( lpf, LPF_SYNC_DEFAULT ) ;
-       EXPECT_EQ( LPF_SUCCESS, rc );
-       size_t dstoffset = 0;
-       size_t srcoffset = 0;
-       unsigned p;
-       for ( p = 0; p < nprocs; ++p ) {
-           dstoffset = p * blocksize; 
-           if (pid != p) lpf_put( lpf, srcslot, srcoffset, p, dstslot, dstoffset, blocksize, LPF_MSG_DEFAULT);
-           srcoffset += blocksize;
-       }
+  int i = 0;
+  for (i = 0; i < 3; ++i) {
+    lpf_err_t rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
+    EXPECT_EQ(LPF_SUCCESS, rc);
+    size_t dstoffset = 0;
+    size_t srcoffset = 0;
+    unsigned p;
+    for (p = 0; p < nprocs; ++p) {
+      dstoffset = p * blocksize;
+      if (pid != p)
+        lpf_put(lpf, srcslot, srcoffset, p, dstslot, dstoffset, blocksize,
+                LPF_MSG_DEFAULT);
+      srcoffset += blocksize;
     }
+  }
 
-    lpf_err_t rc = lpf_sync( lpf, LPF_SYNC_DEFAULT ) ;
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  lpf_err_t rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    lpf_deregister( lpf, srcslot );
-    lpf_deregister( lpf, dstslot );
+  lpf_deregister(lpf, srcslot);
+  lpf_deregister(lpf, dstslot);
 }
 
-
-/** 
+/**
  * \test Test lpf_put by sending messages larger than max MPI message size
  * \pre P >= 2
  * \note Extra lpfrun parameters: -max-mpi-msg-size 500
  * \return Exit code: 0
  */
-TEST(API, func_lpf_put_parallel_big)
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
+TEST(API, func_lpf_put_parallel_big) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }

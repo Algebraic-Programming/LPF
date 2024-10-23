@@ -15,57 +15,52 @@
  * limitations under the License.
  */
 
-
-#include <lpf/core.h>
-#include <lpf/collectives.h>
 #include "gtest/gtest.h"
+#include <lpf/collectives.h>
+#include <lpf/core.h>
 
+void spmd(lpf_t ctx, lpf_pid_t s, lpf_pid_t p, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
+  lpf_coll_t coll1, coll2, coll3, coll4;
+  lpf_err_t rc;
 
-void spmd( lpf_t ctx, lpf_pid_t s, lpf_pid_t p, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
-    lpf_coll_t coll1, coll2, coll3, coll4;
-    lpf_err_t rc;
+  rc = lpf_resize_memory_register(ctx, 4);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_resize_memory_register( ctx, 4 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_init(ctx, s, p, 1, 0, 0, &coll1);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, 1, 0, 0, &coll1 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_init(ctx, s, p, 1, 8, 0, &coll2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, 1, 8, 0, &coll2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_init(ctx, s, p, (1 << 7), 0, (1 << 19), &coll3);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, (1<<7), 0, (1<<19), &coll3 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_init(ctx, s, p, (1 << 4), 8, (1 << 25), &coll4);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_init( ctx, s, p, (1<<4), 8, (1<<25), &coll4 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll1);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_destroy( coll1 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll2);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_destroy( coll2 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll3);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 
-    rc = lpf_collectives_destroy( coll3 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
-
-    rc = lpf_collectives_destroy( coll4 );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+  rc = lpf_collectives_destroy(coll4);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Initialises lpf_coll_t objects and deletes them.
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( COLL, func_lpf_collectives_init )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(COLL, func_lpf_collectives_init) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

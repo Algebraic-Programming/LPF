@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
+#include "Test.h"
 #include <lpf/core.h>
 #include <lpf/pthread.h>
-#include "Test.h"
 
 #include <pthread.h>
 #include <unistd.h>
@@ -26,95 +26,89 @@ pthread_key_t pid_key;
 
 /** Process information */
 struct thread_local_data {
-    /** Number of processes */
-    long P;
+  /** Number of processes */
+  long P;
 
-    /** Process ID */
-    long s;
+  /** Process ID */
+  long s;
 };
 
-void lpf_spmd( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
-{
-    (void) ctx;
-    const struct thread_local_data * const data = pthread_getspecific( pid_key );
+void lpf_spmd(lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)ctx;
+  const struct thread_local_data *const data = pthread_getspecific(pid_key);
 
-    EXPECT_EQ( "%zd", (size_t)nprocs, (size_t)(data->P) );
-    EXPECT_EQ( "%zd", (size_t)pid, (size_t)(data->s) );
-    EXPECT_EQ( "%zd", (size_t)(args.input_size), (size_t)(sizeof( struct thread_local_data)) );
-    EXPECT_EQ( "%zd", (size_t)(args.output_size), (size_t)0 );
-    EXPECT_EQ( "%p", args.input, data );
-    EXPECT_EQ( "%p", args.output, NULL );
+  EXPECT_EQ("%zd", (size_t)nprocs, (size_t)(data->P));
+  EXPECT_EQ("%zd", (size_t)pid, (size_t)(data->s));
+  EXPECT_EQ("%zd", (size_t)(args.input_size),
+            (size_t)(sizeof(struct thread_local_data)));
+  EXPECT_EQ("%zd", (size_t)(args.output_size), (size_t)0);
+  EXPECT_EQ("%p", args.input, data);
+  EXPECT_EQ("%p", args.output, NULL);
 }
 
-void * pthread_spmd( void * _data ) {
-    EXPECT_NE( "%p", _data, NULL );
+void *pthread_spmd(void *_data) {
+  EXPECT_NE("%p", _data, NULL);
 
-    const struct thread_local_data data = * ((struct thread_local_data*) _data);
-    const int pts_rc = pthread_setspecific( pid_key, _data );
-    lpf_args_t args;
-    args.input = _data;
-    args.input_size  = sizeof(data);
-    args.output =  NULL;
-    args.output_size = 0;
-    args.f_symbols = NULL;
-    args.f_size = 0;
-    lpf_init_t init;
-    lpf_err_t rc = LPF_SUCCESS;
+  const struct thread_local_data data = *((struct thread_local_data *)_data);
+  const int pts_rc = pthread_setspecific(pid_key, _data);
+  lpf_args_t args;
+  args.input = _data;
+  args.input_size = sizeof(data);
+  args.output = NULL;
+  args.output_size = 0;
+  args.f_symbols = NULL;
+  args.f_size = 0;
+  lpf_init_t init;
+  lpf_err_t rc = LPF_SUCCESS;
 
-    EXPECT_EQ( "%d", pts_rc, 0 );
+  EXPECT_EQ("%d", pts_rc, 0);
 
-    rc = lpf_pthread_initialize(
-        (lpf_pid_t)data.s,
-        (lpf_pid_t)data.P,
-        &init
-    );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+  rc = lpf_pthread_initialize((lpf_pid_t)data.s, (lpf_pid_t)data.P, &init);
+  EXPECT_EQ("%d", rc, LPF_SUCCESS);
 
-    rc = lpf_hook( init, &lpf_spmd, args );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+  rc = lpf_hook(init, &lpf_spmd, args);
+  EXPECT_EQ("%d", rc, LPF_SUCCESS);
 
-    rc = lpf_pthread_finalize( init );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+  rc = lpf_pthread_finalize(init);
+  EXPECT_EQ("%d", rc, LPF_SUCCESS);
 
-    return NULL;
+  return NULL;
 }
 
-/** 
+/**
  * \test Tests lpf_hook on pthread implementation
  * \pre P <= 1
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( func_lpf_hook_simple_pthread )
-{
-    long k = 0;
-    const long P = sysconf( _SC_NPROCESSORS_ONLN );
+TEST(func_lpf_hook_simple_pthread) {
+  long k = 0;
+  const long P = sysconf(_SC_NPROCESSORS_ONLN);
 
-    const int ptc_rc = pthread_key_create( &pid_key, NULL );
-    EXPECT_EQ( "%d", ptc_rc, 0 );
+  const int ptc_rc = pthread_key_create(&pid_key, NULL);
+  EXPECT_EQ("%d", ptc_rc, 0);
 
-    pthread_t * const threads = (pthread_t*) malloc( P * sizeof(pthread_t) );
-    EXPECT_NE( "%p", threads, NULL );
+  pthread_t *const threads = (pthread_t *)malloc(P * sizeof(pthread_t));
+  EXPECT_NE("%p", threads, NULL);
 
-    struct thread_local_data * const data = (struct thread_local_data*) malloc( P * sizeof(struct thread_local_data) );
-    EXPECT_NE( "%p", data, NULL );
+  struct thread_local_data *const data =
+      (struct thread_local_data *)malloc(P * sizeof(struct thread_local_data));
+  EXPECT_NE("%p", data, NULL);
 
-    for( k = 0; k < P; ++k ) {
-        data[ k ].P = P;
-        data[ k ].s = k;
-        const int rval = pthread_create( threads + k, NULL, &pthread_spmd, data + k );
-        EXPECT_EQ( "%d", rval, 0 );
-    }
+  for (k = 0; k < P; ++k) {
+    data[k].P = P;
+    data[k].s = k;
+    const int rval = pthread_create(threads + k, NULL, &pthread_spmd, data + k);
+    EXPECT_EQ("%d", rval, 0);
+  }
 
-    for( k = 0; k < P; ++k ) {
-        const int rval = pthread_join( threads[ k ], NULL );
-        EXPECT_EQ( "%d", rval, 0 );
-    }
+  for (k = 0; k < P; ++k) {
+    const int rval = pthread_join(threads[k], NULL);
+    EXPECT_EQ("%d", rval, 0);
+  }
 
-    const int ptd_rc = pthread_key_delete( pid_key );
-    EXPECT_EQ( "%d", ptd_rc, 0 );
+  const int ptd_rc = pthread_key_delete(pid_key);
+  EXPECT_EQ("%d", ptd_rc, 0);
 
-    return 0;
+  return 0;
 }
-
-

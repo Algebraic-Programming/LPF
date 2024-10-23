@@ -15,63 +15,58 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    int a = 0;
-    int c = -1;
-    rc = bsplib_push_reg( bsplib, &a, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_push_reg( bsplib, &c, sizeof( c ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  int a = 0;
+  int c = -1;
+  rc = bsplib_push_reg(bsplib, &a, sizeof(a));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_push_reg(bsplib, &c, sizeof(c));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_sync( bsplib  );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    int b = 2;
-    rc = bsplib_put( bsplib, 0, &b, &a, 0, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  int b = 2;
+  rc = bsplib_put(bsplib, 0, &b, &a, 0, sizeof(a));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( 0, a );
-    EXPECT_EQ( 2, b );
-    EXPECT_EQ( -1, c );
+  EXPECT_EQ(0, a);
+  EXPECT_EQ(2, b);
+  EXPECT_EQ(-1, c);
 
-    rc = bsplib_pop_reg( bsplib, &a );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_pop_reg( bsplib, &c );  // non-stack order!
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync( bsplib );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_pop_reg(bsplib, &a);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_pop_reg(bsplib, &c); // non-stack order!
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( bsplib_pid( bsplib ) == 0 ? 2 : 0, a );
-    EXPECT_EQ( 2, b );
-    EXPECT_EQ( -1, c );
+  EXPECT_EQ(bsplib_pid(bsplib) == 0 ? 2 : 0, a);
+  EXPECT_EQ(2, b);
+  EXPECT_EQ(-1, c);
 
-
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Test a basic use case with bsp_push_reg and bsp_pop_reg
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_pushpopreg_normal )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_pushpopreg_normal) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

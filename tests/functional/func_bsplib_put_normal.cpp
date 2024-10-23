@@ -15,81 +15,70 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
 #include <stdint.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
-    int i;
-    const int n = 10;
-    uint32_t memory[n];
-    uint32_t *array = memory + 2;
-    int length = 5;
-    rc = bsplib_push_reg(bsplib, array, length );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  int i;
+  const int n = 10;
+  uint32_t memory[n];
+  uint32_t *array = memory + 2;
+  int length = 5;
+  rc = bsplib_push_reg(bsplib, array, length);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    uint32_t value = 0x12345678;
-    rc = bsplib_put(bsplib, 
-            ( bsplib_pid(bsplib) + 1 ) % bsplib_nprocs(bsplib),
-            &value, array, 0,
-        sizeof( value ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_pop_reg(bsplib, array );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    for ( i = 0; i < n; ++i )
-    {
-        memory[i] = 0xAAAAAAAAu;
+  uint32_t value = 0x12345678;
+  rc = bsplib_put(bsplib, (bsplib_pid(bsplib) + 1) % bsplib_nprocs(bsplib),
+                  &value, array, 0, sizeof(value));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_pop_reg(bsplib, array);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+
+  for (i = 0; i < n; ++i) {
+    memory[i] = 0xAAAAAAAAu;
+  }
+
+  for (i = 0; i < n; ++i) {
+    EXPECT_EQ(0xAAAAAAAAu, memory[i]);
+  }
+  EXPECT_EQ(0x12345678u, value);
+
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+
+  for (i = 0; i < n; ++i) {
+    if (2 != i) {
+      EXPECT_EQ(0xAAAAAAAAu, memory[i]);
+    } else {
+      EXPECT_EQ(0x12345678u, memory[i]);
     }
+  }
+  EXPECT_EQ(0x12345678u, value);
 
-    for ( i = 0; i < n; ++i )
-    {
-        EXPECT_EQ( 0xAAAAAAAAu, memory[i] );
-    }
-    EXPECT_EQ( 0x12345678u, value );
-
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-
-    for ( i = 0; i < n; ++i )
-    {
-        if ( 2 != i )
-        {
-            EXPECT_EQ( 0xAAAAAAAAu, memory[i] );
-        }
-        else
-        {
-            EXPECT_EQ( 0x12345678u, memory[i] );
-        }
-    }
-    EXPECT_EQ( 0x12345678u, value );
-
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
- * \test Tests a normal lpf_put case. 
+/**
+ * \test Tests a normal lpf_put case.
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_put_normal)
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_put_normal) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

@@ -15,20 +15,18 @@
  * limitations under the License.
  */
 
+#include "gtest/gtest.h"
 #include <lpf/core.h>
 #include <string.h>
-#include "gtest/gtest.h"
 
-
-/** 
+/**
  * \test Test lpf_exec error of starting a NULL spmd
  * \pre P >= 1
  * \return Message: NULL spmd argument
  * \return Exit code: 6
  */
-TEST( API, func_lpf_debug_exec_null_spmd )
-{
-    lpf_err_t rc = LPF_SUCCESS;
-    EXPECT_EQ(lpf_exec( LPF_ROOT, LPF_MAX_P, NULL, LPF_NO_ARGS ), rc);
-    FAIL();
+TEST(API, func_lpf_debug_exec_null_spmd) {
+  lpf_err_t rc = LPF_SUCCESS;
+  EXPECT_EQ(lpf_exec(LPF_ROOT, LPF_MAX_P, NULL, LPF_NO_ARGS), rc);
+  FAIL();
 }

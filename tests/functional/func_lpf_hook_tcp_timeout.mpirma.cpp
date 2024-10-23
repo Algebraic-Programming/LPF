@@ -15,39 +15,34 @@
  * limitations under the License.
  */
 
+#include "Test.h"
 #include <lpf/core.h>
 #include <lpf/mpi.h>
-#include "Test.h"
 
-#include <stdlib.h>
 #include <mpi.h>
+#include <stdlib.h>
 
 // Disable automatic initialization.
-const int LPF_MPI_AUTO_INITIALIZE=0; 
+const int LPF_MPI_AUTO_INITIALIZE = 0;
 
-/** 
- * \test Tests lpf_hook on mpi implementation using TCP/IP to initialize, while a timeout happens and _exit() is not called right away.
- * \pre P >= 100
- * \pre P <= 100
- * \return Exit code: 1
+/**
+ * \test Tests lpf_hook on mpi implementation using TCP/IP to initialize, while
+ * a timeout happens and _exit() is not called right away. \pre P >= 100 \pre P
+ * <= 100 \return Exit code: 1
  */
-TEST( func_lpf_hook_tcp_timeout_mpi )
-{
-    MPI_Init(NULL, NULL);
+TEST(func_lpf_hook_tcp_timeout_mpi) {
+  MPI_Init(NULL, NULL);
 
-    int pid, nprocs;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+  int pid, nprocs;
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
-    lpf_err_t rc = LPF_SUCCESS;
-    lpf_init_t init;
-    rc = lpf_mpi_initialize_over_tcp( 
-            "localhost", "9325", 999,
-            pid, nprocs, &init);
+  lpf_err_t rc = LPF_SUCCESS;
+  lpf_init_t init;
+  rc =
+      lpf_mpi_initialize_over_tcp("localhost", "9325", 999, pid, nprocs, &init);
 
-    EXPECT_EQ( "%d", rc, LPF_ERR_FATAL );
+  EXPECT_EQ("%d", rc, LPF_ERR_FATAL);
 
-    return 0;
+  return 0;
 }
-
-

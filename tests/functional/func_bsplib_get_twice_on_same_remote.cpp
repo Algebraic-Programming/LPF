@@ -15,94 +15,89 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
 #include <stdint.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    char x = 'x';
-    char y = 'y';
-    char z = 'z';
+  char x = 'x';
+  char y = 'y';
+  char z = 'z';
 
-    rc = bsplib_push_reg(bsplib, &x, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_push_reg(bsplib, &y, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_push_reg(bsplib, &x, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_push_reg(bsplib, &y, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    if ( bsplib_pid(bsplib) == 0 )
-        rc = bsplib_get(bsplib, 1, &x, 0, &y, sizeof( x ) );
-    else if ( bsplib_pid(bsplib) == 1 )
-        rc = bsplib_get(bsplib, 0, &y, 0, &z, sizeof( y ) );
+  if (bsplib_pid(bsplib) == 0)
+    rc = bsplib_get(bsplib, 1, &x, 0, &y, sizeof(x));
+  else if (bsplib_pid(bsplib) == 1)
+    rc = bsplib_get(bsplib, 0, &y, 0, &z, sizeof(y));
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( 'y', y );
-    EXPECT_EQ( 'z', z );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ('y', y);
+  EXPECT_EQ('z', z);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( bsplib_pid(bsplib) == 0 ? 'x' : 'y', y );
-    EXPECT_EQ( bsplib_pid(bsplib) == 1 ? 'y' : 'z', z );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ(bsplib_pid(bsplib) == 0 ? 'x' : 'y', y);
+  EXPECT_EQ(bsplib_pid(bsplib) == 1 ? 'y' : 'z', z);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    // redo the previous but now the order of pid 0 and 1 reversed
+  // redo the previous but now the order of pid 0 and 1 reversed
 
-    x = 'x';
-    y = 'y';
-    z = 'z';
+  x = 'x';
+  y = 'y';
+  z = 'z';
 
-    rc = bsplib_push_reg(bsplib, &x, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_push_reg(bsplib, &y, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_push_reg(bsplib, &x, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_push_reg(bsplib, &y, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    if ( bsplib_pid(bsplib) == 1 )
-        rc = bsplib_get(bsplib, 0, &x, 0, &y, sizeof( x ) );
-    else if ( bsplib_pid(bsplib) == 0 )
-        rc = bsplib_get(bsplib, 1, &y, 0, &z, sizeof( y ) );
+  if (bsplib_pid(bsplib) == 1)
+    rc = bsplib_get(bsplib, 0, &x, 0, &y, sizeof(x));
+  else if (bsplib_pid(bsplib) == 0)
+    rc = bsplib_get(bsplib, 1, &y, 0, &z, sizeof(y));
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( 'y', y );
-    EXPECT_EQ( 'z', z );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ('y', y);
+  EXPECT_EQ('z', z);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( bsplib_pid(bsplib) == 1 ? 'x' : 'y', y );
-    EXPECT_EQ( bsplib_pid(bsplib) == 0 ? 'y' : 'z', z );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ(bsplib_pid(bsplib) == 1 ? 'x' : 'y', y);
+  EXPECT_EQ(bsplib_pid(bsplib) == 0 ? 'y' : 'z', z);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
- * \test Tests two lpf_gets where one memory location serves as source and destination for two gets
- * \pre P >= 2
- * \return Exit code: 0
+/**
+ * \test Tests two lpf_gets where one memory location serves as source and
+ * destination for two gets \pre P >= 2 \return Exit code: 0
  */
-TEST(API, func_bsplib_get_twice_on_same_remote )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_get_twice_on_same_remote) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

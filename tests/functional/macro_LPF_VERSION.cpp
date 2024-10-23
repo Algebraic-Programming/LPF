@@ -15,25 +15,22 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
 #ifdef _LPF_VERSION
-  #if _LPF_VERSION == 202000L
-    // everything is OK
-  #else
-     #error Macro _LPF_VERSION has not been defined as 202000L
-  #endif
+#if _LPF_VERSION == 202000L
+// everything is OK
 #else
-   #error Macro _LPF_VERSION has not been defined
+#error Macro _LPF_VERSION has not been defined as 202000L
+#endif
+#else
+#error Macro _LPF_VERSION has not been defined
 #endif
 
-/** 
+/**
  * \test Test the existence and value of the preprocessor macro _LPF_VERSION
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, macro_LPF_VERSION )
-{
-    EXPECT_EQ( 202000L, _LPF_VERSION );
-}
+TEST(API, macro_LPF_VERSION) { EXPECT_EQ(202000L, _LPF_VERSION); }

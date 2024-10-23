@@ -15,69 +15,62 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 0, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
-    int i;
-    int p = bsplib_nprocs(bsplib);
-    int a[p];
-    int b[p];
-    memset( b, 0, sizeof( b ) );
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 0, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    for ( i = 0; i < p; ++i )
-    {
-        a[i] = bsplib_pid(bsplib) * i;
-    }
+  int i;
+  int p = bsplib_nprocs(bsplib);
+  int a[p];
+  int b[p];
+  memset(b, 0, sizeof(b));
 
-    rc = bsplib_push_reg(bsplib, &a, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  for (i = 0; i < p; ++i) {
+    a[i] = bsplib_pid(bsplib) * i;
+  }
 
-    for ( i = 0; i < p; ++i )
-    {
-        lpf_pid_t srcPid = i;
-        size_t srcOffset = i;
+  rc = bsplib_push_reg(bsplib, &a, sizeof(a));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-        rc = bsplib_get(bsplib, 
-                srcPid, a, srcOffset * sizeof( a[0] ), b + i,
-            sizeof( a[0] ) );
-        EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    }
+  for (i = 0; i < p; ++i) {
+    lpf_pid_t srcPid = i;
+    size_t srcOffset = i;
 
-    rc = bsplib_pop_reg(bsplib, &a );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+    rc = bsplib_get(bsplib, srcPid, a, srcOffset * sizeof(a[0]), b + i,
+                    sizeof(a[0]));
+    EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  }
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    for ( i = 0; i < p; ++i )
-    {
-        EXPECT_EQ( i * i, b[i] );
-    }
+  rc = bsplib_pop_reg(bsplib, &a);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  for (i = 0; i < p; ++i) {
+    EXPECT_EQ(i * i, b[i]);
+  }
+
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Tests a common case of a bsplib_get in unsafe mode
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_get_normal_unsafemode )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_get_normal_unsafemode) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

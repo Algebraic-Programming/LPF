@@ -15,66 +15,62 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    int c[2] = { 0, 0};
-    int a[2];
-    memset( a, 0, sizeof(a));
-    rc = bsplib_push_reg( bsplib, a, sizeof( a ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  int c[2] = {0, 0};
+  int a[2];
+  memset(a, 0, sizeof(a));
+  rc = bsplib_push_reg(bsplib, a, sizeof(a));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_push_reg( bsplib, a, sizeof( int ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_push_reg(bsplib, a, sizeof(int));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_sync( bsplib  );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_pop_reg( bsplib, a );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_pop_reg(bsplib, a);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_pop_reg( bsplib, a );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_pop_reg(bsplib, a);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    int b = 2;
-    rc = bsplib_put( bsplib, 0, &b, a, 0, sizeof( int ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  int b = 2;
+  rc = bsplib_put(bsplib, 0, &b, a, 0, sizeof(int));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_put( bsplib, 0, c, a, 0, sizeof( c) );
-    EXPECT_EQ( BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc );
+  rc = bsplib_put(bsplib, 0, c, a, 0, sizeof(c));
+  EXPECT_EQ(BSPLIB_ERR_MEMORY_ACCESS_OUT_OF_RANGE, rc);
 
-    EXPECT_EQ( 0, a[0] );
-    EXPECT_EQ( 2, b );
-    rc = bsplib_sync( bsplib );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  EXPECT_EQ(0, a[0]);
+  EXPECT_EQ(2, b);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( bsplib_pid( bsplib ) == 0 ? 2 : 0, a[0] );
-    EXPECT_EQ( 2, b );
+  EXPECT_EQ(bsplib_pid(bsplib) == 0 ? 2 : 0, a[0]);
+  EXPECT_EQ(2, b);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Test a case where two pop_regs are issued before the two puts
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_pushpopreg_two_pops_before_two_puts )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_pushpopreg_two_pops_before_two_puts) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

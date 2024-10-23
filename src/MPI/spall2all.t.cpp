@@ -15,159 +15,149 @@
  * limitations under the License.
  */
 
+#include "assert.hpp"
+#include "mpilib.hpp"
 #include "spall2all.h"
 #include "spall2all.hpp"
-#include "mpilib.hpp"
-#include "assert.hpp"
-#include <cstdlib>
-#include <cmath>
-#include <string>
-#include <limits>
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <string>
 
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE = 0;
 
-/** 
+/**
  * \pre P >= 1
  * \pre P <= 2
  */
 class SparseAll2AllTests : public testing::Test {
 
-    protected:
+protected:
+  static void SetUpTestSuite() {
 
-    static void SetUpTestSuite() {
+    MPI_Init(NULL, NULL);
+    Lib::instance();
 
-       MPI_Init(NULL, NULL);
-       Lib::instance();
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  }
 
-        MPI_Comm_rank( MPI_COMM_WORLD, &my_pid );
-        MPI_Comm_size( MPI_COMM_WORLD, &nprocs );
+  static void TearDownTestSuite() { MPI_Finalize(); }
 
-    }
-
-    static void TearDownTestSuite() {
-        MPI_Finalize();
-    }
-
-    static int my_pid;
-    static int nprocs;
+  static int my_pid;
+  static int nprocs;
 };
 
 int SparseAll2AllTests::my_pid = -1;
 int SparseAll2AllTests::nprocs = -1;
 
+TEST_F(SparseAll2AllTests, EnoughMemory) {
 
-TEST_F( SparseAll2AllTests, EnoughMemory )
-{
+  using namespace std;
+  using namespace lpf::mpi;
 
-using namespace std;
-using namespace lpf::mpi;
+  // Parameters
+  // Maximum number of items to send to any process
+  const int N = 10;
 
-// Parameters
-// Maximum number of items to send to any process
-const int N = 10;
-
-// The number of bytes to send N items
-const int M = N * (6 + 2*(int) ceil(1+log10(nprocs)) );
+  // The number of bytes to send N items
+  const int M = N * (6 + 2 * (int)ceil(1 + log10(nprocs)));
 
 // Note: the number of bytes is derived from the message format, as below
-#define NEW_MSG( buf, my_pid, dst_pid, character) \
-    snprintf( (buf), sizeof(buf), "(%d, %d)%c;", (my_pid), (dst_pid), (character) )
+#define NEW_MSG(buf, my_pid, dst_pid, character)                               \
+  snprintf((buf), sizeof(buf), "(%d, %d)%c;", (my_pid), (dst_pid), (character))
 
-    sparse_all_to_all_t spt;
-    double epsilon = 1e-20; // bound of probability of failure (using Chernoff bounds)
-    size_t max_tmp_bytes = size_t( ceil(3-log(epsilon)/N)*M );
-    size_t max_tmp_msgs = size_t( ceil(3-log(epsilon)/N)*N );
-    uint64_t rng_seed = 0;
-    sparse_all_to_all_create( &spt, my_pid, nprocs, rng_seed, 1, 
-            std::numeric_limits<int>::max() );
-    int error = sparse_all_to_all_reserve( &spt, max_tmp_bytes, max_tmp_msgs );
-    EXPECT_EQ( 0, error );
+  sparse_all_to_all_t spt;
+  double epsilon =
+      1e-20; // bound of probability of failure (using Chernoff bounds)
+  size_t max_tmp_bytes = size_t(ceil(3 - log(epsilon) / N) * M);
+  size_t max_tmp_msgs = size_t(ceil(3 - log(epsilon) / N) * N);
+  uint64_t rng_seed = 0;
+  sparse_all_to_all_create(&spt, my_pid, nprocs, rng_seed, 1,
+                           std::numeric_limits<int>::max());
+  int error = sparse_all_to_all_reserve(&spt, max_tmp_bytes, max_tmp_msgs);
+  EXPECT_EQ(0, error);
 
-    srand(my_pid*1000);
+  srand(my_pid * 1000);
 
-    std::vector<char> a2a_send(nprocs*M);
-    std::vector<char> a2a_recv(nprocs*M*100);
-    std::vector<int> a2a_send_counts(nprocs);
-    std::vector<int> a2a_send_offsets(nprocs);
-    std::vector<int> a2a_recv_counts(nprocs);
-    std::vector<int> a2a_recv_offsets(nprocs);
+  std::vector<char> a2a_send(nprocs * M);
+  std::vector<char> a2a_recv(nprocs * M * 100);
+  std::vector<int> a2a_send_counts(nprocs);
+  std::vector<int> a2a_send_offsets(nprocs);
+  std::vector<int> a2a_recv_counts(nprocs);
+  std::vector<int> a2a_recv_offsets(nprocs);
 
-    for (int i = 0; i < nprocs; ++i)
-    {
-        a2a_send_counts[i] = 0;
-        a2a_send_offsets[i] = i*M;
-        a2a_recv_counts[i] = 100*M;
-        a2a_recv_offsets[i] = i*100*M;
-    }
+  for (int i = 0; i < nprocs; ++i) {
+    a2a_send_counts[i] = 0;
+    a2a_send_offsets[i] = i * M;
+    a2a_recv_counts[i] = 100 * M;
+    a2a_recv_offsets[i] = i * 100 * M;
+  }
 
-    int n = rand() / (1.0 + RAND_MAX) * N;
+  int n = rand() / (1.0 + RAND_MAX) * N;
 
-    for (int i = 0; i < n; ++i) {
-        char c = rand() % 26 + 'A';
-        int dst_pid = rand() / (1.0 + RAND_MAX) * nprocs;
-        char buf[M];
-        size_t size = NEW_MSG(buf, my_pid, dst_pid, c); 
-        int rc = sparse_all_to_all_send( &spt, dst_pid, buf, size );
-        EXPECT_EQ( 0, rc );
-
-        char * a2a_buf = &a2a_send[0] + a2a_send_offsets[dst_pid] + a2a_send_counts[dst_pid];
-        memcpy( a2a_buf , buf, size );
-        a2a_send_counts[dst_pid] += size;
-        ASSERT( a2a_send_counts[dst_pid] <= M );
-    }
-
-
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Alltoall( &a2a_send_counts[0], 1, MPI_INT, 
-                  &a2a_recv_counts[0], 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Alltoallv( &a2a_send[0], &a2a_send_counts[0], &a2a_send_offsets[0], MPI_BYTE,
-            &a2a_recv[0], &a2a_recv_counts[0], &a2a_recv_offsets[0], MPI_BYTE,
-            MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
-
-
-    error = 1;
-    int vote  = my_pid; int ballot = -1;
-    MPI_Barrier(MPI_COMM_WORLD);
-    error = sparse_all_to_all( MPI_COMM_WORLD, &spt, 1, &vote, &ballot  );
-
-    EXPECT_GE( error, 0 );
-    EXPECT_EQ( (nprocs-1)*nprocs/2, ballot );
-    
-    std::vector< std::string > spall2all_recv_buf(nprocs);
+  for (int i = 0; i < n; ++i) {
+    char c = rand() % 26 + 'A';
+    int dst_pid = rand() / (1.0 + RAND_MAX) * nprocs;
     char buf[M];
-    size_t size = sizeof(buf);
-    while (0 == sparse_all_to_all_recv( &spt, buf, &size ))
-    {
-        spall2all_recv_buf.push_back( std::string( buf, buf+size) );
-        size = sizeof(buf) ;
+    size_t size = NEW_MSG(buf, my_pid, dst_pid, c);
+    int rc = sparse_all_to_all_send(&spt, dst_pid, buf, size);
+    EXPECT_EQ(0, rc);
+
+    char *a2a_buf =
+        &a2a_send[0] + a2a_send_offsets[dst_pid] + a2a_send_counts[dst_pid];
+    memcpy(a2a_buf, buf, size);
+    a2a_send_counts[dst_pid] += size;
+    ASSERT(a2a_send_counts[dst_pid] <= M);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Alltoall(&a2a_send_counts[0], 1, MPI_INT, &a2a_recv_counts[0], 1, MPI_INT,
+               MPI_COMM_WORLD);
+  MPI_Alltoallv(&a2a_send[0], &a2a_send_counts[0], &a2a_send_offsets[0],
+                MPI_BYTE, &a2a_recv[0], &a2a_recv_counts[0],
+                &a2a_recv_offsets[0], MPI_BYTE, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  error = 1;
+  int vote = my_pid;
+  int ballot = -1;
+  MPI_Barrier(MPI_COMM_WORLD);
+  error = sparse_all_to_all(MPI_COMM_WORLD, &spt, 1, &vote, &ballot);
+
+  EXPECT_GE(error, 0);
+  EXPECT_EQ((nprocs - 1) * nprocs / 2, ballot);
+
+  std::vector<std::string> spall2all_recv_buf(nprocs);
+  char buf[M];
+  size_t size = sizeof(buf);
+  while (0 == sparse_all_to_all_recv(&spt, buf, &size)) {
+    spall2all_recv_buf.push_back(std::string(buf, buf + size));
+    size = sizeof(buf);
+  }
+
+  a2a_recv_offsets.push_back(a2a_recv.size());
+  std::vector<std::string> a2a_recv_buf(nprocs);
+  for (int i = 0; i < nprocs; ++i) {
+    const char *ptr = &a2a_recv[0] + a2a_recv_offsets[i];
+    while (ptr - &a2a_recv[0] < a2a_recv_offsets[i] + a2a_recv_counts[i]) {
+      const char *end = &a2a_recv[0] + a2a_recv_offsets[i + 1];
+      end = std::find(ptr, end, ';') + 1;
+
+      a2a_recv_buf.push_back(std::string(ptr, end));
+      ptr = end;
     }
+  }
+  std::sort(spall2all_recv_buf.begin(), spall2all_recv_buf.end());
+  std::sort(a2a_recv_buf.begin(), a2a_recv_buf.end());
 
-    a2a_recv_offsets.push_back( a2a_recv.size() );
-    std::vector< std::string > a2a_recv_buf(nprocs);
-    for ( int i = 0 ; i < nprocs; ++i)
-    {
-        const char * ptr = &a2a_recv[0] + a2a_recv_offsets[i] ;
-        while ( ptr - &a2a_recv[0] < a2a_recv_offsets[i] + a2a_recv_counts[i] ) {
-            const char * end = &a2a_recv[0] + a2a_recv_offsets[i+1];
-            end = std::find( ptr, end, ';')+1;
-
-            a2a_recv_buf.push_back( std::string( ptr, end  ));
-            ptr = end;
-        }
-    }
-    std::sort( spall2all_recv_buf.begin(), spall2all_recv_buf.end() );
-    std::sort( a2a_recv_buf.begin(), a2a_recv_buf.end() );
-
-    EXPECT_EQ( a2a_recv_buf, spall2all_recv_buf );
+  EXPECT_EQ(a2a_recv_buf, spall2all_recv_buf);
 
 #if 0
     std::cout << "[" << my_pid << "] Total elements spall2all: " << spall2all_recv_buf.size() 
@@ -182,188 +172,162 @@ const int M = N * (6 + 2*(int) ceil(1+log10(nprocs)) );
     std::cout << std::endl;
 #endif
 
-    sparse_all_to_all_destroy( &spt );
+  sparse_all_to_all_destroy(&spt);
 }
 
-TEST_F( SparseAll2AllTests, Create )
-{
-    SparseAllToAll x(9, 10);
+TEST_F(SparseAll2AllTests, Create) { SparseAllToAll x(9, 10); }
+
+TEST_F(SparseAll2AllTests, Reserve) { SparseAllToAll x(4, 10); }
+
+TEST_F(SparseAll2AllTests, ReserveUnequal) {
+  SparseAllToAll x(my_pid, nprocs);
+
+  // simulate the case where one of the processes can't
+  // allocate enough buffer space
+  if (my_pid != 0)
+    x.reserve(nprocs * ceil(1 + log2(nprocs)), sizeof(int));
+
+  bool prerandomize = true;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
 }
 
-TEST_F( SparseAll2AllTests, Reserve )
-{
-    SparseAllToAll x( 4,10);
+TEST_F(SparseAll2AllTests, Send) {
+  SparseAllToAll x(my_pid, nprocs);
+  x.reserve(nprocs * ceil(1 + log2(nprocs)), sizeof(int));
+  for (int i = 0; i <= my_pid; ++i)
+    x.send((my_pid + 1) % nprocs, &i, sizeof(i));
+
+  bool prerandomize = true;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
 }
 
-TEST_F( SparseAll2AllTests, ReserveUnequal )
-{
-    SparseAllToAll x( my_pid, nprocs );
+TEST_F(SparseAll2AllTests, Ring) {
 
-    // simulate the case where one of the processes can't 
-    // allocate enough buffer space
-    if (my_pid != 0 )
-        x.reserve( nprocs * ceil(1+log2(nprocs)), sizeof(int) );
+  SparseAllToAll x(my_pid, nprocs);
+  EXPECT_TRUE(x.empty());
+  x.reserve(nprocs * ceil(1 + log2(nprocs)), sizeof(int));
+  x.send((my_pid + 1) % nprocs, &my_pid, sizeof(my_pid));
+
+  EXPECT_FALSE(x.empty());
+
+  bool prerandomize = true;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
+
+  EXPECT_FALSE(x.empty());
+
+  int y = -1;
+  x.recv(&y, sizeof(y));
+  EXPECT_EQ((my_pid + nprocs - 1) % nprocs, y);
+
+  EXPECT_TRUE(x.empty());
+}
+
+TEST_F(SparseAll2AllTests, Access) {
+  SparseAllToAll x(my_pid, nprocs);
+  x.reserve(nprocs * ceil(1 + log2(nprocs)), sizeof(int));
+  EXPECT_TRUE(x.empty());
+
+  for (int i = 0; i <= my_pid; ++i)
+    x.send((my_pid + i + 1) % nprocs, &i, sizeof(i));
+
+  EXPECT_FALSE(x.empty());
+
+  for (int i = 0; i <= my_pid; ++i) {
+    int y;
+    x.recv(&y, sizeof(y));
+    EXPECT_EQ(my_pid - i, y);
+  }
+  EXPECT_TRUE(x.empty());
+}
+
+TEST_F(SparseAll2AllTests, SmallBuf) {
+  SparseAllToAll x(my_pid, nprocs);
+  const int nMsgs = 5;
+  x.reserve(nMsgs, sizeof(int));
+
+  for (int i = 0; i < nMsgs; ++i) {
+    x.send((my_pid + i) % nprocs, &i, sizeof(int));
+  }
+
+  bool prerandomize = true;
+  int error = 0;
+  for (int i = 0; i < 100 && !error; ++i) {
+    error = x.exchange(Lib::instance().world(), prerandomize, NULL, 1);
+  }
+  EXPECT_TRUE(nprocs == 1 || error);
+}
+
+TEST_F(SparseAll2AllTests, SmallBufProc1) {
+
+  SparseAllToAll x(my_pid, nprocs);
+  const int nMsgs = 100;
+  // only one process has a very small buffer space. Still
+  // that has high likelihood to fail
+  x.reserve(my_pid == 1 ? nMsgs : (nMsgs * nMsgs), sizeof(int));
+
+  int failures = 0;
+  for (int j = 0; j < 100; ++j) {
+    x.clear();
+
+    for (int i = 0; i < nMsgs; ++i) {
+      x.send((my_pid + i) % nprocs, &i, sizeof(i));
+    }
 
     bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
+    int error = x.exchange(Lib::instance().world(), prerandomize, NULL, 1);
+    failures += (error ? 1 : 0);
+  }
+  EXPECT_GE(90.0 / nprocs + 10, 100.0 - failures);
 }
 
-TEST_F( SparseAll2AllTests, Send )
-{
-    SparseAllToAll x( my_pid, nprocs );
-    x.reserve( nprocs * ceil(1+log2(nprocs)) , sizeof(int));
-    for (int i = 0; i <= my_pid ; ++i)
-        x.send( (my_pid + 1) % nprocs, &i, sizeof(i) );
+TEST_F(SparseAll2AllTests, ManyMsgs) {
+  SparseAllToAll x(my_pid, nprocs);
+  const int nMsgs = 10000;
+  x.reserve(nMsgs * 2, sizeof(int));
 
-    bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
-}
+  for (int j = 0; j < 10; ++j) {
+    x.clear();
 
-TEST_F( SparseAll2AllTests, Ring )
-{
-
-    SparseAllToAll x(my_pid, nprocs);
-    EXPECT_TRUE(  x.empty() );
-    x.reserve( nprocs * ceil(1+log2(nprocs)) , sizeof(int));
-    x.send( (my_pid + 1) % nprocs, &my_pid, sizeof(my_pid) );
-
-    EXPECT_FALSE(  x.empty() );
-
-    bool prerandomize = true;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
-
-    EXPECT_FALSE(  x.empty() );
-   
-    int y = -1;
-    x.recv( &y, sizeof(y)); 
-    EXPECT_EQ( (my_pid + nprocs -1) % nprocs, y );
-
-    EXPECT_TRUE(  x.empty() );
-}
-
-
-TEST_F( SparseAll2AllTests, Access )
-{
-    SparseAllToAll x(my_pid, nprocs);
-    x.reserve( nprocs * ceil(1+log2(nprocs)) , sizeof(int) );
-    EXPECT_TRUE(  x.empty() );
-
-    for (int i = 0; i <= my_pid ; ++i)
-        x.send( (my_pid + i + 1) % nprocs, &i, sizeof(i) );
-
-    EXPECT_FALSE(  x.empty() );
-
-    for (int i = 0; i<= my_pid; ++i) {
-        int y;
-        x.recv( &y, sizeof(y) );
-        EXPECT_EQ( my_pid - i , y);
-    }
-    EXPECT_TRUE(  x.empty() );
-}
-
-TEST_F( SparseAll2AllTests, SmallBuf )
-{
-    SparseAllToAll x(my_pid, nprocs);
-    const int nMsgs = 5;
-    x.reserve( nMsgs , sizeof(int) );
-
-    for (int i = 0; i < nMsgs; ++i)
-    {
-        x.send( (my_pid + i) % nprocs, &i, sizeof(int) );
+    for (int i = 0; i < nMsgs; ++i) {
+      x.send((my_pid + i) % nprocs, &i, sizeof(i));
     }
 
     bool prerandomize = true;
-    int error = 0;
-    for (int i = 0; i < 100 && !error; ++i)
-    {
-         error = x.exchange( Lib::instance().world(), prerandomize, NULL, 1 );
+    int trials = 5;
+    int error = x.exchange(Lib::instance().world(), prerandomize, NULL, trials);
+    EXPECT_FALSE(error);
+
+    for (int i = 0; i < nMsgs; ++i) {
+      EXPECT_FALSE(x.empty());
+      int k = -1;
+      x.recv(&k, sizeof(k));
+      EXPECT_GE(k, 0);
+      EXPECT_LT(k, nMsgs);
     }
-    EXPECT_TRUE( nprocs == 1 || error );
-
+    EXPECT_TRUE(x.empty());
+  }
 }
 
-TEST_F( SparseAll2AllTests, SmallBufProc1 )
-{
+TEST_F(SparseAll2AllTests, LargeSend) {
 
-    SparseAllToAll x(my_pid, nprocs);
-    const int nMsgs = 100;
-    // only one process has a very small buffer space. Still
-    // that has high likelihood to fail
-    x.reserve( my_pid == 1 ? nMsgs : (nMsgs * nMsgs) , sizeof(int) );
+  std::vector<char> data(size_t(std::numeric_limits<int>::max()) + 10u);
+  for (size_t i = 0; i < data.size(); ++i)
+    data[i] = char(i + my_pid);
 
-    int failures = 0;
-    for (int j = 0; j < 100 ; ++j) {
-        x.clear();
+  SparseAllToAll x(my_pid, nprocs);
+  x.reserve(1, data.size());
+  x.send((my_pid + 1) % nprocs, data.data(), data.size());
 
-        for (int i = 0; i < nMsgs; ++i)
-        {
-            x.send( (my_pid + i) % nprocs, & i, sizeof(i) );
-        }
+  bool prerandomize = false;
+  int error = x.exchange(Lib::instance().world(), prerandomize, NULL);
+  EXPECT_TRUE(!error);
 
-        bool prerandomize = true;
-        int error = x.exchange( Lib::instance().world(), prerandomize, NULL, 1 );
-        failures += ( error ? 1 : 0 ) ;
-    }
-    EXPECT_GE( 90.0 / nprocs + 10 , 100.0-failures  );
-
+  std::fill(data.begin(), data.end(), '\0');
+  x.recv(data.data(), data.size());
+  int j = (nprocs != 1 ? 1 : 0);
+  for (size_t i = 0; i < data.size(); ++i)
+    EXPECT_EQ(char(i + (my_pid + nprocs - j) % nprocs), data[i]);
 }
-
-TEST_F( SparseAll2AllTests, ManyMsgs )
-{
-    SparseAllToAll x(my_pid, nprocs);
-    const int nMsgs = 10000;
-    x.reserve( nMsgs * 2 , sizeof(int) );
-
-    for (int j = 0; j < 10 ; ++j) {
-        x.clear();
-
-        for (int i = 0; i < nMsgs; ++i)
-        {
-            x.send( (my_pid + i) % nprocs, & i, sizeof(i) );
-        }
-
-        bool prerandomize = true;
-        int trials = 5;
-        int error = x.exchange( Lib::instance().world(), prerandomize, 
-                NULL, trials);
-        EXPECT_FALSE( error );
-
-        for (int i = 0; i < nMsgs; ++i)
-        {
-            EXPECT_FALSE( x.empty() );
-            int k = -1;
-            x.recv( &k, sizeof(k));
-            EXPECT_GE( k, 0 );
-            EXPECT_LT( k, nMsgs );
-        }
-        EXPECT_TRUE( x.empty() );
-    }
-}
-
-TEST_F( SparseAll2AllTests, LargeSend )
-{
-
-    std::vector<char> data( size_t(std::numeric_limits<int>::max()) + 10u );
-    for (size_t i = 0; i < data.size(); ++i)
-        data[i] = char(i + my_pid) ;
-
-    SparseAllToAll x( my_pid, nprocs );
-    x.reserve( 1 , data.size() );
-    x.send( (my_pid + 1) % nprocs, data.data(), data.size() );
-
-    bool prerandomize = false;
-    int error = x.exchange( Lib::instance().world(), prerandomize, NULL);
-    EXPECT_TRUE( !error );
-
-    std::fill(data.begin(), data.end(), '\0' );
-    x.recv( data.data(), data.size() );
-    int j = (nprocs != 1?1:0);
-    for (size_t i = 0; i < data.size(); ++i)
-        EXPECT_EQ( char(i + (my_pid + nprocs - j) % nprocs), data[i] ) ;
-
-}
-
-

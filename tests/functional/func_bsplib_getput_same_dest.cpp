@@ -15,59 +15,56 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 1, 2, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
-    char x = 'x';
-    char y = 'y';
-    char z = 'z';
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 1, 2, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_push_reg(bsplib, &x, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_push_reg(bsplib, &z, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  char x = 'x';
+  char y = 'y';
+  char z = 'z';
 
-    rc = bsplib_get(bsplib, 0, &x, 0, &z, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_put(bsplib, 0, &y, &z, 0, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_push_reg(bsplib, &x, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_push_reg(bsplib, &z, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( 'y', y );
-    EXPECT_EQ( 'z', z );
+  rc = bsplib_get(bsplib, 0, &x, 0, &z, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_put(bsplib, 0, &y, &z, 0, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ('y', y);
+  EXPECT_EQ('z', z);
 
-    EXPECT_EQ( 'x', x );
-    EXPECT_EQ( 'y', y );
-    EXPECT_EQ( bsplib_pid(bsplib) == 0 ? 'y' : 'x', z );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  EXPECT_EQ('x', x);
+  EXPECT_EQ('y', y);
+  EXPECT_EQ(bsplib_pid(bsplib) == 0 ? 'y' : 'x', z);
+
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Tests a bsplib_get and a lpf_put to the same destination
  * \pre P >= 2
  * \return Exit code: 0
  */
-TEST( API, func_bsplib_getput_same_dest )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_getput_same_dest) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

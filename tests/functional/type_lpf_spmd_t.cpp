@@ -15,40 +15,39 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
-void test_spmd( const lpf_t lpf, const lpf_pid_t pid, const lpf_pid_t nprocs, const lpf_args_t args)
-{
-    // ignore all parameters
-    (void) lpf;
-    (void) pid;
-    (void) nprocs;
-    (void) args;
+void test_spmd(const lpf_t lpf, const lpf_pid_t pid, const lpf_pid_t nprocs,
+               const lpf_args_t args) {
+  // ignore all parameters
+  (void)lpf;
+  (void)pid;
+  (void)nprocs;
+  (void)args;
 
-    /* empty */
+  /* empty */
 }
 
 extern lpf_spmd_t var_a;
 static lpf_spmd_t var_b = NULL;
-lpf_spmd_t var_c = & test_spmd;
+lpf_spmd_t var_c = &test_spmd;
 
 /** \test Test whether the lpf_spmd_t typedef is defined appropriately
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST( API, type_lpf_spmd_t )
-{
-    lpf_spmd_t var_d = NULL;
-    lpf_spmd_t var_e = & test_spmd;
+TEST(API, type_lpf_spmd_t) {
+  lpf_spmd_t var_d = NULL;
+  lpf_spmd_t var_e = &test_spmd;
 
-    lpf_t a = NULL;
-    lpf_pid_t b = 0;
-    lpf_pid_t c = 0;
-    lpf_args_t e;
-    (*var_e)(a, b, c, e);
+  lpf_t a = NULL;
+  lpf_pid_t b = 0;
+  lpf_pid_t c = 0;
+  lpf_args_t e;
+  (*var_e)(a, b, c, e);
 
-    EXPECT_EQ( (lpf_spmd_t) NULL, var_b );
-    EXPECT_EQ( &test_spmd, var_e );
-    EXPECT_EQ( (lpf_spmd_t) NULL, var_d );
+  EXPECT_EQ((lpf_spmd_t)NULL, var_b);
+  EXPECT_EQ(&test_spmd, var_e);
+  EXPECT_EQ((lpf_spmd_t)NULL, var_d);
 }

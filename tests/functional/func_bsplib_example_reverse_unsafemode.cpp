@@ -15,53 +15,49 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
-#include <lpf/bsplib.h>
 #include "gtest/gtest.h"
+#include <lpf/bsplib.h>
+#include <lpf/core.h>
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) args; // ignore any arguments passed through call to lpf_exec
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)args; // ignore any arguments passed through call to lpf_exec
 
-    bsplib_err_t rc = BSPLIB_SUCCESS;
-    
-    bsplib_t bsplib;
-    rc = bsplib_create( lpf, pid, nprocs, 0, 0, &bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_err_t rc = BSPLIB_SUCCESS;
 
-    lpf_pid_t x = bsplib_pid(bsplib);
-    rc = bsplib_push_reg(bsplib, &x, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  bsplib_t bsplib;
+  rc = bsplib_create(lpf, pid, nprocs, 0, 0, &bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_put(bsplib, 
-            bsplib_nprocs(bsplib) - bsplib_pid(bsplib) - 1, 
-            &x, &x, 0, sizeof( x ) );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  lpf_pid_t x = bsplib_pid(bsplib);
+  rc = bsplib_push_reg(bsplib, &x, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( bsplib_pid(bsplib), x );
+  rc = bsplib_put(bsplib, bsplib_nprocs(bsplib) - bsplib_pid(bsplib) - 1, &x,
+                  &x, 0, sizeof(x));
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_sync(bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  EXPECT_EQ(bsplib_pid(bsplib), x);
 
-    rc = bsplib_pop_reg(bsplib, &x );
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  rc = bsplib_sync(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    EXPECT_EQ( bsplib_nprocs(bsplib) - bsplib_pid(bsplib) - 1, x );
+  rc = bsplib_pop_reg(bsplib, &x);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 
-    rc = bsplib_destroy( bsplib);
-    EXPECT_EQ( BSPLIB_SUCCESS, rc );
+  EXPECT_EQ(bsplib_nprocs(bsplib) - bsplib_pid(bsplib) - 1, x);
+
+  rc = bsplib_destroy(bsplib);
+  EXPECT_EQ(BSPLIB_SUCCESS, rc);
 }
 
-/** 
+/**
  * \test Tests the reverse example from Hill's BSPlib paper in unsafe mode
  * \pre P >= 1
  * \return Exit code: 0
  */
-TEST(API, func_bsplib_exampl_reverse_unsafemode )
-{
-    lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_bsplib_exampl_reverse_unsafemode) {
+  lpf_err_t rc = lpf_exec(LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
-

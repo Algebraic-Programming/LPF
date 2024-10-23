@@ -15,34 +15,31 @@
  * limitations under the License.
  */
 
+#include "Test.h"
 #include <lpf/core.h>
 #include <lpf/mpi.h>
-#include "Test.h"
 
 #include <mpi.h>
 
+const int LPF_MPI_AUTO_INITIALIZE = 0;
 
-const int LPF_MPI_AUTO_INITIALIZE=0;
-
-void test_spmd( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
-{
-    (void) ctx;
-    (void) pid;
-    (void) nprocs;
-    (void) args;
-    return;
+void test_spmd(lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args) {
+  (void)ctx;
+  (void)pid;
+  (void)nprocs;
+  (void)args;
+  return;
 }
 
-void subset_func(MPI_Comm comm)
-{
-    MPI_Barrier(comm);
+void subset_func(MPI_Comm comm) {
+  MPI_Barrier(comm);
 
-    lpf_init_t init;
-    lpf_err_t rc = lpf_mpi_initialize_with_mpicomm(comm, &init);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+  lpf_init_t init;
+  lpf_err_t rc = lpf_mpi_initialize_with_mpicomm(comm, &init);
+  EXPECT_EQ("%d", LPF_SUCCESS, rc);
 
-    rc = lpf_hook(init, test_spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+  rc = lpf_hook(init, test_spmd, LPF_NO_ARGS);
+  EXPECT_EQ("%d", LPF_SUCCESS, rc);
 }
 
 /**
@@ -50,26 +47,25 @@ void subset_func(MPI_Comm comm)
  * \pre P >= 3
  * \return Exit code: 0
  */
-TEST( func_lpf_hook_subset )
-{
-    MPI_Init(NULL, NULL);
+TEST(func_lpf_hook_subset) {
+  MPI_Init(NULL, NULL);
 
-    int s;
-    MPI_Comm_rank(MPI_COMM_WORLD, &s);
+  int s;
+  MPI_Comm_rank(MPI_COMM_WORLD, &s);
 
-    int subset = s < 2; // Processes are divided into 2 subsets {0,1} and {2,...,p-1}
+  int subset =
+      s < 2; // Processes are divided into 2 subsets {0,1} and {2,...,p-1}
 
-    MPI_Comm subset_comm;
-    MPI_Comm_split(MPI_COMM_WORLD, subset, s, &subset_comm);
+  MPI_Comm subset_comm;
+  MPI_Comm_split(MPI_COMM_WORLD, subset, s, &subset_comm);
 
-// only the first subset enters that function
-    if (subset)
-    {
-        subset_func(subset_comm);
-    }
+  // only the first subset enters that function
+  if (subset) {
+    subset_func(subset_comm);
+  }
 
-    MPI_Barrier(MPI_COMM_WORLD); // Paranoid barrier
+  MPI_Barrier(MPI_COMM_WORLD); // Paranoid barrier
 
-    MPI_Finalize();
-    return 0;
+  MPI_Finalize();
+  return 0;
 }

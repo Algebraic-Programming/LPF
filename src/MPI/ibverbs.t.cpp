@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include "ibverbs.hpp"
 #include "assert.hpp"
+#include "ibverbs.hpp"
 #include "mpilib.hpp"
 
 #include <gtest/gtest.h>
@@ -24,302 +24,274 @@
 
 using namespace lpf::mpi;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE = 0;
 
-
-/** 
+/**
  * \pre P >= 1
  * \pre P <= 2
  */
 class IBVerbsTests : public testing::Test {
 
-    protected:
+protected:
+  static void SetUpTestSuite() {
 
-        static void SetUpTestSuite() {
+    MPI_Init(NULL, NULL);
+    Lib::instance();
+    comm = new Comm();
+    *comm = Lib::instance().world();
+    comm->barrier();
+    verbs = new IBVerbs(*comm);
+  }
 
-            MPI_Init(NULL, NULL);
-            Lib::instance();
-            comm = new Comm();
-            *comm = Lib::instance().world();
-            comm->barrier();
-            verbs = new IBVerbs( *comm );
-        }
+  static void TearDownTestSuite() {
+    delete verbs;
+    verbs = nullptr;
+    delete comm;
+    comm = nullptr;
+    MPI_Finalize();
+  }
 
-        static void TearDownTestSuite() {
-            delete verbs;
-            verbs = nullptr;
-            delete comm;
-            comm = nullptr;
-            MPI_Finalize();
-        }
-
-        static Comm *comm;
-        static IBVerbs *verbs;
+  static Comm *comm;
+  static IBVerbs *verbs;
 };
 
-lpf::mpi::Comm * IBVerbsTests::comm = nullptr;
-IBVerbs * IBVerbsTests::verbs = nullptr;
+lpf::mpi::Comm *IBVerbsTests::comm = nullptr;
+IBVerbs *IBVerbsTests::verbs = nullptr;
 
+TEST_F(IBVerbsTests, init) { comm->barrier(); }
 
-TEST_F( IBVerbsTests, init )
-{
+TEST_F(IBVerbsTests, resizeMemreg) {
 
-    comm->barrier();
+  verbs->resizeMemreg(2);
+
+  comm->barrier();
 }
 
+TEST_F(IBVerbsTests, resizeMesgq) {
 
-TEST_F( IBVerbsTests, resizeMemreg )
-{
+  verbs->resizeMesgq(2);
 
-    verbs->resizeMemreg( 2 );
-
-    comm->barrier();
+  comm->barrier();
 }
 
+TEST_F(IBVerbsTests, regVars) {
 
-TEST_F( IBVerbsTests, resizeMesgq )
-{
+  char buf1[30] = "Hi";
+  char buf2[30] = "Boe";
 
-    verbs->resizeMesgq( 2 );
+  verbs->resizeMemreg(2);
 
-    comm->barrier();
+  IBVerbs::SlotID b1 = verbs->regLocal(buf1, sizeof(buf1));
+  IBVerbs::SlotID b2 = verbs->regGlobal(buf2, sizeof(buf2));
+
+  comm->barrier();
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
 
-TEST_F( IBVerbsTests, regVars )
-{
+TEST_F(IBVerbsTests, put) {
 
+  char buf1[30] = "Hi";
+  char buf2[30] = "Boe";
 
-    char buf1[30] = "Hi";
-    char buf2[30] = "Boe";
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(1);
 
-    verbs->resizeMemreg( 2 );
+  IBVerbs::SlotID b1 = verbs->regLocal(buf1, sizeof(buf1));
+  IBVerbs::SlotID b2 = verbs->regGlobal(buf2, sizeof(buf2));
 
-    IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
-    IBVerbs::SlotID b2 = verbs->regGlobal( buf2, sizeof(buf2) );
+  comm->barrier();
 
-    comm->barrier();
-    verbs->dereg(b1);
-    verbs->dereg(b2);
+  verbs->put(b1, 0, (comm->pid() + 1) % comm->nprocs(), b2, 0, sizeof(buf1));
+
+  verbs->sync(true);
+  EXPECT_EQ("Hi", std::string(buf1));
+  EXPECT_EQ("Hi", std::string(buf2));
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
 
+TEST_F(IBVerbsTests, get) {
 
-TEST_F( IBVerbsTests, put )
-{
+  char buf1[30] = "Hoi";
+  char buf2[30] = "Vreemd";
 
-    char buf1[30] = "Hi";
-    char buf2[30] = "Boe";
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(1);
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( 1 );
+  IBVerbs::SlotID b1 = verbs->regLocal(buf1, sizeof(buf1));
+  IBVerbs::SlotID b2 = verbs->regGlobal(buf2, sizeof(buf2));
 
-    IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
-    IBVerbs::SlotID b2 = verbs->regGlobal( buf2, sizeof(buf2) );
+  comm->barrier();
 
-    comm->barrier();
+  verbs->get((comm->pid() + 1) % comm->nprocs(), b2, 0, b1, 0, sizeof(buf2));
 
-    verbs->put( b1, 0, (comm->pid() + 1)%comm->nprocs(), b2, 0, sizeof(buf1));
-
-    verbs->sync(true);
-    EXPECT_EQ( "Hi", std::string(buf1) );
-    EXPECT_EQ( "Hi", std::string(buf2) );
-    verbs->dereg(b1);
-    verbs->dereg(b2);
+  verbs->sync(true);
+  EXPECT_EQ("Vreemd", std::string(buf1));
+  EXPECT_EQ("Vreemd", std::string(buf2));
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
 
+TEST_F(IBVerbsTests, putAllToAll) {
+  int nprocs = comm->nprocs();
+  int pid = comm->pid();
 
-TEST_F( IBVerbsTests, get )
-{
+  const int H = 2.5 * nprocs;
 
-    char buf1[30] = "Hoi";
-    char buf2[30] = "Vreemd";
+  std::vector<int> a(H);
+  std::vector<int> b(H);
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( 1 );
+  for (int i = 0; i < H; ++i) {
+    a[i] = i * nprocs + pid;
+    b[i] = nprocs * nprocs - (i * nprocs + pid);
+  }
 
-    IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
-    IBVerbs::SlotID b2 = verbs->regGlobal( buf2, sizeof(buf2) );
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(H);
 
-    comm->barrier();
+  IBVerbs::SlotID a1 = verbs->regGlobal(a.data(), sizeof(int) * a.size());
+  IBVerbs::SlotID b1 = verbs->regGlobal(b.data(), sizeof(int) * b.size());
 
-    verbs->get( (comm->pid() + 1)%comm->nprocs(), b2, 0,
-            b1, 0, sizeof(buf2));
+  comm->barrier();
 
-    verbs->sync(true);
-    EXPECT_EQ( "Vreemd", std::string(buf1) );
-    EXPECT_EQ( "Vreemd", std::string(buf2) );
-    verbs->dereg(b1);
-    verbs->dereg(b2);
+  for (int i = 0; i < H; ++i) {
+    int dstPid = (pid + i) % nprocs;
+    verbs->put(a1, sizeof(int) * i, dstPid, b1, sizeof(int) * i, sizeof(int));
+  }
+
+  verbs->sync(true);
+
+  for (int i = 0; i < H; ++i) {
+    int srcPid = (nprocs + pid - (i % nprocs)) % nprocs;
+    EXPECT_EQ(i * nprocs + pid, a[i]);
+    EXPECT_EQ(i * nprocs + srcPid, b[i]);
+  }
+  verbs->dereg(a1);
+  verbs->dereg(b1);
 }
 
+TEST_F(IBVerbsTests, getAllToAll) {
+  int nprocs = comm->nprocs();
+  int pid = comm->pid();
 
-TEST_F( IBVerbsTests, putAllToAll )
-{
-    int nprocs = comm->nprocs();
-    int pid = comm->pid();
-    
-    const int H = 2.5 * nprocs;
+  const int H = 100.3 * nprocs;
 
-    std::vector< int > a(H);
-    std::vector< int > b(H);
+  std::vector<int> a(H), a2(H);
+  std::vector<int> b(H), b2(H);
 
-    for (int i = 0; i < H; ++i) {
-        a[i] = i * nprocs + pid ;
-        b[i] = nprocs*nprocs - ( i * nprocs + pid);
-    }
+  for (int i = 0; i < H; ++i) {
+    a[i] = i * nprocs + pid;
+    a2[i] = a[i];
+    b[i] = nprocs * nprocs - (i * nprocs + pid);
+    b2[i] = i * nprocs + (nprocs + pid + i) % nprocs;
+  }
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( H );
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(H);
 
-    IBVerbs::SlotID a1 = verbs->regGlobal( a.data(), sizeof(int)*a.size());
-    IBVerbs::SlotID b1 = verbs->regGlobal( b.data(), sizeof(int)*b.size());
+  IBVerbs::SlotID a1 = verbs->regGlobal(a.data(), sizeof(int) * a.size());
+  IBVerbs::SlotID b1 = verbs->regGlobal(b.data(), sizeof(int) * b.size());
 
-    comm->barrier();
+  comm->barrier();
 
-    for (int i = 0; i < H; ++i) {
-        int dstPid = (pid + i ) % nprocs;
-        verbs->put( a1, sizeof(int)*i,
-                dstPid, b1, sizeof(int)*i, sizeof(int));
-    }
+  for (int i = 0; i < H; ++i) {
+    int srcPid = (pid + i) % nprocs;
+    verbs->get(srcPid, a1, sizeof(int) * i, b1, sizeof(int) * i, sizeof(int));
+  }
 
-    verbs->sync(true);
+  verbs->sync(true);
 
-    for (int i = 0; i < H; ++i) {
-        int srcPid = (nprocs + pid - (i%nprocs)) % nprocs;
-        EXPECT_EQ( i*nprocs + pid, a[i] ) ;
-        EXPECT_EQ( i*nprocs + srcPid, b[i] );
-    }
-    verbs->dereg(a1);
-    verbs->dereg(b1);
+  EXPECT_EQ(a, a2);
+  EXPECT_EQ(b, b2);
 
+  verbs->dereg(a1);
+  verbs->dereg(b1);
 }
 
-TEST_F( IBVerbsTests, getAllToAll )
-{
-    int nprocs = comm->nprocs();
-    int pid = comm->pid();
+TEST_F(IBVerbsTests, putHuge) {
+  std::vector<char> hugeMsg(3 * verbs->getMaxMsgSize());
+  std::vector<char> hugeBuf(3 * verbs->getMaxMsgSize());
+  LOG(4, "Allocating putHuge with vector size: " << hugeMsg.size());
 
-    const int H = 100.3 * nprocs;
+  for (size_t i = 0; i < hugeMsg.size(); ++i)
+    hugeMsg[i] = char(i);
 
-    std::vector< int > a(H), a2(H);
-    std::vector< int > b(H), b2(H);
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(1);
 
-    for (int i = 0; i < H; ++i) {
-        a[i] = i * nprocs + pid ;
-        a2[i] = a[i]; 
-        b[i] = nprocs*nprocs - ( i * nprocs + pid);
-        b2[i] = i*nprocs+ (nprocs + pid + i) % nprocs;
-    }
+  IBVerbs::SlotID b1 = verbs->regLocal(hugeMsg.data(), hugeMsg.size());
+  IBVerbs::SlotID b2 = verbs->regGlobal(hugeBuf.data(), hugeBuf.size());
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( H );
+  comm->barrier();
 
-    IBVerbs::SlotID a1 = verbs->regGlobal( a.data(), sizeof(int)*a.size());
-    IBVerbs::SlotID b1 = verbs->regGlobal( b.data(), sizeof(int)*b.size());
+  verbs->put(b1, 0, (comm->pid() + 1) % comm->nprocs(), b2, 0,
+             hugeMsg.size() * sizeof(char));
 
-    comm->barrier();
+  verbs->sync(true);
 
-    for (int i = 0; i < H; ++i) {
-        int srcPid = (pid + i) % nprocs;
-        verbs->get( srcPid, a1, sizeof(int)*i,
-                b1, sizeof(int)*i, sizeof(int));
-    }
+  EXPECT_EQ(hugeMsg, hugeBuf);
 
-    verbs->sync(true);
-
-
-    EXPECT_EQ(a, a2);
-    EXPECT_EQ(b, b2);
-
-    verbs->dereg(a1);
-    verbs->dereg(b1);
-
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
 
+TEST_F(IBVerbsTests, getHuge) {
 
-TEST_F( IBVerbsTests, putHuge )
-{
-    std::vector<char> hugeMsg(3*verbs->getMaxMsgSize());
-    std::vector< char > hugeBuf(3*verbs->getMaxMsgSize());
-    LOG(4, "Allocating putHuge with vector size: " << hugeMsg.size());
+  std::vector<char> hugeMsg(3 * verbs->getMaxMsgSize());
+  std::vector<char> hugeBuf(3 * verbs->getMaxMsgSize());
+  LOG(4, "Allocating getHuge with vector size: " << hugeMsg.size());
 
-    for ( size_t i = 0; i < hugeMsg.size() ; ++i)
-        hugeMsg[i] = char( i );
+  for (size_t i = 0; i < hugeMsg.size(); ++i)
+    hugeMsg[i] = char(i);
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( 1 );
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(1);
 
-    IBVerbs::SlotID b1 = verbs->regLocal( hugeMsg.data(), hugeMsg.size() );
-    IBVerbs::SlotID b2 = verbs->regGlobal( hugeBuf.data(), hugeBuf.size() );
+  IBVerbs::SlotID b1 = verbs->regLocal(hugeMsg.data(), hugeMsg.size());
+  IBVerbs::SlotID b2 = verbs->regGlobal(hugeBuf.data(), hugeBuf.size());
 
-    comm->barrier();
+  comm->barrier();
 
-    verbs->put( b1, 0, (comm->pid() + 1)%comm->nprocs(), b2, 0, hugeMsg.size() * sizeof(char) );
+  verbs->get((comm->pid() + 1) % comm->nprocs(), b2, 0, b1, 0,
+             hugeMsg.size() * sizeof(char));
 
-    verbs->sync(true);
+  verbs->sync(true);
 
-    EXPECT_EQ( hugeMsg, hugeBuf );
+  EXPECT_EQ(hugeMsg, hugeBuf);
 
-    verbs->dereg(b1);
-    verbs->dereg(b2);
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
 
-TEST_F( IBVerbsTests, getHuge )
-{
+TEST_F(IBVerbsTests, manyPuts) {
 
-    std::vector<char> hugeMsg(3*verbs->getMaxMsgSize());
-    std::vector< char > hugeBuf(3*verbs->getMaxMsgSize());
-    LOG(4, "Allocating getHuge with vector size: " << hugeMsg.size());
+  const unsigned N = 5000;
+  std::vector<unsigned char> buf1(N);
+  std::vector<unsigned char> buf2(N);
+  for (unsigned int i = 0; i < N; ++i)
+    buf1[i] = i + comm->pid();
 
-    for ( size_t i = 0; i < hugeMsg.size() ; ++i)
-        hugeMsg[i] = char(i);
+  verbs->resizeMemreg(2);
+  verbs->resizeMesgq(N);
 
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( 1 );
+  IBVerbs::SlotID b1 = verbs->regLocal(buf1.data(), buf1.size());
+  IBVerbs::SlotID b2 = verbs->regGlobal(buf2.data(), buf1.size());
 
-    IBVerbs::SlotID b1 = verbs->regLocal( hugeMsg.data(), hugeMsg.size() );
-    IBVerbs::SlotID b2 = verbs->regGlobal( hugeBuf.data(), hugeBuf.size() );
+  comm->barrier();
 
-    comm->barrier();
+  for (unsigned i = 0; i < N; ++i)
+    verbs->put(b1, i, (comm->pid() + 1) % comm->nprocs(), b2, i, 1);
 
-    verbs->get( (comm->pid() + 1)%comm->nprocs(), b2, 0, b1, 0, hugeMsg.size() * sizeof(char));
+  verbs->sync(true);
+  for (unsigned i = 0; i < N; ++i) {
+    unsigned char b2_exp =
+        i + (comm->pid() + comm->nprocs() - 1) % comm->nprocs();
+    unsigned char b1_exp = i + comm->pid();
+    EXPECT_EQ(b2_exp, buf2[i]);
+    EXPECT_EQ(b1_exp, buf1[i]);
+  }
 
-    verbs->sync(true);
-
-    EXPECT_EQ(hugeMsg, hugeBuf);
-
-    verbs->dereg(b1);
-    verbs->dereg(b2);
+  verbs->dereg(b1);
+  verbs->dereg(b2);
 }
-
-TEST_F( IBVerbsTests, manyPuts )
-{
-
-    const unsigned N = 5000;
-    std::vector< unsigned char > buf1( N );
-    std::vector< unsigned char > buf2( N );
-    for (unsigned int i = 0 ; i < N; ++ i)
-        buf1[i] = i + comm->pid() ;
-
-    verbs->resizeMemreg( 2 );
-    verbs->resizeMesgq( N );
-
-    IBVerbs::SlotID b1 = verbs->regLocal( buf1.data(), buf1.size()  );
-    IBVerbs::SlotID b2 = verbs->regGlobal( buf2.data(), buf1.size() );
-
-    comm->barrier();
-
-    for ( unsigned i = 0 ; i < N; ++i)
-        verbs->put( b1, i, (comm->pid() + 1)%comm->nprocs(), b2, i, 1);
-
-    verbs->sync(true);
-    for ( unsigned i = 0 ; i < N; ++i) {
-        unsigned char b2_exp = i + (comm->pid() + comm->nprocs() - 1)  % comm->nprocs();
-        unsigned char b1_exp = i + comm->pid();
-        EXPECT_EQ( b2_exp, buf2[i]);
-        EXPECT_EQ( b1_exp, buf1[i] );
-    }
-
-    verbs->dereg(b1);
-    verbs->dereg(b2);
-}
-

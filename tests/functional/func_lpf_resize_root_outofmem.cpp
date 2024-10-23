@@ -15,34 +15,27 @@
  * limitations under the License.
  */
 
-#include <lpf/core.h>
 #include "gtest/gtest.h"
+#include <lpf/core.h>
 
-
-
-/** 
- * \test Test lpf_resize function on LPF_ROOT when requested resources take too much memory
- * \pre P >= 1
- * \return Exit code: 0
+/**
+ * \test Test lpf_resize function on LPF_ROOT when requested resources take too
+ * much memory \pre P >= 1 \return Exit code: 0
  */
-TEST( API, func_lpf_resize_root_outofmem )
-{
-    lpf_err_t rc = LPF_SUCCESS;
- 
-    size_t maxMsgs = ((size_t) -1)/10 ;
-    size_t maxRegs = ((size_t) -1)/10;
-    rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
-    rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
+TEST(API, func_lpf_resize_root_outofmem) {
+  lpf_err_t rc = LPF_SUCCESS;
 
-       
+  size_t maxMsgs = ((size_t)-1) / 10;
+  size_t maxRegs = ((size_t)-1) / 10;
+  rc = lpf_resize_message_queue(LPF_ROOT, maxMsgs);
+  EXPECT_EQ(LPF_ERR_OUT_OF_MEMORY, rc);
+  rc = lpf_resize_memory_register(LPF_ROOT, maxRegs);
+  EXPECT_EQ(LPF_ERR_OUT_OF_MEMORY, rc);
 
-    maxMsgs = -1;
-    maxRegs = -1;
-    rc = lpf_resize_message_queue( LPF_ROOT, maxMsgs);
-    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
-    rc = lpf_resize_memory_register( LPF_ROOT, maxRegs );
-    EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
-
+  maxMsgs = -1;
+  maxRegs = -1;
+  rc = lpf_resize_message_queue(LPF_ROOT, maxMsgs);
+  EXPECT_EQ(LPF_ERR_OUT_OF_MEMORY, rc);
+  rc = lpf_resize_memory_register(LPF_ROOT, maxRegs);
+  EXPECT_EQ(LPF_ERR_OUT_OF_MEMORY, rc);
 }

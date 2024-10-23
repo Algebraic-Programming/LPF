@@ -15,27 +15,27 @@
  * limitations under the License.
  */
 
+#include "gtest/gtest.h"
 #include <lpf/core.h>
 #include <string.h>
-#include "gtest/gtest.h"
 
-void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t a)
-{
-    (void) pid; (void) nprocs; (void) a;
-    lpf_err_t rc = LPF_SUCCESS;
-    rc = lpf_rehook( lpf, NULL, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
+void spmd(lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t a) {
+  (void)pid;
+  (void)nprocs;
+  (void)a;
+  lpf_err_t rc = LPF_SUCCESS;
+  rc = lpf_rehook(lpf, NULL, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
 
-/** 
- * \test Test rehook error of using NULL spmd 
+/**
+ * \test Test rehook error of using NULL spmd
  * \pre P >= 1
  * \return Message: NULL spmd argument
  * \return Exit code: 6
  */
-TEST( API, func_lpf_debug_rehook_null_spmd )
-{
-    lpf_err_t rc = LPF_SUCCESS;
-    rc = lpf_exec( LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+TEST(API, func_lpf_debug_rehook_null_spmd) {
+  lpf_err_t rc = LPF_SUCCESS;
+  rc = lpf_exec(LPF_ROOT, LPF_MAX_P, &spmd, LPF_NO_ARGS);
+  EXPECT_EQ(LPF_SUCCESS, rc);
 }
