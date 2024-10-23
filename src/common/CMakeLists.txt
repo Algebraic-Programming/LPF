@@ -24,7 +24,7 @@ add_library(lpf_common_${LPFLIB_CONFIG_NAME} OBJECT
 )
 
 
-add_gtest(time_test "pthread" time.t.cpp time.cpp stack.cpp)
-add_gtest(memreg_test "pthread" memreg.t.cpp log.cpp time.cpp config.cpp stack.cpp)
-add_gtest(sparseset_test "pthread" sparseset.t.cpp log.cpp time.cpp config.cpp stack.cpp)
+add_gtest(time_test "pthread" OFF time.t.cpp time.cpp stack.cpp)
+add_gtest(memreg_test "pthread" OFF memreg.t.cpp log.cpp time.cpp config.cpp stack.cpp)
+add_gtest(sparseset_test "pthread" OFF sparseset.t.cpp log.cpp time.cpp config.cpp stack.cpp)
 

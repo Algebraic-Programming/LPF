@@ -70,9 +70,6 @@ extern "C" {
 #define lpf_resize_message_queue( ctx, size ) \
     lpf_debug_resize_message_queue( __FILE__, __LINE__, (ctx), (size) )
 
-#define lpf_abort( ctx ) \
-    lpf_debug_abort( __FILE__, __LINE__, (ctx))
-
 
 extern _LPFLIB_API 
 lpf_err_t lpf_debug_exec( const char * file, int line,
@@ -136,8 +133,8 @@ extern _LPFLIB_API
 lpf_err_t lpf_debug_resize_message_queue( const char * file, int line,
         lpf_t ctx, size_t max_msgs );
 
-extern _LPFLIB_API 
-lpf_err_t lpf_debug_abort( const char * file, int line, lpf_t ctx);
+extern
+lpf_err_t lpf_debug_abort();
 
 #ifdef __cplusplus
 }

@@ -166,7 +166,7 @@ if (MPI_FOUND)
     include_directories(${MPI_C_INCLUDE_PATH})
     # add a test for dynamichook 
     if (NOT IS_OPENMPI AND LPF_ENABLE_TESTS)
-        add_gtest_mpi(dynamichook.t "mpimsg" ON FALSE
+        add_gtest(dynamichook.t "mpimsg" ON
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
@@ -189,33 +189,33 @@ if (MPI_FOUND)
 
 # Other unit tests
     if (ENABLE_IBVERBS AND LPF_ENABLE_TESTS)
-        add_gtest_mpi( ibverbs_test "ibverbs" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
+        add_gtest( ibverbs_test "ibverbs" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
     foreach (engine ${MPI_ENGINES})
-        add_gtest_mpi( spall2all_test_${engine} ${engine} ON FALSE
+        add_gtest( spall2all_test_${engine} ${engine} ON
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.c 
             ${CMAKE_CURRENT_SOURCE_DIR}/spall2all.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
-        add_gtest_mpi( dall2all_test_${engine} ${engine} ON FALSE
+        add_gtest( dall2all_test_${engine} ${engine} ON
             ${CMAKE_CURRENT_SOURCE_DIR}/dall2all.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
         if (MPI_IBARRIER)
-            add_gtest_mpi( hall2all_test_${engine} ${engine} ON FALSE
+            add_gtest( hall2all_test_${engine} ${engine} ON
                 ${CMAKE_CURRENT_SOURCE_DIR}/hall2all.t.cpp 
                 ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
         endif()
 
-        add_gtest_mpi( messagesort_test_${engine} ${engine} ON FALSE
+        add_gtest( messagesort_test_${engine} ${engine} ON
             ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.t.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/messagesort.cpp)
 
-        add_gtest_mpi( ipcmesg_test_${engine} ${engine}  ON FALSE
+        add_gtest( ipcmesg_test_${engine} ${engine} ON
             ${CMAKE_CURRENT_SOURCE_DIR}/ipcmesg.t.cpp)
     endforeach()
 

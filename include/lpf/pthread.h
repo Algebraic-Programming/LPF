@@ -78,6 +78,13 @@ lpf_err_t lpf_pthread_initialize( lpf_pid_t pid, lpf_pid_t nprocs,
 extern _LPFLIB_API
 lpf_err_t lpf_pthread_finalize( lpf_init_t init );
 
+
+/**
+ * Internal function to gracefully (and expectedly)
+ * abort the execution of a test (see tests/functional/debug)
+ */
+lpf_err_t lpf_debug_abort();
+
 /**
  * @}
  *

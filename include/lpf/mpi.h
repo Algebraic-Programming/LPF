@@ -147,6 +147,8 @@ lpf_err_t lpf_mpi_initialize_over_tcp(
  */
 lpf_err_t lpf_mpi_finalize( lpf_init_t init );
 
+lpf_err_t lpf_debug_abort();
+
 /**
  * @}
  *

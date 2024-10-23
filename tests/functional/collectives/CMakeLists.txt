@@ -49,7 +49,7 @@ foreach (LPF_IMPL_ID ${ENGINES})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        add_gtest_mpi(${exeName} ${LPF_IMPL_ID} ${debug}  FALSE "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
 
         string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
