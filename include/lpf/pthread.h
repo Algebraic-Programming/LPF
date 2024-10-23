@@ -79,9 +79,10 @@ extern _LPFLIB_API
 lpf_err_t lpf_pthread_finalize( lpf_init_t init );
 
 
-/**
- * Internal function to gracefully (and expectedly)
- * abort the execution of a test (see tests/functional/debug)
+/*
+ * Portable aborting returning 
+ * predictable error codes (useful for death tests
+ * in tests/functional/debug)
  */
 lpf_err_t lpf_debug_abort();
 
