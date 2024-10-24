@@ -87,7 +87,7 @@ installdir="$builddir"
 config=Release
 doc=OFF
 functests=OFF
-googletest_license_agreement=NO
+googletest_license_agreement=FALSE
 perftests=OFF
 reconfig=no
 CMAKE_EXE=cmake
@@ -133,7 +133,7 @@ do
 ------------------------------------------------------------------------------
 The functional test suite requires Google Testing Framework which comes with
 its own license. The license can be viewed via
-        https://github.com/google/googletest/blob/release-1.8.1/LICENSE
+	https://github.com/google/googletest/blob/v1.15.x/LICENSE
 Do you agree with the license [yes/no] ?
 EOF
             read answer
@@ -154,7 +154,7 @@ User agrees with Google Testing Framework license. It will be downloaded during
 the build.
 ==============================================================================
 EOF
-                googletest_license_agreement=YES
+            googletest_license_agreement=TRUE
             fi
 
             shift
@@ -162,7 +162,7 @@ EOF
 
        --functests=i-agree-with-googletest-license)
             functests=ON
-            googletest_license_agreement=YES
+            googletest_license_agreement=TRUE
             shift
             ;;
 
@@ -281,7 +281,7 @@ ${CMAKE_EXE} -Wno-dev \
       -DCMAKE_BUILD_TYPE=$config           \
       -DLPFLIB_MAKE_DOC=$doc         \
       -DLPFLIB_MAKE_TEST_DOC=$doc    \
-      -DLPF_ENABLE_TESTS=$functests \
+      -DLPF_ENABLE_TESTS=$functests  \
       -DGTEST_AGREE_TO_LICENSE=$googletest_license_agreement \
       -DLPFLIB_PERFTESTS=$perftests  \
       -DLPFLIB_CONFIG_NAME=${config_name:-${config}}\

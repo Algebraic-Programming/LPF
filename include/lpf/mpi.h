@@ -147,6 +147,13 @@ lpf_err_t lpf_mpi_initialize_over_tcp(
  */
 lpf_err_t lpf_mpi_finalize( lpf_init_t init );
 
+/*
+ * Portable aborting returning 
+ * predictable error codes (useful for death tests
+ * in tests/functional/debug)
+ */
+lpf_err_t lpf_debug_abort();
+
 /**
  * @}
  *

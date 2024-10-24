@@ -133,6 +133,9 @@ extern _LPFLIB_API
 lpf_err_t lpf_debug_resize_message_queue( const char * file, int line,
         lpf_t ctx, size_t max_msgs );
 
+extern
+lpf_err_t lpf_debug_abort();
+
 #ifdef __cplusplus
 }
 #endif
