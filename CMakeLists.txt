@@ -176,6 +176,7 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
 
     if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
+        list(APPEND ENGINES "zero")
     endif()
 
 endif()

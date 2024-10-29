@@ -196,6 +196,10 @@ if (MPI_FOUND)
         add_gtest( ibverbs_test "ibverbs" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+
+        add_gtest( zero_test "zero" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp 
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
 
     foreach (engine ${MPI_ENGINES})
