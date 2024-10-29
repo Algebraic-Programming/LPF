@@ -203,5 +203,4 @@ TEST( API, func_lpf_probe_parallel_nested )
 
     rc = lpf_exec( LPF_ROOT, machine.p / 2, &spmd1, args );
     EXPECT_EQ( LPF_SUCCESS, rc );
-
 }
