@@ -32,7 +32,6 @@ void spmd( lpf_t a, lpf_pid_t b, lpf_pid_t c, lpf_args_t d)
  */
 TEST(API, func_lpf_debug_exec_null_f_symbols )
 {
-    lpf_err_t rc = LPF_SUCCESS;
     lpf_args_t args;
     args.input = NULL;
     args.input_size = 0;

@@ -25,10 +25,11 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) lpf; // ignore lpf context variable
     lpf_err_t rc = LPF_SUCCESS;
-    int a[2] = { pid, -1 };
+    lpf_pid_t a[2] = { pid, LPF_MAX_P };
     lpf_memslot_t aSlot = LPF_INVALID_MEMSLOT;
 
     EXPECT_LE( 2, nprocs );
+    EXPECT_LT( pid, LPF_MAX_P );
 
     if ( 0 == pid )
     {

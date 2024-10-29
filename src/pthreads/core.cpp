@@ -411,11 +411,15 @@ lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_
 }
 
 lpf_err_t lpf_abort(lpf_t ctx) {
+    (void) ctx;
     // Using std::abort is not portable
     // SIGABRT code 6 is often coverted to code 134.
-    // Therefore, use exit(6) instead
-    //std::abort(); 
-    std::exit(6);
+    // Therefore, use std::quick_exit(6) instead
+    // The reason we do not use std::exit is that
+    // it implies calling destructors, and this leads to 
+    // segmentation faults for pthread backend and abnormal
+    // programs. std::quick_exit does not call destructors
+    std::quick_exit(6);
     return LPF_SUCCESS;
 }
 
