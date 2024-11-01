@@ -281,7 +281,7 @@ ${CMAKE_EXE} -Wno-dev \
       -DCMAKE_BUILD_TYPE=$config           \
       -DLPFLIB_MAKE_DOC=$doc         \
       -DLPFLIB_MAKE_TEST_DOC=$doc    \
-      -DLPF_ENABLE_TESTS=$functests  \
+      -DLPF_ENABLE_TESTS=$functests \
       -DGTEST_AGREE_TO_LICENSE=$googletest_license_agreement \
       -DLPFLIB_PERFTESTS=$perftests  \
       -DLPFLIB_CONFIG_NAME=${config_name:-${config}}\
