@@ -55,7 +55,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 
     EXPECT_EQ(3, y[0] );
     EXPECT_EQ(4, y[1] );
-    //FAIL();
 }
 
 /** 
