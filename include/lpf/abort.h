@@ -27,13 +27,43 @@ extern "C" {
 /** \addtogroup LPF_EXTENSIONS LPF API extensions
  * @{
  *
- * \defgroup LPF_ABORT Provides functionality akin to the stdlib abort
+ * \defgroup LPF_ABORT Functionality for aborting LPF applications
+ *
+ * If #LPF_HAS_ABORT has a nonzero value, then a call to #lpf_abort from any
+ * process in a distributed application, will abort the entire application.
+ *
+ * \note As with all LPF extensions, it is \em not mandatory for all LPF
+ *       implementations to support this one.
+ *
+ * If #LPF_HAS_ABORT has a zero value, then a call to #lpf_abort shall have no
+ * other effect than it returning #LPF_SUCCESS.
+ *
+ * Therefore,
+ *  - LPF implementations that cannot support an abort functionality may still
+ *    provide a valid, albeit trivial, implementation of this extension.
+ *  - LPF applications that aim to rely on #lpf_abort should first ensure that
+ *    #LPF_HAS_ABORT is nonzero.
+ *
+ * \warning Portable LPF implementations best not rely on #lpf_abort at all.
+ *          Although sometimes unavoidable, the recommendation is to avoid the
+ *          use of this extension as best as possible.
+ *
+ * \note One case where #lpf_abort is absolutely required is for \em testing an
+ *       LPF debug layer. Such a layer should detect erroneous usage, report it,
+ *       but then typically cannot continue execution. In this case, relying on
+ *       the standard abort or exit functionalities to terminate the process the
+ *       error was detected at, typically results in implementation-specific
+ *       (i.e., undefined) behaviour with regards to how the application at
+ *       large terminates. This means that a test-suite for such a debug layer
+ *       cannot reliably detect whether a distributed application has terminated
+ *       for the expected reasons. In this case, #lpf_abort provides a reliable
+ *       mechanism that such a test requires.
  *
  * @{
  */
 
 /**
- * Whether the selected LPF engine supports aborting distributed applications.
+ * Whether the active LPF engine supports aborting distributed applications.
  *
  * If the value of this field is zero (0), then a call to #lpf_abort will be a
  * no-op and always return #LPF_SUCCESS.
@@ -44,9 +74,9 @@ extern const int LPF_HAS_ABORT ;
  * A call to this function aborts the distributed application as soon as
  * possible.
  *
- * \warning This function corresponds to a no-op if #LPF_MAY_ABORT equals zero.
+ * \warning This function corresponds to a no-op if #LPF_HAS_ABORT equals zero.
  *
- * The below specification only applies when #LPF_MAY_ABORT contains a non-zero
+ * The below specification only applies when #LPF_HAS_ABORT contains a non-zero
  * value; otherwise, a call to this function will have no other effect besides
  * returning #LPF_SUCCESS.
  *
@@ -103,9 +133,9 @@ extern const int LPF_HAS_ABORT ;
  *       \em not a collective function; a single process calling #lpf_abort can
  *       terminate all associated processes.
  *
- * @returns #LPF_SUCCESS If and only if #LPF_MAY_ABORT equals zero.
+ * @returns #LPF_SUCCESS If and only if #LPF_HAS_ABORT equals zero.
  *
- * If #LPF_MAY_ABORT is nonzero, then this function shall not return.
+ * If #LPF_HAS_ABORT is nonzero, then this function shall not return.
  */
 extern _LPFLIB_API 
 lpf_err_t lpf_abort(lpf_t ctx);
