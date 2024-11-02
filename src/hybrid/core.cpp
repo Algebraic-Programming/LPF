@@ -37,6 +37,10 @@
 
 extern "C" {
 
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+_LPFLIB_VAR const int LPF_HAS_ABORT = 2;
+
 _LPFLIB_VAR const lpf_err_t LPF_SUCCESS = 0;
 _LPFLIB_VAR const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
 _LPFLIB_VAR const lpf_err_t LPF_ERR_FATAL = 2;

@@ -38,6 +38,10 @@
 
 #include <pthread.h> // for pthreads
 
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+const int LPF_HAS_ABORT = 2;
+
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
 const lpf_err_t LPF_ERR_FATAL = 2;
@@ -391,4 +395,3 @@ lpf_err_t lpf_abort(lpf_t ctx) {
     std::quick_exit(6);
     return LPF_SUCCESS;
 }
-

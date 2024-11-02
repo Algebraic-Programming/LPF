@@ -37,6 +37,10 @@
 
 #include <mpi.h>
 
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+const int LPF_CAN_ABORT = 2;
+
 // Error codes. 
 // Note: Some code (e.g. in process::broadcastSymbol) depends on the 
 // fact that numbers are assigned in order of severity, where 0 means

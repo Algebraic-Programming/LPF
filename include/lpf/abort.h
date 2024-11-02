@@ -38,7 +38,7 @@ extern "C" {
  * If the value of this field is zero (0), then a call to #lpf_abort will be a
  * no-op and always return #LPF_SUCCESS.
  */
-extern const int LPF_CAN_ABORT ;
+extern const int LPF_HAS_ABORT ;
 
 /**
  * A call to this function aborts the distributed application as soon as
