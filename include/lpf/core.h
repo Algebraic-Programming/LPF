@@ -2317,7 +2317,6 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs );
 extern _LPFLIB_API
 lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
 
-
 #ifdef __cplusplus
 }
 #endif
