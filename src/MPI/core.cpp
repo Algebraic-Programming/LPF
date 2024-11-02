@@ -17,6 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/mpi.h>
+#include <lpf/abort.h>
 
 #include <vector>
 #include <limits>

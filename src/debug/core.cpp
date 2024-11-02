@@ -16,6 +16,7 @@
  */
 
 #include "debug/lpf/core.h"
+#include "lpf/abort.h"
 
 #undef lpf_get
 #undef lpf_put
@@ -29,7 +30,6 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
-#undef lpf_abort
 
 #undef lpf_init_t
 #undef lpf_pid_t

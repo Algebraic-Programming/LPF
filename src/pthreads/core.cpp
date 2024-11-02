@@ -17,6 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/pthread.h>
+#include <lpf/abort.h>
 
 #include "threadlocaldata.hpp"
 #include "machineparams.hpp"
