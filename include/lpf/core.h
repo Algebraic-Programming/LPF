@@ -126,6 +126,8 @@
  *  - \ref LPF_EXTENSIONS
  *     - \ref LPF_PTHREAD
  *     - \ref LPF_MPI
+ *     - \ref LPF_HYBRID
+ *     - \ref LPF_ABORT
  *  - \ref LPF_HL
  *     - \ref LPF_BSPLIB
  *     - \ref LPF_COLLECTIVES
