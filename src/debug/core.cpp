@@ -102,7 +102,11 @@ class _LPFLIB_LOCAL Interface {
     static void threadInit() {
         int rc = pthread_key_create( &s_threadKeyCtxStore, &destroyCtxStore );
         if (rc) {
-            LOG( 0, "Internal error while initializing thread static storage");
+            LOG( 0, "Internal error while initializing thread static storage" );
+            std::abort();
+        }
+        if( ! LPF_HAS_ABORT ) {
+            LOG( 0, "Debug layer relies on lpf_abort, but selected engine does not support it" );
             std::abort();
         }
     }
