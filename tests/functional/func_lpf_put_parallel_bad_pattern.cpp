@@ -36,7 +36,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         ys[i] = 0;
     }
         
-    rc = lpf_resize_message_queue( lpf, n);
+    rc = lpf_resize_message_queue( lpf, 2*n );
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_memory_register( lpf, 2 );
     EXPECT_EQ( LPF_SUCCESS, rc );
@@ -60,6 +60,12 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
         EXPECT_EQ( 0u, ys[i] );
     }
 
+    // this pattern for P=5 has that:
+    //  - PID 0 puts a message to PID 0
+    //  - PID 0 puts a message to PID 2
+    //  - PID 1 puts a message to PID 0
+    //  - PID 1 puts a message to PID 2
+    // hence the h-relation is 2
     if ( pid < n )
     {
         for ( i = 0; i < n; ++ i)
