@@ -16,6 +16,7 @@
 #
 
 cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
+include(ProcessorCount)
 project(LPF C CXX ASM)
 
 # Version info
@@ -399,14 +400,35 @@ if (LPF_ENABLE_TESTS)
 	    string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
 	    set(lpfProbeSecs ${CMAKE_MATCH_1})
 
+	    # The "\pre P <= max" comment in a test indicates the desired number of
+	    # maximum LPF processes. If, at CMake configuration, the number of detected
+	    # processes is smaller, it overrides the desired number of maximum LPF
+	    # processes. If the test does not define a desired number of maximum LPF
+	    # processes, it will be set to the detected number of processes.
+	    #
+	    # The "\pre P >= min" comment in a test indicates the desired number of
+	    # minimum LPF processes. If the number of detected processes is smaller, it
+	    # overrides the desired number of minimum LPF processes. If the test does
+	    # not define a desired minimum number of LPF processes, it will be set to
+	    # the detected number of processes.
+	    #
+	    # Hence if neither a desired min nor max number of processes are defined in
+	    # a test, then the test will execute using the number of detected
+	    # processes only.
+	    #
+	    # Most tests only define a mininum number of desired processes, such as
+	    # "\pre P >= 1". In those cases, the test will execute for all possible
+	    # number of processes between 1 and the detected number of processes. This
+	    # has been the behaviour of the test suite since v1.0.
+
 	    target_link_exe_with_core(${testName} ${ENGINE})
 
 
 	    if ("${minProcs}" STREQUAL "")
-		    set(minProcs "1")
+		    ProcessorCount(minProcs)
 	    endif()
 	    if ("${maxProcs}" STREQUAL "")
-		    set(maxProcs "5")
+		    ProcessorCount(maxProcs)
 	    endif()
 	    if ("${lpfProbeSecs}" STREQUAL "")
 		    set(lpfProbeSecs "0.0")
