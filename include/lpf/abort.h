@@ -101,14 +101,14 @@ extern const int LPF_HAS_ABORT ;
  *          could be implemented on top of the above-described default LPF
  *          behaviour.
  *
- * The call to #lpf_abort diffes from the stdlib <tt>abort</tt> in that
- * implementations are not required to raise SIGABRT. The only requirements are
- * that:
+ * The call to #lpf_abort differs from the stdlib <tt>abort</tt>; for example,
+ * implementations are not required to raise SIGABRT as part of a call to
+ * #lpf_abort. Instead, the requirements are that:
  *  1. processes that call this function terminate during the call to
- *     #lpf_abort.
+ *     #lpf_abort;
  *  2. all other processes associated with the distributed application terminate
  *     at latest during a next call to #lpf_sync that should have handled
- *     communications with the aborted process;
+ *     communications with any aborted process;
  *  3. regardless of whether LPF aborted sibling processes, whether they exited
  *     gracefully, or whether they also called #lpf_abort, the process(es) which
  *     made the parent call to #lpf_exec, #lpf_hook, or #lpf_rehook should
