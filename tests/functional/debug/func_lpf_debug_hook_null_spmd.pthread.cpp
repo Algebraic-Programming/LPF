@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/pthread.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <pthread.h>
 #include <unistd.h>
@@ -30,7 +30,7 @@ struct thread_local_data {
 
 
 void * pthread_spmd( void * _data ) {
-    EXPECT_NE( "%p", _data, NULL );
+    EXPECT_NE( _data, (void*)NULL );
 
     const struct thread_local_data data = * ((struct thread_local_data*) _data);
     const int pts_rc = pthread_setspecific( pid_key, _data );
@@ -44,20 +44,20 @@ void * pthread_spmd( void * _data ) {
     lpf_init_t init;
     lpf_err_t rc = LPF_SUCCESS;
 
-    EXPECT_EQ( "%d", pts_rc, 0 );
+    EXPECT_EQ( pts_rc, 0 );
 
     rc = lpf_pthread_initialize(
         (lpf_pid_t)data.s,
         (lpf_pid_t)data.P,
         &init
     );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+    EXPECT_EQ( rc, LPF_SUCCESS );
 
     rc = lpf_hook( init, NULL, args );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+    EXPECT_EQ( rc, LPF_SUCCESS );
 
     rc = lpf_pthread_finalize( init );
-    EXPECT_EQ( "%d", rc, LPF_SUCCESS );
+    EXPECT_EQ( rc, LPF_SUCCESS );
 
     return NULL;
 }
@@ -67,38 +67,36 @@ void * pthread_spmd( void * _data ) {
  * \pre P <= 1
  * \pre P >= 1
  * \return Message: NULL spmd argument
- * \return Exit code: 6
+ * \return Exit code: 134
  */
-TEST( func_lpf_hook_null_spmd )
+TEST( API, func_lpf_hook_null_spmd )
 {
     long k = 0;
     const long P = sysconf( _SC_NPROCESSORS_ONLN );
 
     const int ptc_rc = pthread_key_create( &pid_key, NULL );
-    EXPECT_EQ( "%d", ptc_rc, 0 );
+    EXPECT_EQ( ptc_rc, 0 );
 
     pthread_t * const threads = (pthread_t*) malloc( P * sizeof(pthread_t) );
-    EXPECT_NE( "%p", threads, NULL );
+    EXPECT_NE( threads, (pthread_t*)NULL );
 
     struct thread_local_data * const data = (struct thread_local_data*) malloc( P * sizeof(struct thread_local_data) );
-    EXPECT_NE( "%p", data, NULL );
+    EXPECT_NE( data, (struct thread_local_data *)NULL );
 
     for( k = 0; k < P; ++k ) {
         data[ k ].P = P;
         data[ k ].s = k;
         const int rval = pthread_create( threads + k, NULL, &pthread_spmd, data + k );
-        EXPECT_EQ( "%d", rval, 0 );
+        EXPECT_EQ( rval, 0 );
     }
 
     for( k = 0; k < P; ++k ) {
         const int rval = pthread_join( threads[ k ], NULL );
-        EXPECT_EQ( "%d", rval, 0 );
+        EXPECT_EQ( rval, 0 );
     }
 
     const int ptd_rc = pthread_key_delete( pid_key );
-    EXPECT_EQ( "%d", ptd_rc, 0 );
-
-    return 0;
+    EXPECT_EQ( ptd_rc, 0 );
 }
 
 

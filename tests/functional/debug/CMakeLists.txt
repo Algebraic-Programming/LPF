@@ -37,10 +37,6 @@ set(debug_test_sources
     func_lpf_debug_global_deregister_order_mismatch.cpp
     func_lpf_debug_global_deregister_unequal.cpp
     func_lpf_debug_global_register_null_memreg.cpp
-    #func_lpf_debug_hook_null_f_symbols.pthread.cpp
-    #func_lpf_debug_hook_null_input.pthread.cpp
-    #func_lpf_debug_hook_null_output.pthread.cpp
-    #func_lpf_debug_hook_null_spmd.pthread.cpp
     func_lpf_debug_local_register_null_memreg.cpp
     func_lpf_debug_put_after_deregister_dest_after_sync.cpp
     func_lpf_debug_put_after_deregister_dest.cpp
@@ -96,4 +92,16 @@ foreach (LPF_IMPL_ID ${ENGINES})
 
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
+
+add_gtest(func_lpf_debug_hook_f_symbols_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_f_symbols.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_input_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_input.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_output_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_output.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_spmd_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_spmd.pthread.cpp)
 
