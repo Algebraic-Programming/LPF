@@ -64,6 +64,9 @@ void * pthread_spmd( void * _data ) {
     return NULL;
 }
 
+// the below tests for return code 134 as this is what aborted programs return
+// as an error code on modern systems
+
 /** 
  * \test Tests lpf_hook on pthread implementation with NULL output
  * \pre P <= 1
