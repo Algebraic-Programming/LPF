@@ -171,20 +171,20 @@ if (MPI_FOUND)
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
         
-                configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
-                set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
-                add_test(NAME dynamichook_1proc
-                         COMMAND bash ${dynamic_hook_t_sh} 1)
-                set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_2proc
-                         COMMAND bash ${dynamic_hook_t_sh} 2)
-                set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_3proc
-                         COMMAND bash ${dynamic_hook_t_sh} 3)
-                set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_10proc
-                         COMMAND bash ${dynamic_hook_t_sh} 10)
-                set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 )
+            configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
+            set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
+            add_test(NAME dynamichook_1proc
+                COMMAND bash ${dynamic_hook_t_sh} 1)
+            set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 )
+            add_test(NAME dynamichook_2proc
+                COMMAND bash ${dynamic_hook_t_sh} 2)
+            set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 )
+            add_test(NAME dynamichook_3proc
+                COMMAND bash ${dynamic_hook_t_sh} 3)
+            set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 )
+            add_test(NAME dynamichook_10proc
+                COMMAND bash ${dynamic_hook_t_sh} 10)
+            set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 )
     endif()
 
 # Other unit tests
@@ -220,5 +220,4 @@ if (MPI_FOUND)
     endforeach()
 
 endif(MPI_FOUND)
-
 
