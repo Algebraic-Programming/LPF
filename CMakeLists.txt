@@ -404,7 +404,7 @@ if (LPF_ENABLE_TESTS)
 	    # maximum LPF processes. If, at CMake configuration, the number of detected
 	    # processes is smaller, it overrides the desired number of maximum LPF
 	    # processes. If the test does not define a desired number of maximum LPF
-	    # processes, it will be set to the detected number of processes.
+	    # processes, it will be set to five.
 	    #
 	    # The "\pre P >= min" comment in a test indicates the desired number of
 	    # minimum LPF processes. If the number of detected processes is smaller, it
@@ -429,7 +429,7 @@ if (LPF_ENABLE_TESTS)
 		    ProcessorCount(minProcs)
 	    endif()
 	    if ("${maxProcs}" STREQUAL "")
-		    ProcessorCount(maxProcs)
+		    ProcessorCount(5)
 	    endif()
 	    if ("${minProcs}" GREATER "${nprocs}")
 		    set(minProcs ${nprocs})
@@ -451,7 +451,7 @@ if (LPF_ENABLE_TESTS)
 		    EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
 		    DISCOVERY_MODE POST_BUILD
 		    DISCOVERY_TIMEOUT 15
-		    )
+	    )
 
 
     endfunction(add_gtest)
