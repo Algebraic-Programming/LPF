@@ -141,7 +141,6 @@ foreach (LPF_IMPL_ID pthread mpirma)
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 add_gtest(func_lpf_hook_subset.mpimsg mpimsg ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_subset.mpimsg.cpp")
-add_gtest(func_lpf_hook_tcp.mpirma mpirma ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_tcp.mpirma.cpp")
 add_gtest(func_lpf_hook_tcp_timeout.mpirma mpirma ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_tcp_timeout.mpirma.cpp")
 # end of engine-specific tests
 

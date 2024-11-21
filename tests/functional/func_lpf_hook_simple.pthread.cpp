@@ -36,18 +36,18 @@ struct thread_local_data {
 void lpf_spmd( lpf_t ctx, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 {
     (void) ctx;
-    const struct thread_local_data * const data = pthread_getspecific( pid_key );
+    const struct thread_local_data * const data = static_cast<thread_local_data *>(pthread_getspecific( pid_key ));
 
     EXPECT_EQ( (size_t)nprocs, (size_t)(data->P) );
     EXPECT_EQ( (size_t)pid, (size_t)(data->s) );
     EXPECT_EQ( (size_t)(args.input_size), (size_t)(sizeof( struct thread_local_data)) );
     EXPECT_EQ( (size_t)(args.output_size), (size_t)0 );
     EXPECT_EQ( args.input, data );
-    EXPECT_EQ( args.output, NULL );
+    EXPECT_EQ( args.output, nullptr );
 }
 
 void * pthread_spmd( void * _data ) {
-    EXPECT_NE( _data, NULL );
+    EXPECT_NE( _data, nullptr);
 
     const struct thread_local_data data = * ((struct thread_local_data*) _data);
     const int pts_rc = pthread_setspecific( pid_key, _data );
@@ -94,10 +94,10 @@ TEST(API, func_lpf_hook_simple_pthread )
     EXPECT_EQ( ptc_rc, 0 );
 
     pthread_t * const threads = (pthread_t*) malloc( P * sizeof(pthread_t) );
-    EXPECT_NE( threads, NULL );
+    EXPECT_NE( threads, nullptr );
 
     struct thread_local_data * const data = (struct thread_local_data*) malloc( P * sizeof(struct thread_local_data) );
-    EXPECT_NE( data, NULL );
+    EXPECT_NE( data, nullptr );
 
     for( k = 0; k < P; ++k ) {
         data[ k ].P = P;
