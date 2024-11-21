@@ -297,7 +297,6 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
 
 lpf_err_t lpf_abort( lpf_t ctx ) {
     (void) ctx;
-    std::cout << "Will call MPI_abort\n";
     MPI_Abort(MPI_COMM_WORLD, 6);
     return LPF_SUCCESS;
 }
