@@ -57,6 +57,7 @@
 #undef LPF_NONE
 #undef LPF_INIT_NONE
 #undef LPF_NO_ARGS
+#undef LPF_HAS_ABORT
 
 #if __cplusplus >= 201103L
 #include <unordered_map>

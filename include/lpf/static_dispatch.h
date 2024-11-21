@@ -78,6 +78,7 @@
 #undef LPF_NONE
 #undef LPF_INIT_NONE
 #undef LPF_NO_ARGS
+#undef LPF_HAS_ABORT
 
 #ifdef LPF_FUNC
 
@@ -122,6 +123,7 @@
 #define LPF_NONE              LPF_CONST(NONE)
 #define LPF_INIT_NONE         LPF_CONST(INIT_NONE)
 #define LPF_NO_ARGS           LPF_CONST(NO_ARGS)
+#define LPF_HAS_ABORT         LPF_CONST(HAS_ABORT)
 
 #endif
 

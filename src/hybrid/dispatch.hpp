@@ -19,14 +19,17 @@
 #define LPF_CORE_HYBRID_DISPATCH_HPP
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #define LPF_CORE_STATIC_DISPATCH
 #define LPF_CORE_STATIC_DISPATCH_ID pthread
 #define LPF_CORE_STATIC_DISPATCH_CONFIG LPF_CORE_IMPL_CONFIG
 #include <lpf/core.h>
+#include <lpf/abort.h>
 #undef LPF_CORE_STATIC_DISPATCH_ID
 #undef LPF_CORE_STATIC_DISPATCH_CONFIG
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #define LPF_CORE_STATIC_DISPATCH_ID LPF_CORE_MULTI_NODE_ENGINE
 #define LPF_CORE_STATIC_DISPATCH_CONFIG LPF_CORE_IMPL_CONFIG
 #include <lpf/core.h>
@@ -35,8 +38,10 @@
 #undef LPF_CORE_STATIC_DISPATCH_CONFIG
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #undef LPF_CORE_STATIC_DISPATCH
 #include <lpf/core.h>
+#include <lpf/abort.h>
 
 #define USE_THREAD( symbol ) \
        LPF_RENAME_PRIMITIVE4( lpf, pthread, LPF_CORE_IMPL_CONFIG, symbol )
