@@ -368,11 +368,11 @@ if (LPF_ENABLE_TESTS)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
     set(test_output "${CMAKE_BINARY_DIR}/junit")
 
-    set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
-    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY FILE_PERMISSIONS WORLD_EXECUTE OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
-    if( NOT Python3_FOUND )
-        find_package( Python3 REQUIRED)
-    endif()
+    find_package( Python3 REQUIRED COMPONENTS Interpreter)
+    set(MY_TEST_LAUNCHER ${Python3_EXECUTABLE} ${CMAKE_BINARY_DIR}/test_launcher.py)
+    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py.in ${CMAKE_BINARY_DIR}/test_launcher.py @ONLY FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
+    #if( NOT Python3_FOUND )
+    #endif()
 
     # Macro for adding a new GoogleTest test
     function(add_gtest testName ENGINE debug testSource )
