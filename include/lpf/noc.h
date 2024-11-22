@@ -76,6 +76,76 @@ extern "C" {
 #define _LPF_NOC_VERSION 202400L
 
 /**
+ * Resizes the memory register for non-coherent RDMA.
+ *
+ * After a successful call to this function, the local process has enough
+ * resources to register \a max_regs memory regions in a non-coherent way.
+ *
+ * Each registration via lpf_noc_register() counts as one. Such registrations
+ * remain taking up capacity in the register until they are released via a call
+ * to lpf_noc_deregister(), which lowers the count of used memory registerations
+ * by one.
+ *
+ * There are no runtime out-of-bounds checks prescribed for lpf_noc_register()--
+ * this would also be too costly as error checking would require communication.
+ *
+ * If memory allocation were successful, the return value is #LPF_SUCCESS and
+ * the local process may assume the new buffer size \a max_regs.
+ *
+ * In the case of insufficient local memory the return value will be
+ * #LPF_ERR_OUT_OF_MEMORY. In that case, it is as if the call never happened and
+ * the user may retry the call locally after freeing up unused resources. Should
+ * retrying not lead to a successful call, the programmer may opt to broadcast
+ * the error (using existing slots) or to give up by returning from the spmd
+ * section.
+ *
+ * \note The current maximum cannot be retrieved from the runtime. Instead, the
+ *       programmer must track this information herself. To provide
+ *       encapsulation, see lpf_rehook().
+ *
+ * \note When the given memory register capacity is smaller than the current
+ *       capacity, the runtime is allowed but not required to release the
+ *       allocated memory. Such a call shall always be successful and return
+ *       #LPF_SUCCESS.
+ *
+ * \note This means that an implementation that allows shrinking the given
+ *       capacity must also ensure the old buffer remains intact in case there
+ *       is not enough memory to allocate a smaller one.
+ *
+ * \note The last invocation of lpf_noc_resize_memory_register() determines the
+ *       maximum number of memory registrations using lpf_noc_register() that
+ *       can be maintained concurrently.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only. Any
+ * further thread safety may be guaranteed by the implementation, but is not
+ * specified. Similar conditions hold for all LPF primitives that take an
+ * argument of type #lpf_t; see #lpf_t for more information.
+ *
+ * \param[in,out]   ctx The runtime state as provided by lpf_exec().
+ * \param[in]  max_regs The requested maximum number of memory regions that can
+ *                      be registered. This value must be the same on all
+ *                      processes.
+ *
+ * \returns #LPF_SUCCESS
+ *            When this process successfully acquires the resources.
+ *
+ * \returns #LPF_ERR_OUT_OF_MEMORY
+ *            When there was not enough memory left on the heap. In this case
+ *            the effect is the same as when this call did not occur at all.
+ *
+ * \par BSP costs
+ * None
+ *
+ * See also \ref BSPCOSTS.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( \mathit{max\_regs} ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_noc_resize_memory_register( lpf_t ctx, size_t max_regs );
+
+/**
  * Registers a local memory area, preparing its use for intra-process
  * communication.
  *
@@ -90,8 +160,8 @@ extern "C" {
  * how to ensure sufficient capacity.
  *
  * Different from a memory slot returned by #lpf_register_local, a memory slot
- * returned by a successful call to this function may also serve as either a
- * local or remote memory slot for #lpf_noc_put and #lpf_noc_get.
+ * returned by a successful call to this function may serve as either a local
+ * or remote memory slot for #lpf_noc_put and #lpf_noc_get.
  *
  * Use of the returned memory slot to indicate a remote memory area may only
  * occur by copying the returned memory slot to another LPF process. This may
@@ -171,6 +241,43 @@ lpf_err_t lpf_noc_register(
 );
 
 /**
+ * Deregisters a memory area previously registered using lpf_noc_register().
+ *
+ * After a successful deregistration, the slot is returned to the pool of free
+ * memory slots. The total number of memory slots may be set via a call to
+ * lpf_noc_resize_memory_register().
+ *
+ * Deregistration takes effect immediately. A call to this function is not
+ * collective, and the other of deregistration does not need to match the order
+ * of registration. Any local or remote communication using the given \a memslot
+ * in the current superstep invokes undefined behaviour.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only. Any
+ * further thread safety may be guaranteed by the implementation, but is not
+ * specified. Similar conditions hold for all LPF primitives that take an
+ * argument of type #lpf_t; see #lpf_t for more information.
+ *
+ * \param[in,out] ctx The runtime state as provided by lpf_exec().
+ * \param[in] memslot The memory slot identifier to de-register.
+ *
+ * \returns #LPF_SUCCESS
+ *            Successfully deregistered the memory region.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \mathcal{O}(n) \f$, where \f$ n \f$ is the size of the memory region
+ * corresponding to \a memslot.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_deregister(
+    lpf_t ctx,
+    lpf_memslot_t memslot
+);
+
+/**
  * Copies contents of local memory into the memory of remote processes.
  *
  * This operation is guaranteed to be completed after a call to the next
@@ -181,9 +288,10 @@ lpf_err_t lpf_noc_register(
  * Concurrent reads or writes from or to the same memory area are
  * allowed in the same way they are for the core primitive #lpf_put.
  *
- * This primitive differs from #lpf_put in that \em both \a src_slot and
- * \a dst_slot may be the result from #lpf_noc_register. Neither slot needs to
- * have been registered before the last call to #lpf_sync.
+ * This primitive differs from #lpf_put in that the \a dst_slot may be the
+ * result of a successful call to #lpf_noc_register, while \a src_slot \em must
+ * be the results of such a successful call. In both cases, the slot need
+ * \em not have been registered before the last call to #lpf_sync.
  *
  * \par Thread safety
  * This function is safe to be called from different LPF processes only. Any
@@ -260,9 +368,10 @@ lpf_err_t lpf_noc_put(
  * Concurrent reads or writes from or to the same memory area are allowed in the
  * same way it is for #lpf_get.
  *
- * This primitive differs from #lpf_get in that \em both \a src_slot and
- * \a dst_slot may be the result from #lpf_noc_register. Neither slot needs to
- * have been registered before the last call to #lpf_sync.
+ * This primitive differs from #lpf_get in that the \a src_slot may be the
+ * result of a successful call to #lpf_noc_register, while \a dst_slot \em must
+ * be the results of such a successful call. In both cases, the slot need
+ * \em not have been registered before the last call to #lpf_sync.
  *
  * \par Thread safety
  * This function is safe to be called from different LPF processes only. Any
@@ -318,7 +427,7 @@ lpf_err_t lpf_noc_put(
  * See \ref BSPCOSTS.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_get(
+lpf_err_t lpf_noc_get(
     lpf_t ctx,
     lpf_pid_t src_pid,
     lpf_memslot_t src_slot,
@@ -333,7 +442,6 @@ lpf_err_t lpf_get(
  * @}
  *
  * @}
- *
  */
 
 #ifdef __cplusplus
