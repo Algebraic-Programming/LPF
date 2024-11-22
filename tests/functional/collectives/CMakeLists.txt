@@ -31,7 +31,6 @@ set(c99_tests_sources
     func_lpf_gather.cpp
     func_lpf_reduce.cpp
     func_lpf_scatter.cpp
-    func_lpf_zero_cost.cpp
 )
 
 foreach (LPF_IMPL_ID ${ENGINES})

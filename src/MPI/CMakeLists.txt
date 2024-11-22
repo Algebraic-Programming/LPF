@@ -175,16 +175,18 @@ if (MPI_FOUND)
             set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
             add_test(NAME dynamichook_1proc
                 COMMAND bash ${dynamic_hook_t_sh} 1)
-            set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 )
+            # We set all dynamichook tests to run in serial mode, without any other tests,
+            # since these tests occupy the same port and would block each other
+            set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
             add_test(NAME dynamichook_2proc
                 COMMAND bash ${dynamic_hook_t_sh} 2)
-            set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 )
+            set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
             add_test(NAME dynamichook_3proc
                 COMMAND bash ${dynamic_hook_t_sh} 3)
-            set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 )
+            set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
             add_test(NAME dynamichook_10proc
                 COMMAND bash ${dynamic_hook_t_sh} 10)
-            set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 )
+            set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
     endif()
 
 # Other unit tests

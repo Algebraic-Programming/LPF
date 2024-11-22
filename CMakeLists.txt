@@ -441,7 +441,7 @@ if (LPF_ENABLE_TESTS)
 	    endif()
 
 	    # Most recent approach to Gtests, recommended!
-	    set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
+	    set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};--engine;${ENGINE};--parallel_launcher;${CMAKE_BINARY_DIR}/lpfrun_build;--min_process_count;${minProcs};--max_process_count;${maxProcs};--lpf_probe_timer;${lpfProbeSecs};--expected_return_code;${retCode})
 	    gtest_discover_tests(${testName}
 		    TEST_PREFIX ${ENGINE}_
 		    EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
