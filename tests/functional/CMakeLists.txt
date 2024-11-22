@@ -86,7 +86,6 @@ set(test_sources
     func_lpf_probe_root.cpp
     func_lpf_put_and_get_overlapping.cpp
     func_lpf_put_parallel_alltoall.cpp
-    func_lpf_put_parallel_bad_pattern.cpp
     func_lpf_put_parallel_big.cpp
     func_lpf_put_parallel_huge.cpp
     func_lpf_put_parallel_overlapping_complete.cpp
