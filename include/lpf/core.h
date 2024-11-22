@@ -703,7 +703,7 @@ extern "C" {
  * released, and NN the number of the specifications released before this one in
  * the same year.
  */
-#define _LPF_VERSION 202000L
+#define _LPF_VERSION 202400L
 
 /**
  * An implementation that has defined this macro may never define the
@@ -765,6 +765,9 @@ extern "C" {
  *         -# loses performance due to locking on internal data structures of
  *            #lpf_t.
  *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
+ *
  * \par Communication
  * Object of this type must never be communicated.
  *
@@ -778,6 +781,9 @@ typedef void * lpf_t;
  * An unsigned integral type large enough to hold the number of processes. All
  * operations that work with C unsigned integral types also work for this
  * type.
+ *
+ * \par Trivially copyable
+ * Objects of this type are trivially copyable.
  *
  * \par Communication
  * It is safe to communicate values of this type.
@@ -794,8 +800,18 @@ typedef unsigned lpf_pid_t;
  *
  * \note An implementation based on, e.g., UNIX processes, has to put in effort
  *       to translate a specific function at a root process into the correct
- *       matching function at a remote process; function addresses might not
- *       match across UNIX processes, after all.
+ *       matching function at a remote process; function addresses might not,
+ *       after all, match across UNIX processes.
+ *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
+ *
+ * \par Communication
+ * Objects of this type must never be communicated.
+ *
+ * \note LPF foresees in the so-called communication of function pointers via
+ *       #lpf_args_t and #lpf_exec (or #lpf_hook, #lpf_rehook for non-inclusive
+ *       LPF engines).
  */
 typedef void (*lpf_func_t) ();
 
@@ -814,6 +830,9 @@ typedef void (*lpf_func_t) ();
  * the pointers on the different processes need not be equal; in that case, LPF
  * ensures that the pointers on all processes with PID larger than zero point to
  * the same function symbol as they do on PID 0.
+ *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
  *
  * \par Communication
  * Objects of this type must never be communicated.
@@ -854,6 +873,12 @@ typedef struct lpf_args
  *
  * \note Real-world applications will likely always require initial program
  *       parameters to be passed into the parallel SPMD section.
+ *
+ * \par Trivially copyable
+ * This value is trivially copyable.
+ *
+ * \par Communication
+ * This value must never be communicated.
  */
 extern _LPFLIB_VAR const lpf_args_t LPF_NO_ARGS;
 
@@ -863,9 +888,13 @@ extern _LPFLIB_VAR const lpf_args_t LPF_NO_ARGS;
  * An implementation must ensure the error codes of this type may be compared
  * for equality or for inequality.
  *
+ * \par Trivially copyable
+ * Objects of this type are trivially copyable.
+ *
  * \par Communication
- * It is \em safe to communicate values of this type. <em>An implementation
- * must ensure this</em>.
+ * It is \em safe to communicate values of this type.
+ *
+ * \note An implementation \em must ensure the above.
  */
 #ifdef DOXYGEN
 typedef ... lpf_err_t;
@@ -912,6 +941,9 @@ extern _LPFLIB_VAR const lpf_err_t LPF_ERR_FATAL;
  * to bootstrap communications between processes. How such an object can be
  * obtained, depends on the implementation.
  *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
+ *
  * \par Communication
  * Object of this type must never be communicated.
  */
@@ -934,6 +966,9 @@ typedef void * lpf_init_t;
  * semantics of RDMA communication using #lpf_get or #lpf_put using the default
  * message attribute #LPF_MSG_DEFAULT.
  *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
+ *
  * \par Communication
  * Object of this type must not be communicated.
  */
@@ -949,6 +984,9 @@ typedef int lpf_sync_attr_t;
 
  * \note An implementation may choose to define more members for the user to
  *       inspect; however, doing so will lead to non-portable code.
+ *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
  *
  * \par Communication
  * Only the non-(function-)pointer members can be communicated safely.
@@ -1032,11 +1070,24 @@ typedef struct lpf_machine {
 } lpf_machine_t;
 
 /**
- * Type to identify a registered memory region. Both source and destination
- * memory areas must be registered for direct remote memory access (DRMA).
+ * Type to identify a registered memory region.
+ *
+ * Both source and destination memory areas must be registered for direct remote
+ * memory access (DRMA).
+ *
+ * \par Trivially copyable
+ * Objects of this type are trivially copyable.
  *
  * \par Communication
- * Object of this type must not be communicated.
+ * Object of this type \em should not be communicated
+ *
+ * \note Unless otherwise specified, a valid memory slot on one LPF process when
+ *       communicated to another process, does not necessarily have that the
+ *       remote copy is a valid memory slot on that remote process. This is
+ *       despite the requirement that memory slots should be trivially copyable.
+ *
+ * \note To collectively create memory slots that refer to the same distributed
+ *       memory region, see #lpf_register_global.
  */
 #ifdef DOXYGEN
 typedef ... lpf_memslot_t;
@@ -1057,6 +1108,9 @@ typedef size_t lpf_memslot_t;
  * for instance, to allow for a delay in delivery of a message, or to
  * instruct the runtime that the message should be combined with data
  * already residing in the destination memory, e.g., by addition.
+ *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
  *
  * \par Communication
  * Objects of this type must not be communicated.
@@ -1096,6 +1150,9 @@ typedef int lpf_msg_attr_t;
  * \note The argument \a ctx is defined const because #lpf_t resolves to a
  *       pointer type.
  *
+ * \par Trivially copyable
+ * Objects of this type need not be trivially copyable.
+ *
  * \par Communication
  * Objects of this type must not be communicated.
  */
@@ -1106,6 +1163,9 @@ typedef void(*lpf_spmd_t) ( const lpf_t ctx, const lpf_pid_t pid, const lpf_pid_
  * A non-existing LPF context. #LPF_NONE may never be used as argument to any of
  * the functions in this module. If two #lpf_t objects both equal #LPF_NONE, then
  * a comparison for equality shall return \a true.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
  *
  * \par Communication
  * This value must not be communicated.
@@ -1123,6 +1183,9 @@ extern _LPFLIB_VAR const lpf_t LPF_NONE;
  * There shall only be one LPF process (one thread or one process) in any
  * implementation that provides a valid #LPF_ROOT.
  *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
+ *
  * \par Communication
  * This value must not be communicated.
  */
@@ -1130,6 +1193,9 @@ extern _LPFLIB_VAR const lpf_t LPF_ROOT;
 
 /**
  * An invalid #lpf_init_t object.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
  *
  * \par Communication
  * This value must not be communicated.
@@ -1139,6 +1205,9 @@ extern _LPFLIB_VAR const lpf_init_t LPF_INIT_NONE;
 /**
  * Apply the default syncing mechanism in lpf_sync().
  *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
+ *
  * \par Communication
  * This value must not be communicated.
  */
@@ -1146,6 +1215,9 @@ extern _LPFLIB_VAR const lpf_sync_attr_t LPF_SYNC_DEFAULT;
 
 /**
  * Applies the default semantics of a #lpf_put or #lpf_get.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
  *
  * \par Communication
  * This value must not be communicated.
@@ -1157,18 +1229,36 @@ extern _LPFLIB_VAR const lpf_msg_attr_t LPF_MSG_DEFAULT;
  * can come in useful when you want to run an \a spmd function on the maximum
  * number of processors with lpf_exec(). In that case, use NULL as parameter
  * for the \a args parameter.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
+ *
+ * \par Communication
+ * This value may be communicated.
  */
 extern _LPFLIB_VAR const lpf_pid_t LPF_MAX_P;
 
 /**
  * A dummy value to initialize an abstract machine of type #lpf_machine_t at
  * their declaration.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
+ *
+ * \par Communication
+ * This value must not be communicated.
  */
 extern _LPFLIB_VAR const lpf_machine_t LPF_INVALID_MACHINE;
 
 /**
  * A dummy value to initialize memory slots at their declaration. A debug
  * implementation may check for this value so that errors can be detected.
+ *
+ * \par Trivially copyable
+ * This value must be trivially copyable.
+ *
+ * \par Communication
+ * This value must not be communicated.
  */
 extern _LPFLIB_VAR const lpf_memslot_t LPF_INVALID_MEMSLOT;
 
