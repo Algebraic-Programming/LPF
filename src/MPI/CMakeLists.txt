@@ -35,22 +35,20 @@ if (MPI_FOUND)
     set_target_properties( lpf_proxy_dummy PROPERTIES LINK_FLAGS
             "${MPI_C_LINK_FLAGS}" )
     target_include_directories( lpf_proxy_dummy PRIVATE ${MPI_C_INCLUDE_PATH})
-    target_compile_flags(lpf_proxy_dummy PRIVATE  ${MPI_C_COMPILE_FLAGS})
     install( TARGETS lpf_proxy_dummy RUNTIME DESTINATION ${INSTALL_HELPERS} )
-        
 
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
 
 
-# univ_ stands for universal interface => lpf_exec, lpf_put, etc...
-# spec_ stands for specific interface => lpf_mpimsg_release_exec, lpf_mpimsg_release_put, etc...
+    # univ_ stands for universal interface => lpf_exec, lpf_put, etc...
+    # spec_ stands for specific interface => lpf_mpimsg_release_exec, lpf_mpimsg_release_put, etc...
     foreach (iface  "univ_" "spec_" )
-    foreach (LPF_IMPL_ID ${MPI_ENGINES})
-        set(libname "lpf_core_${iface}${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
-        set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
-        
-        set(ibverbs_sources)
-        if (LPF_IMPL_ID STREQUAL ibverbs)
+        foreach (LPF_IMPL_ID ${MPI_ENGINES})
+            set(libname "lpf_core_${iface}${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
+            set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
+
+            set(ibverbs_sources)
+            if (LPF_IMPL_ID STREQUAL ibverbs)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -67,15 +65,13 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-		init.cpp
+                init.cpp
                 ${ibverbs_sources}
             )
 
 
         target_compile_flags(raw_${libname} 
-                PUBLIC ${MPI_C_COMPILE_FLAGS} 
-                INTERFACE "-fPIC"
-                )
+                INTERFACE "-fPIC")
 
         target_compile_definitions(raw_${libname} 
                 PRIVATE "LPF_CORE_MPI_USES_${LPF_IMPL_ID}=1"
@@ -103,9 +99,7 @@ if (MPI_FOUND)
                                                     MACOSX_RPATH TRUE)
 
         target_compile_flags(${libname} 
-                PUBLIC ${MPI_C_COMPILE_FLAGS} 
-                INTERFACE "-fPIC"
-        )
+                INTERFACE "-fPIC")
 
         if (iface STREQUAL "spec_")
             target_compile_definitions(${libname} 
@@ -159,7 +153,7 @@ if (MPI_FOUND)
         set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
         string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
 
-        set(lpf_cflags "${lpf_cflags} ${MPI_C_COMPILE_FLAGS} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
+        set(lpf_cflags "${lpf_cflags}  -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
         set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
     endforeach()
   
