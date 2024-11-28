@@ -192,7 +192,7 @@ EOF
 
        --with-mpiexec=*)
             mpiexec="${arg#--with-mpiexec=}"
-            mpi_cmake_flags="${mpi_cmake_flags} -DMPIEXEC=$mpiexec"
+            mpi_cmake_flags="${mpi_cmake_flags} -DMPIEXEC=$mpiexec -DMPIEXEC_EXECUTABLE=$mpiexec"
             shift;
             ;;
 
