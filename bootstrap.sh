@@ -288,8 +288,8 @@ ${CMAKE_EXE} -Wno-dev \
       -DLPF_HWLOC="${hwloc}" \
       $hwloc_found_flag \
       $mpi_cmake_flags \
-      "$extra_flags" \
-      "$perf_flags" \
+      ${extra_flags+"$extra_flags"} \
+      ${perf_flags+"$perf_flags"} \
       "$@" $srcdir \
      || { echo FAIL "Failed to configure LPF; Please check your chosen configuration"; exit 1; }
 
