@@ -52,12 +52,12 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-	"A high performance BSP communications library" )
+  "A high performance BSP communications library" )
 
 set(CPACK_SOURCE_GENERATOR "TGZ" )
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/" "/\\\\.svn/" "\\\\.swp$" "/site/" "/build/" "/pclint/" "/junit/" "/ideas/" )
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
-	"LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
+  "LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
 
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
@@ -183,7 +183,7 @@ endif()
 #enable the hybrid engine
 if ( LIB_POSIX_THREADS AND LIB_MATH AND LIB_DL AND MPI_FOUND
         AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1
-	AND ENABLE_IBVERBS )
+        AND ENABLE_IBVERBS )
     list(APPEND ENGINES "hybrid")
     set(HYBRID_ENGINE_ENABLED on)
 endif()
@@ -232,8 +232,8 @@ option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
 option(GTEST_AGREE_TO_LICENSE
-	"Does the user agree to the GoogleTest license"
-	OFF)
+      "Does the user agree to the GoogleTest license"
+      OFF)
 
 # C++ standard -- Google tests require newer C++ standard than C++11
 if (LPF_ENABLE_TESTS)
@@ -342,7 +342,7 @@ if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
 
     if (NOT GTEST_AGREE_TO_LICENSE)
-	    message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
+        message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
     endif()
     # Enable testing in CMake
     enable_testing()
@@ -371,60 +371,58 @@ if (LPF_ENABLE_TESTS)
     find_package( Python3 REQUIRED COMPONENTS Interpreter)
     set(MY_TEST_LAUNCHER ${Python3_EXECUTABLE} ${CMAKE_BINARY_DIR}/test_launcher.py)
     configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py.in ${CMAKE_BINARY_DIR}/test_launcher.py @ONLY FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
-    #if( NOT Python3_FOUND )
-    #endif()
 
     # Macro for adding a new GoogleTest test
     function(add_gtest testName ENGINE debug testSource )
-	    if ("{$ENGINE}" STREQUAL "")
-		    message(FATAL_ERROR "engine cannot be empty, ever!")
-	    endif()
-	    add_executable(${testName} ${testSource} ${ARGN})
-	    target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
-	    target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
-	    if (debug)
-		    target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-		    target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
-	    else(debug)
-		    target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
-	    endif(debug)
+        if ("{$ENGINE}" STREQUAL "")
+            message(FATAL_ERROR "engine cannot be empty, ever!")
+        endif()
+        add_executable(${testName} ${testSource} ${ARGN})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
+        if (debug)
+            target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
+        else(debug)
+            target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+        endif(debug)
 
 
-	    # Extract test-specific information from comments of tests
-	    file(READ ${testSource} fileContents)
-	    string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
-	    set(retCode ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
-	    set(minProcs ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
-	    set(maxProcs ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
-	    set(lpfProbeSecs ${CMAKE_MATCH_1})
+        # Extract test-specific information from comments of tests
+        file(READ ${testSource} fileContents)
+        string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
+        set(retCode ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
+        set(minProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
+        set(maxProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
+        set(lpfProbeSecs ${CMAKE_MATCH_1})
 
-	    target_link_exe_with_core(${testName} ${ENGINE})
+        target_link_exe_with_core(${testName} ${ENGINE})
 
         # The "\pre P <= max" comment in a test indicates the desired number of
         # maximum LPF processes. If the test does not define a desired number of 
         # maximum LPF processes, it will be set to 5.
-	    #
-	    # The "\pre P >= min" comment in a test indicates the desired number of
+        #
+        # The "\pre P >= min" comment in a test indicates the desired number of
         # minimum LPF processes. If the test does not define a desired minimum 
         # number of LPF processes, it will be set to 1.
         #
         # Let 'processorCount' be the detected number of processors by the system.
         # If this number is smaller than the desider minimum and/or maximum number
         # of processes, it overwrites these
-	    #
-	    # Most tests only define a mininum number of desired processes, such as
-	    # "\pre P >= 1". In those cases, the test will execute for the range 1,..,5
+        #
+        # Most tests only define a mininum number of desired processes, such as
+        # "\pre P >= 1". In those cases, the test will execute for the range 1,..,5
         # (including)
 
-	    if ("${minProcs}" STREQUAL "")
-		    set(minProcs "1")
-	    endif()
-	    if ("${maxProcs}" STREQUAL "")
-		    set(maxProcs "5")
-	    endif()
+        if ("${minProcs}" STREQUAL "")
+            set(minProcs "1")
+        endif()
+        if ("${maxProcs}" STREQUAL "")
+            set(maxProcs "5")
+        endif()
         # cap min with processorCount, if needed
         if ("${minProcs}" GREATER "${processorCount}")
             set(minProcs ${processorCount})
@@ -433,22 +431,21 @@ if (LPF_ENABLE_TESTS)
         if ("${maxProcs}" GREATER "${processorCount}")
             set(maxProcs ${processorCount})
         endif()
-	    if ("${lpfProbeSecs}" STREQUAL "")
-		    set(lpfProbeSecs "0.0")
-	    endif()
-	    if ("${retCode}" STREQUAL "")
-		    set(retCode "0")
-	    endif()
+        if ("${lpfProbeSecs}" STREQUAL "")
+            set(lpfProbeSecs "0.0")
+        endif()
+        if ("${retCode}" STREQUAL "")
+            set(retCode "0")
+        endif()
 
-	    # Most recent approach to Gtests, recommended!
-	    set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};--engine;${ENGINE};--parallel_launcher;${CMAKE_BINARY_DIR}/lpfrun_build;--min_process_count;${minProcs};--max_process_count;${maxProcs};--lpf_probe_timer;${lpfProbeSecs};--expected_return_code;${retCode})
-	    gtest_discover_tests(${testName}
-		    TEST_PREFIX ${ENGINE}_
-		    EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
-		    DISCOVERY_MODE POST_BUILD
-		    DISCOVERY_TIMEOUT 15
-		    )
-
+        # Most recent approach to Gtests, recommended!
+        set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};--engine;${ENGINE};--parallel_launcher;${CMAKE_BINARY_DIR}/lpfrun_build;--min_process_count;${minProcs};--max_process_count;${maxProcs};--lpf_probe_timer;${lpfProbeSecs};--expected_return_code;${retCode})
+        gtest_discover_tests(${testName}
+            TEST_PREFIX ${ENGINE}_
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            DISCOVERY_MODE POST_BUILD
+            DISCOVERY_TIMEOUT 15
+        )
 
     endfunction(add_gtest)
 

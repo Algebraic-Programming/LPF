@@ -153,7 +153,7 @@ if (MPI_FOUND)
         set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
         string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
 
-        set(lpf_cflags "${lpf_cflags}  -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
+        set(lpf_cflags "${lpf_cflags} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
         set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
     endforeach()
   
