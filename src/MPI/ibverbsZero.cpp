@@ -763,6 +763,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
     ASSERT( src.mr );
+    ASSERT( dst.mr );
 
     int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
     if (size == 0) numMsgs = 1;

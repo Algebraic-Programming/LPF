@@ -211,11 +211,17 @@ public:
     void destroy() {
         m_local.destroy();
         m_global.destroy();
+        m_noc.destroy();
     }
 
     Slot addLocalReg( Record record )  // nothrow
     { 
         return toLocal( m_local.add( record ) ); 
+    } 
+
+    Slot addNocReg( Record record )  // nothrow
+    { 
+        return toNoc( m_local.add( record ) ); 
     } 
 
     Slot addGlobalReg( Record record ) // nothrow
@@ -227,16 +233,20 @@ public:
     {
         if (isLocalSlot(slot))
             m_local.remove( fromLocal(slot) ) ;
-        else
+        else if (isGlobalSlot(slot))
             m_global.remove( fromGlobal( slot ) );
+        else 
+            m_noc.remove(fromNoc( slot ) );
      }
 
     const Record & lookup( Slot slot ) const // nothrow
     {
         if (isLocalSlot(slot))
             return m_local.lookup( fromLocal(slot));
-        else
+        else if (isGlobalSlot(slot))
             return m_global.lookup( fromGlobal( slot ));
+        else // isNocSlot(slot) == true
+            return m_noc.lookup( fromNoc( slot ));
     }
 
     Record & update( Slot slot ) // nothrow
@@ -252,36 +262,50 @@ public:
     {
         m_global.reserve( size, defaultRecord );
         m_local.reserve( size, defaultRecord );
+        m_noc.reserve( size, defaultRecord );
     }
 
     size_t capacity( ) const
     { 
-        return std::min( m_global.capacity(), m_local.capacity() );
+        return std::min(std::min( m_global.capacity(), m_local.capacity()), m_noc.capacity() );
     }
 
     size_t range() const
     {
-        return std::max( 2*m_global.capacity(), 2*m_local.capacity()+1 );
+        return std::max(std::max( 3*m_global.capacity(), 3*m_local.capacity()+1), 3*m_noc.capacity()+2);
     }
 
     static bool isLocalSlot( Slot slot ) 
-    { return slot % 2 == 1; }
+    { return slot % 3 == 1; }
+
+    static bool isGlobalSlot( Slot slot ) 
+    { return slot % 3 == 0; }
+
+    static bool isNocSlot( Slot slot ) 
+    { return slot % 3 == 2; }
 
 private:
     static Slot fromGlobal( Slot slot )
-    { return slot / 2; }
+    { return slot / 3; }
 
     static Slot fromLocal( Slot slot )
-    { return (slot - 1) / 2; }
+    { return (slot - 1) / 3; }
+
+    static Slot fromNoc( Slot slot )
+    { return (slot - 2) / 3; }
 
     static Slot toGlobal( Slot slot )
-    { return 2*slot; }
+    { return 3*slot; }
 
     static Slot toLocal( Slot slot )
-    { return 2*slot + 1; }
+    { return 3*slot + 1; }
+
+    static Slot toNoc( Slot slot )
+    { return 3*slot + 2; }
 
     MemoryRegister<Record> m_local;
     MemoryRegister<Record> m_global;
+    MemoryRegister<Record> m_noc;
 };
 
 } // namespace lpf
