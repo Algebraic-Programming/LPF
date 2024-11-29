@@ -341,6 +341,11 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
     # -fPIC and -rdynamic are necessary to ensure that symbols can be
     # looked up by dlsym which is the mechanism lpf_exec uses to broadcast the
     # function that should be executed
+    set(rdyn_lflag "-rdynamic")
+    if (APPLE)
+        # OS X does not support -rdynamic
+	set(rdyn_lflag "")
+    endif ()
 
     # include flags:
     set( mpi_include_flags )
@@ -350,10 +355,10 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
     # linker flags:
     set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
     string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
-    set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags} -rdynamic")
+    set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags} ${rdyn_lflag}")
 
     # executable linker flags:
-    set(lpf_exe_link_flags "${lpf_exe_link_flags} -rdynamic")
+    set(lpf_exe_link_flags "${lpf_exe_link_flags} ${rdyn_lflag}")
 endif ()
 #  ...add requirements from other engines here...
 
