@@ -227,6 +227,7 @@ endif()
 
 # When system is not Linux, enable conditionally compiled blocks
 if (APPLE)
+    message( WARNING "LPF compilation on OS X is not regularly tested" )
     add_definitions(-DLPF_ON_MACOS=1)
 endif()
 
@@ -330,14 +331,38 @@ endfunction(target_compile_flags)
 # Source
 set(lpf_cflags)
 set(lpf_lib_link_flags)
-set(lpf_exe_link_flags "-rdynamic")
+set(lpf_exe_link_flags)
+
+# Populate lpf_cflags, lpf_lib_link_flags, lpf_exe_link_flags according to
+# (enabled) engine requirements
+#  - 0) PThreads engine needs nothing special
+#  - 1) MPI-based engines:
+if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
+    # -fPIC and -rdynamic are necessary to ensure that symbols can be
+    # looked up by dlsym which is the mechanism lpf_exec uses to broadcast the
+    # function that should be executed
+
+    # include flags:
+    set( mpi_include_flags )
+    string( REPLACE ";" " -I" mpi_include_flags "${MPI_C_INCLUDE_PATH}" )
+    set(lpf_cflags "${lpf_cflags} -I${mpi_include_flags} -fPIC")
+
+    # linker flags:
+    set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
+    string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
+    set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags} -rdynamic")
+
+    # executable linker flags:
+    set(lpf_exe_link_flags "${lpf_exe_link_flags} -rdynamic")
+endif ()
+#  ...add requirements from other engines here...
 
 # Collating all compile & link flags
 set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
 set(LPF_CORE_LIB_LINK_FLAGS "${lpf_lib_link_flags}" CACHE STRING "Flags to link user libraries" )
 set(LPF_CORE_EXE_LINK_FLAGS "${lpf_exe_link_flags}" CACHE STRING "Flags to link user executables" )
 
-# Compiling LPF programmes in the build dir
+# Compiling LPF programs in the build dir
 function( target_link_exe_with_core target )
     set(engine "imp")
     if (ARGV1)
@@ -476,10 +501,11 @@ else(LPF_ENABLE_TESTS)
 
 endif(LPF_ENABLE_TESTS)
 
+# Main LPF library includes and sources
 include_directories(include)
 include_directories(src/common)
-
 add_subdirectory(src)
+
 # Apps
 add_subdirectory(src/utils)
 
