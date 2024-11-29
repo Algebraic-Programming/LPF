@@ -332,11 +332,6 @@ set(lpf_cflags)
 set(lpf_lib_link_flags)
 set(lpf_exe_link_flags "-rdynamic")
 
-# Collating all compile & link flags
-set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
-set(LPF_CORE_LIB_LINK_FLAGS "${lpf_lib_link_flags}" CACHE STRING "Flags to link user libraries" )
-set(LPF_CORE_EXE_LINK_FLAGS "${lpf_exe_link_flags}" CACHE STRING "Flags to link user executables" )
-
 # Compiling LPF programmes in the build dir
 function( target_link_exe_with_core target )
     set(engine "imp")
@@ -492,6 +487,10 @@ endif (LPF_ENABLE_TESTS)
 add_subdirectory(doc)
 add_subdirectory(examples)
 
+# Collating all compile & link flags
+set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
+set(LPF_CORE_LIB_LINK_FLAGS "${lpf_lib_link_flags}" CACHE STRING "Flags to link user libraries" )
+set(LPF_CORE_EXE_LINK_FLAGS "${lpf_exe_link_flags}" CACHE STRING "Flags to link user executables" )
 
 # Generation of frontends to be installed
 configure_file( lpfcc.in  lpfcc  @ONLY)
