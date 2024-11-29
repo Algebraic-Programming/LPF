@@ -182,10 +182,29 @@ endif()
 
 #enable the hybrid engine
 if ( LIB_POSIX_THREADS AND LIB_MATH AND LIB_DL AND MPI_FOUND
-        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1
-        AND ENABLE_IBVERBS )
-    list(APPEND ENGINES "hybrid")
-    set(HYBRID_ENGINE_ENABLED on)
+        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1 )
+    if( ENABLE_IBVERBS )
+        set(LPFLIB_HYBRID_MPI_ENGINE "ibverbs" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( MPI_RMA )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpirma" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( LIB_MATH AND LIB_DL AND MPI_FOUND )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpimsg" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    endif()
+    if( HYBRID_ENGINE_ENABLED )
+        message( "Hybrid engine will be built using the ${LPFLIB_HYBRID_MPI_ENGINE} engine" )
+    else()
+	message( "No suitable inter-node communication engine found; "
+	    "hybrid engine will not be built" )
+    endif()
 endif()
 
 message( STATUS "The following engines will be built: ${ENGINES}")
