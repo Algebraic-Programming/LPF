@@ -187,6 +187,31 @@ do
             shift
             ;;
 
+       # The below two special cases are to ensure good integration with CMake.
+       # Note that the arguments that follow -MT and -MQ are object files, which
+       # otherwise would be appended to the objects list. In case of manual
+       # usage of lpfcc, therefore, the use of these flags should come after --,
+       # however, it is unclear how to pass that to CMake and we choose this
+       # solution instead.
+
+       -MT)
+            other_args[$arg_number]="-MT"
+            arg_number=$((arg_number + 1))
+            shift
+            other_args[$arg_number]="$arg"
+            arg_number=$((arg_number + 1))
+            shift
+            ;;
+
+       -MQ)
+            other_args[$arg_number]="-MQ"
+            arg_number=$((arg_number + 1))
+            shift
+            other_args[$arg_number]="$arg"
+            arg_number=$((arg_number + 1))
+            shift
+            ;;
+
        *)   case $state in
 
                 engine)
