@@ -144,17 +144,23 @@ if (MPI_FOUND)
                 ARCHIVE DESTINATION ${INSTALL_LIB}
                )
 
-        set( mpi_include_flags )
-        string( REPLACE ";" " -I" mpi_include_flags "${MPI_C_INCLUDE_PATH}" )
+        # use mpimsg, which is the minimum enabled engine in the presence of MPI
+        # to populate the required include flags for lpfcc and lpfcxx only once
+        if (LPF_IMPL_ID STREQUAL "mpimsg")
+            # -fPIC (and -rdynamic) are necessary to ensure that symbols can be
+            # looked up by dlsym which is the mechanism lpf_exec uses to broadcast the
+            # function that should be executed
 
-        # -fPIC and -rdynamic are necessary to ensure that symbols can be looked up by dlsym
-        # which is the mechanism lpf_exec uses to broadcast the function that should be executed
+            # include flags:
+            set( mpi_include_flags )
+            string( REPLACE ";" " -I" mpi_include_flags "${MPI_C_INCLUDE_PATH}" )
+            set(lpf_cflags "${lpf_cflags} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
 
-        set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
-        string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
-
-        set(lpf_cflags "${lpf_cflags} -I${mpi_include_flags} -fPIC" PARENT_SCOPE)
-        set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
+            # linker flags:
+            set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
+            string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
+            set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags}" PARENT_SCOPE)
+        endif()
     endforeach()
   
     include_directories(${MPI_C_INCLUDE_PATH})
