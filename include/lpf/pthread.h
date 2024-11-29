@@ -28,7 +28,7 @@ extern "C" {
  *
  * @{
  *
- * \defgroup LPF_PTHREAD Specific to Pthreads 
+ * \defgroup LPF_PTHREAD Specific to the Pthreads engine
  *
  * @{
  */

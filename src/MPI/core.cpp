@@ -17,6 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/mpi.h>
+#include <lpf/abort.h>
 
 #include <vector>
 #include <limits>
@@ -35,6 +36,10 @@
 #include "time.hpp"
 
 #include <mpi.h>
+
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+const int LPF_HAS_ABORT = 2;
 
 // Error codes. 
 // Note: Some code (e.g. in process::broadcastSymbol) depends on the 
@@ -289,4 +294,11 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
     
     return i->resizeMesgQueue(max_msgs);
 }
+
+lpf_err_t lpf_abort( lpf_t ctx ) {
+    (void) ctx;
+    MPI_Abort(MPI_COMM_WORLD, 6);
+    return LPF_SUCCESS;
+}
+
 

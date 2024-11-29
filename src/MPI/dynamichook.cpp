@@ -52,7 +52,6 @@ struct _LPFLIB_LOCAL HookException : public std::runtime_error {
     {}
 };
 
-#ifdef MPI_HAS_OPEN_PORT
 namespace {
 
     // Compares two sockaddr objects. 
@@ -514,7 +513,6 @@ loopexit:
     }
 #endif
 }
-#endif
 
 
 //
@@ -524,13 +522,6 @@ MPI_Comm dynamicHook( const std::string & serverNode,
 {
     ASSERT( nprocs > 0 );
     ASSERT( pid < nprocs );
-
-#ifndef MPI_HAS_OPEN_PORT
-    (void) serverNode;
-    (void) serverPort;
-    (void) timeout; (void) pid; (void) nprocs;
-    throw HookException("MPI does not support MPI_Open_port");
-#else
 
 #ifdef USE_SIGALRM
     HookException timeoutException("operation timed out");
@@ -723,7 +714,6 @@ MPI_Comm dynamicHook( const std::string & serverNode,
 #endif
 
     return result;
-#endif
 }
 
 

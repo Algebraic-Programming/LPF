@@ -78,6 +78,14 @@ if (MPI_FOUND)
                 -DINCLUDE_DIRECTORIES:STRING=${MPI_C_INCLUDE_PATH}
            )
 
+   try_compile( IS_OPENMPI "${CMAKE_BINARY_DIR}"
+           "${CMAKE_CURRENT_SOURCE_DIR}/cmake/is_openmpi.c"
+           LINK_LIBRARIES ${MPI_C_LIBRARIES}
+           CMAKE_FLAGS 
+               -DCMAKE_C_FLAGS:STRING=${MPI_C_COMPILE_FLAGS}
+               -DCMAKE_EXE_LINKER_FLAGS:STRING=${MPI_C_LINK_FLAGS}
+               -DINCLUDE_DIRECTORIES:STRING=${MPI_C_INCLUDE_PATH}
+           )
 
     try_run( MPI_IS_THREAD_COMPAT_RC MPI_IS_THREAD_COMPAT_COMPILES
            ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/mpi_is_thread_compat.c
@@ -153,4 +161,26 @@ if (MPI_FOUND)
 
 endif()
 
+if (LIB_IBVERBS)
+try_run( IBVERBS_INIT_RUNS IBVERBS_INIT_COMPILES
+       ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ibverbs_init.c
+       LINK_LIBRARIES ${LIB_IBVERBS}
+       ARGS ${MPIRUN}
+       )
+endif()
+
+set(ENABLE_IBVERBS FALSE)
+if (LPF_ENABLE_TESTS)
+    # The Google Test integration requires that tests successfully compiled are
+    # also runnable
+    if (LIB_IBVERBS AND NOT IBVERBS_INIT_RUNS STREQUAL "FAILED_TO_RUN")
+        set(ENABLE_IBVERBS TRUE)
+    endif()
+else()
+    # Without the aforementioned Google Test requirement, we can safely build
+    # it and allow the user to deploy the built binaries on IB-enabled nodes.
+    if (LIB_IBVERBS)
+        set(ENABLE_IBVERBS TRUE)
+    endif()
+endif()
 

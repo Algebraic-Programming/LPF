@@ -28,15 +28,19 @@ Prerequisites
 Mandatory
  - GNU/Linux,
  - GNU C compiler,
- - GNU C++ compiler (C++03/TR1 or C++11),
+ - GNU C++ compiler (C++11 compatible; however, C++17 compatible with tests enabled)
  - GNU Make,
- - CMake 3.1 or better.
+ - CMake 3.29.0 or better.
 
 Optional MPI engine requires
  - MPI-3, such as 'MPICH', 'OpenMPI', or 'MVAPICH'.
 
 Optional for thread pinning by Pthreads and hybrid engines
  - hwloc > 1.11
+
+Optional tests requires
+ - GNU C++ compiler (C++17 compatible),
+ - Python 3.
 
 Optional (see --enable-doc) documentation requires
  - doxygen > 1.5.6,

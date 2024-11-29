@@ -31,6 +31,10 @@ TEST( MessageSort, empty )
 
 }
 
+/** 
+ * \pre P >= 1
+ * \pre P <= 1
+ */
 TEST( MessageSort, oneMsg )
 {
     std::vector< char > array( 50 * G);

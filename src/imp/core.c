@@ -22,6 +22,8 @@
 #include <string.h>
 #include <stdint.h>
 
+const int LPF_HAS_ABORT = 0;
+
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
 const lpf_err_t LPF_ERR_FATAL = 2;
@@ -179,3 +181,8 @@ lpf_err_t lpf_resize_memory_register( lpf_t lpf, size_t max_regs )
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_abort( lpf_t lpf )
+{
+    (void) lpf;
+    return LPF_SUCCESS;
+}

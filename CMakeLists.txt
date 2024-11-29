@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
 project(LPF C CXX ASM)
 
 # Version info
@@ -52,12 +52,12 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-	"A high performance BSP communications library" )
+  "A high performance BSP communications library" )
 
 set(CPACK_SOURCE_GENERATOR "TGZ" )
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/" "/\\\\.svn/" "\\\\.swp$" "/site/" "/build/" "/pclint/" "/junit/" "/ideas/" )
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
-	"LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
+  "LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
 
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
@@ -104,18 +104,6 @@ set( INSTALL_CMAKE_MODULES "${prefix}/lib/lpf/cmake" CACHE PATH
 set( INSTALL_HEADERS "${prefix}/include" CACHE PATH
         "Installation path for header files" )
 message( STATUS "Installation directory prefix is ${prefix}")
-
-# C++ standard
-find_file(TR1_ARRAY "tr1/array")
-if (TR1_ARRAY)
-    message(STATUS "Governing C++ standard is C++98/TR1")
-    set(CMAKE_CXX_STANDARD 98)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-else()
-    message(STATUS "Governing C++ standard is C++11")
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED YES)
-endif()
 
 # Dependencies
 set(ENGINES)
@@ -173,9 +161,6 @@ if ( MPI_FOUND )
    if ( NOT MPI_IS_THREAD_COMPAT OR NOT MPI_IS_NOT_OPENMPI1 )
       message( WARNING "MPI implementation does not tolerate any threading. Hybrid implementation will not be built")
    endif()
-   if ( NOT MPI_OPEN_PORT )
-      message( WARNING "MPI implementation does not support dynamically connecting separate MPI processes. Hence, lpf_mpi_initialize_over_tcp will always fail.")
-   endif()
    if ( NOT MPI_IBARRIER )
       message( WARNING "MPI implementation does not have MPI_Ibarrier, which is required to use the dense all-to-all algorithm on large (> 2 GB) meta-data exchanges")
    endif()
@@ -189,7 +174,7 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
         list(APPEND ENGINES "mpirma")
     endif()
 
-    if (LIB_IBVERBS)
+    if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
     endif()
 
@@ -197,10 +182,29 @@ endif()
 
 #enable the hybrid engine
 if ( LIB_POSIX_THREADS AND LIB_MATH AND LIB_DL AND MPI_FOUND
-        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1
-	AND LIB_IBVERBS )
-    list(APPEND ENGINES "hybrid")
-    set(HYBRID_ENGINE_ENABLED on)
+        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1 )
+    if( ENABLE_IBVERBS )
+        set(LPFLIB_HYBRID_MPI_ENGINE "ibverbs" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( MPI_RMA )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpirma" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( LIB_MATH AND LIB_DL AND MPI_FOUND )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpimsg" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    endif()
+    if( HYBRID_ENGINE_ENABLED )
+        message( "Hybrid engine will be built using the ${LPFLIB_HYBRID_MPI_ENGINE} engine" )
+    else()
+	message( "No suitable inter-node communication engine found; "
+	    "hybrid engine will not be built" )
+    endif()
 endif()
 
 message( STATUS "The following engines will be built: ${ENGINES}")
@@ -246,59 +250,19 @@ add_definitions(-DBSPLIB_DLL=1)
 option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
+option(GTEST_AGREE_TO_LICENSE
+      "Does the user agree to the GoogleTest license"
+      OFF)
+
+# C++ standard -- Google tests require newer C++ standard than C++11
 if (LPF_ENABLE_TESTS)
-message(STATUS "Unit and API tests will be built")
+   set(CMAKE_CXX_STANDARD 17)
+   set(CMAKE_CXX_STANDARD_REQUIRED YES)
+else()
+   set(CMAKE_CXX_STANDARD 11)
+   set(CMAKE_CXX_STANDARD_REQUIRED YES)
+endif()
 
-# set testing timeout to 60 seconds
-set(CMAKE_TESTING_TIMEOUT 60)
-
-# import Google Testing Framework
-include(cmake/googletest.cmake)
-
-# Have directory to gather all the tests results
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
-set(test_output "${CMAKE_BINARY_DIR}/junit")
-
-# Have a macro to add a unit test
-function(add_gtest testName)
-    add_executable(${testName} ${ARGN})
-    target_link_libraries(${testName} gtest_main)
-    add_test(${testName} ${testName} --gtest_output=xml:${test_output}/ )
-endfunction(add_gtest)
-
-# Have a macro to add a unit test that should run with MPI
-if (MPI_FOUND)
-    function(add_gtest_mpi testName nprocs)
-        add_executable(${testName} ${ARGN})
-        target_link_libraries(${testName} ${MPI_C_LIBRARIES} gtest_main)
-        foreach( p ${nprocs})
-            set(mpmd)
-            foreach( i RANGE 1 ${p})
-                if (i GREATER 1)
-                  set(mpmd ${mpmd} ":")
-                endif()
-                set(mpmd ${mpmd} ${MPIEXEC_NUMPROC_FLAG} 1 ${MPIEXEC_PREFLAGS}
-                        ./${testName} --gtest_output=xml:${test_output}/${testName}_${i}of${p}.xml)
-            endforeach(i)
-            add_test(NAME ${testName}_${p}
-                     COMMAND ${MPIRUN} ${mpmd}
-                    )
-        endforeach(p)
-    endfunction(add_gtest_mpi)
-endif(MPI_FOUND)
-
-# Enable testing in CMake
-enable_testing()
-else(LPF_ENABLE_TESTS)
-    message(STATUS "Unit and API tests will *not* be built")
-    function(add_gtest testName)
-       # Do nothing because tests are disabled
-    endfunction(add_gtest)
-
-    function(add_gtest_mpi testName nprocs)
-       # DO nothing because tests are disabled
-    endfunction(add_gtest_mpi)
-endif(LPF_ENABLE_TESTS)
 
 # Handling of compiler flags
 function(target_add_compilation_flags target visibility)
@@ -366,10 +330,7 @@ endfunction(target_compile_flags)
 # Source
 set(lpf_cflags)
 set(lpf_lib_link_flags)
-set(lpf_exe_link_flags)
-include_directories(include)
-include_directories(src/common)
-add_subdirectory(src)
+set(lpf_exe_link_flags "-rdynamic")
 
 # Collating all compile & link flags
 set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
@@ -384,14 +345,141 @@ function( target_link_exe_with_core target )
     endif()
     set(corelib "lpf_core_univ_${engine}_${LPFLIB_CONFIG_NAME}")
 
-    target_link_libraries(${target} ${corelib})
+    if ("${engine}" STREQUAL "pthread")
+        target_link_libraries(${target} ${corelib})
+    else()
+        target_link_libraries(${target} ${corelib} ${MPI_C_LIBRARIES})
+    endif()
     target_compile_flags(${target} PRIVATE ${LPF_CORE_COMPILE_FLAGS})
     set_target_properties(${target} PROPERTIES
-            LINK_FLAGS "${LPF_CORE_LIB_LINK_FLAGS} ${LPF_CORE_EXE_LINK_FLAGS}"
-            LINKER_LANGUAGE CXX
-    )
+        LINK_FLAGS "${LPF_CORE_LIB_LINK_FLAGS} ${LPF_CORE_EXE_LINK_FLAGS}"
+        LINKER_LANGUAGE CXX
+        )
 endfunction()
 
+if (LPF_ENABLE_TESTS)
+    message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
+
+    if (NOT GTEST_AGREE_TO_LICENSE)
+        message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
+    endif()
+    # Enable testing in CMake
+    enable_testing()
+    include(ProcessorCount)
+    ProcessorCount(processorCount)
+    find_package(GTest)
+    include(GoogleTest)
+    if(NOT GTest_FOUND) # if not found, download it and pull it in
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            # This tag corresponds to GoogleTest 1.15.0 release
+            GIT_TAG        e397860
+            )
+        FetchContent_MakeAvailable(googletest)
+
+    endif()
+    # set testing timeout to 60 seconds
+    set(CMAKE_TESTING_TIMEOUT 60)
+
+    # Have directory to gather all the tests results
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
+    set(test_output "${CMAKE_BINARY_DIR}/junit")
+
+    find_package( Python3 REQUIRED COMPONENTS Interpreter)
+    set(MY_TEST_LAUNCHER ${Python3_EXECUTABLE} ${CMAKE_BINARY_DIR}/test_launcher.py)
+    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py.in ${CMAKE_BINARY_DIR}/test_launcher.py @ONLY FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
+
+    # Macro for adding a new GoogleTest test
+    function(add_gtest testName ENGINE debug testSource )
+        if ("{$ENGINE}" STREQUAL "")
+            message(FATAL_ERROR "engine cannot be empty, ever!")
+        endif()
+        add_executable(${testName} ${testSource} ${ARGN})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
+        if (debug)
+            target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
+        else(debug)
+            target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+        endif(debug)
+
+
+        # Extract test-specific information from comments of tests
+        file(READ ${testSource} fileContents)
+        string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
+        set(retCode ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
+        set(minProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
+        set(maxProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
+        set(lpfProbeSecs ${CMAKE_MATCH_1})
+
+        target_link_exe_with_core(${testName} ${ENGINE})
+
+        # The "\pre P <= max" comment in a test indicates the desired number of
+        # maximum LPF processes. If the test does not define a desired number of 
+        # maximum LPF processes, it will be set to 5.
+        #
+        # The "\pre P >= min" comment in a test indicates the desired number of
+        # minimum LPF processes. If the test does not define a desired minimum 
+        # number of LPF processes, it will be set to 1.
+        #
+        # Let 'processorCount' be the detected number of processors by the system.
+        # If this number is smaller than the desider minimum and/or maximum number
+        # of processes, it overwrites these
+        #
+        # Most tests only define a mininum number of desired processes, such as
+        # "\pre P >= 1". In those cases, the test will execute for the range 1,..,5
+        # (including)
+
+        if ("${minProcs}" STREQUAL "")
+            set(minProcs "1")
+        endif()
+        if ("${maxProcs}" STREQUAL "")
+            set(maxProcs "5")
+        endif()
+        # cap min with processorCount, if needed
+        if ("${minProcs}" GREATER "${processorCount}")
+            set(minProcs ${processorCount})
+        endif()
+        # cap max with processorCount, if needed
+        if ("${maxProcs}" GREATER "${processorCount}")
+            set(maxProcs ${processorCount})
+        endif()
+        if ("${lpfProbeSecs}" STREQUAL "")
+            set(lpfProbeSecs "0.0")
+        endif()
+        if ("${retCode}" STREQUAL "")
+            set(retCode "0")
+        endif()
+
+        # Most recent approach to Gtests, recommended!
+        set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};--engine;${ENGINE};--parallel_launcher;${CMAKE_BINARY_DIR}/lpfrun_build;--min_process_count;${minProcs};--max_process_count;${maxProcs};--lpf_probe_timer;${lpfProbeSecs};--expected_return_code;${retCode})
+        gtest_discover_tests(${testName}
+            TEST_PREFIX ${ENGINE}_
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            DISCOVERY_MODE POST_BUILD
+            DISCOVERY_TIMEOUT 15
+        )
+
+    endfunction(add_gtest)
+
+else(LPF_ENABLE_TESTS)
+    message(STATUS "Unit and API tests will *not* be built")
+    function(add_gtest testName ENGINE debug testSource )
+        # Do nothing because tests are disabled
+    endfunction(add_gtest)
+
+endif(LPF_ENABLE_TESTS)
+
+include_directories(include)
+include_directories(src/common)
+
+add_subdirectory(src)
 # Apps
 add_subdirectory(src/utils)
 
@@ -432,7 +520,7 @@ set( lpf_proxy_dummy ${CMAKE_CURRENT_BINARY_DIR}/src/MPI/lpf_proxy_dummy)
 set( lpf_probe ${CMAKE_CURRENT_BINARY_DIR}/src/utils/lpfprobe)
 set( lpfrun ${CMAKE_CURRENT_BINARY_DIR}/lpfrun_build)
 set( lpfcore ${CMAKE_CURRENT_BINARY_DIR}/src/*/liblpf_core_univ_ENGINE_${LPFLIB_CONFIG_NAME}${SOSUFFIX} )
-configure_file( lpfrun.in lpfrun_build @ONLY)
+configure_file( lpfrun.in lpfrun_build FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE @ONLY)
 configure_file( lpfproxy.in lpfproxy_build @ONLY)
 configure_file( lpfprobe.in lpfprobe_build @ONLY)
 
