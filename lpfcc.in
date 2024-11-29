@@ -192,7 +192,8 @@ do
        # otherwise would be appended to the objects list. In case of manual
        # usage of lpfcc, therefore, the use of these flags should come after --,
        # however, it is unclear how to pass that to CMake and we choose this
-       # solution instead.
+       # solution instead (nor would that be desired-- ideally, lpfcc can act as
+       # a "regular" CC from the CMake perspective)
 
        -MT)
             other_args[$arg_number]="-MT"
