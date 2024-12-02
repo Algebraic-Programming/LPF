@@ -36,13 +36,13 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_register_local( lpf, &x, sizeof(x), &xSlot );
+    rc = lpf_noc_register( lpf, &x, sizeof(x), &xSlot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_register_local( lpf, &y, sizeof(x), &ySlot );
+    rc = lpf_noc_register( lpf, &y, sizeof(x), &ySlot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_put( lpf, ySlot, 0, (pid+1)%nprocs, xSlot, 0, sizeof(x), LPF_MSG_DEFAULT );
+    rc = lpf_noc_put( lpf, ySlot, 0, (pid+1)%nprocs, xSlot, 0, sizeof(x), LPF_MSG_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
     EXPECT_EQ( LPF_SUCCESS, rc );
