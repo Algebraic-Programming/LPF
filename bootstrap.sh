@@ -87,7 +87,7 @@ installdir="$builddir"
 config=Release
 doc=OFF
 functests=OFF
-googletest_license_agreement=NO
+googletest_license_agreement=FALSE
 perftests=OFF
 reconfig=no
 CMAKE_EXE=cmake
@@ -133,7 +133,7 @@ do
 ------------------------------------------------------------------------------
 The functional test suite requires Google Testing Framework which comes with
 its own license. The license can be viewed via
-        https://github.com/google/googletest/blob/release-1.8.1/LICENSE
+	https://github.com/google/googletest/blob/v1.15.x/LICENSE
 Do you agree with the license [yes/no] ?
 EOF
             read answer
@@ -154,7 +154,7 @@ User agrees with Google Testing Framework license. It will be downloaded during
 the build.
 ==============================================================================
 EOF
-                googletest_license_agreement=YES
+            googletest_license_agreement=TRUE
             fi
 
             shift
@@ -162,7 +162,7 @@ EOF
 
        --functests=i-agree-with-googletest-license)
             functests=ON
-            googletest_license_agreement=YES
+            googletest_license_agreement=TRUE
             shift
             ;;
 
@@ -192,7 +192,7 @@ EOF
 
        --with-mpiexec=*)
             mpiexec="${arg#--with-mpiexec=}"
-            mpi_cmake_flags="${mpi_cmake_flags} -DMPIEXEC=$mpiexec"
+            mpi_cmake_flags="${mpi_cmake_flags} -DMPIEXEC=$mpiexec -DMPIEXEC_EXECUTABLE=$mpiexec"
             shift;
             ;;
 
@@ -288,8 +288,8 @@ ${CMAKE_EXE} -Wno-dev \
       -DLPF_HWLOC="${hwloc}" \
       $hwloc_found_flag \
       $mpi_cmake_flags \
-      "$extra_flags" \
-      "$perf_flags" \
+      ${extra_flags+"$extra_flags"} \
+      ${perf_flags+"$perf_flags"} \
       "$@" $srcdir \
      || { echo FAIL "Failed to configure LPF; Please check your chosen configuration"; exit 1; }
 
