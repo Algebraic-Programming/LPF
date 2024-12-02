@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/mpi.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <stdlib.h>
 #include <mpi.h>
@@ -31,7 +31,7 @@ const int LPF_MPI_AUTO_INITIALIZE=0;
  * \pre P <= 100
  * \return Exit code: 1
  */
-TEST( func_lpf_hook_tcp_timeout_mpi )
+TEST(API, func_lpf_hook_tcp_timeout_mpi )
 {
     MPI_Init(NULL, NULL);
 
@@ -45,9 +45,8 @@ TEST( func_lpf_hook_tcp_timeout_mpi )
             "localhost", "9325", 999,
             pid, nprocs, &init);
 
-    EXPECT_EQ( "%d", rc, LPF_ERR_FATAL );
+    EXPECT_EQ( rc, LPF_ERR_FATAL );
 
-    return 0;
 }
 
 

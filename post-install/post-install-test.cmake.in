@@ -268,12 +268,12 @@ if (MPI_FOUND)
     endif()
 
 
-    message("Compiling a simple LPF program with mpimsg engine")
+    message("Compiling a simple MPI LPF program with mpimsg engine")
     # Compile this to check whether mpi.h can be found
     execute_process(
-           COMMAND @bindir@/lpfcc -engine mpimsg  -I@common@
-                   @testdir@/func_lpf_hook_subset.mpimsg.c
-                -o lpfhook_subset_mpimsg_cc
+           COMMAND @bindir@/lpfcxx -engine mpimsg  -I@common@
+                   @testdir@/func_lpf_hook_subset.mpimsg.cpp -c
+                -o lpfhook_subset_mpimsg_cc.o
            WORKING_DIRECTORY @builddir@
            RESULT_VARIABLE status
            )

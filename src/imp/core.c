@@ -22,6 +22,8 @@
 #include <string.h>
 #include <stdint.h>
 
+const int LPF_HAS_ABORT = 0;
+
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
 const lpf_err_t LPF_ERR_FATAL = 2;

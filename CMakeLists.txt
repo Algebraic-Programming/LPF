@@ -52,12 +52,12 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-	"A high performance BSP communications library" )
+  "A high performance BSP communications library" )
 
 set(CPACK_SOURCE_GENERATOR "TGZ" )
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/" "/\\\\.svn/" "\\\\.swp$" "/site/" "/build/" "/pclint/" "/junit/" "/ideas/" )
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
-	"LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
+  "LPF-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_PACKAGE}")
 
 set(CPACK_GENERATOR "RPM")
 set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
@@ -183,10 +183,29 @@ endif()
 
 #enable the hybrid engine
 if ( LIB_POSIX_THREADS AND LIB_MATH AND LIB_DL AND MPI_FOUND
-        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1
-	AND ENABLE_IBVERBS )
-    list(APPEND ENGINES "hybrid")
-    set(HYBRID_ENGINE_ENABLED on)
+        AND MPI_IS_THREAD_COMPAT AND MPI_IS_NOT_OPENMPI1 )
+    if( ENABLE_IBVERBS )
+        set(LPFLIB_HYBRID_MPI_ENGINE "ibverbs" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( MPI_RMA )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpirma" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    elseif( LIB_MATH AND LIB_DL AND MPI_FOUND )
+        set(LPFLIB_HYBRID_MPI_ENGINE "mpimsg" CACHE STRING
+            "Choice of MPI engine to use for inter-process communication")
+        list(APPEND ENGINES "hybrid")
+        set(HYBRID_ENGINE_ENABLED on)
+    endif()
+    if( HYBRID_ENGINE_ENABLED )
+        message( "Hybrid engine will be built using the ${LPFLIB_HYBRID_MPI_ENGINE} engine" )
+    else()
+	message( "No suitable inter-node communication engine found; "
+	    "hybrid engine will not be built" )
+    endif()
 endif()
 
 message( STATUS "The following engines will be built: ${ENGINES}")
@@ -209,6 +228,7 @@ endif()
 
 # When system is not Linux, enable conditionally compiled blocks
 if (APPLE)
+    message( WARNING "LPF compilation on OS X is not regularly tested" )
     add_definitions(-DLPF_ON_MACOS=1)
 endif()
 
@@ -312,14 +332,43 @@ endfunction(target_compile_flags)
 # Source
 set(lpf_cflags)
 set(lpf_lib_link_flags)
-set(lpf_exe_link_flags "-rdynamic")
+set(lpf_exe_link_flags)
+
+# Populate lpf_cflags, lpf_lib_link_flags, lpf_exe_link_flags according to
+# (enabled) engine requirements
+#  - 0) PThreads engine needs nothing special
+#  - 1) MPI-based engines:
+if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
+    # -fPIC and -rdynamic are necessary to ensure that symbols can be
+    # looked up by dlsym which is the mechanism lpf_exec uses to broadcast the
+    # function that should be executed
+    set(rdyn_lflag "-rdynamic")
+    if (APPLE)
+        # OS X does not support -rdynamic
+	set(rdyn_lflag "")
+    endif ()
+
+    # include flags:
+    set( mpi_include_flags )
+    string( REPLACE ";" " -I" mpi_include_flags "${MPI_C_INCLUDE_PATH}" )
+    set(lpf_cflags "${lpf_cflags} -I${mpi_include_flags} -fPIC")
+
+    # linker flags:
+    set(lib_lflags "${MPI_C_LINK_FLAGS}")  #Note: the core library is already linked with MPI_C_LIBRARIES.
+    string(REPLACE ";" " " lib_lflags "${lib_lflags}") # So, no need to also link executables with it.
+    set(lpf_lib_link_flags "${lpf_lib_link_flags} ${lib_lflags} ${rdyn_lflag}")
+
+    # executable linker flags:
+    set(lpf_exe_link_flags "${lpf_exe_link_flags} ${rdyn_lflag}")
+endif ()
+#  ...add requirements from other engines here...
 
 # Collating all compile & link flags
 set(LPF_CORE_COMPILE_FLAGS "${lpf_cflags}" CACHE STRING "Compilation flags for all user code" )
 set(LPF_CORE_LIB_LINK_FLAGS "${lpf_lib_link_flags}" CACHE STRING "Flags to link user libraries" )
 set(LPF_CORE_EXE_LINK_FLAGS "${lpf_exe_link_flags}" CACHE STRING "Flags to link user executables" )
 
-# Compiling LPF programmes in the build dir
+# Compiling LPF programs in the build dir
 function( target_link_exe_with_core target )
     set(engine "imp")
     if (ARGV1)
@@ -367,64 +416,84 @@ if (LPF_ENABLE_TESTS)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/junit)
     set(test_output "${CMAKE_BINARY_DIR}/junit")
 
-    set(MY_TEST_LAUNCHER ${CMAKE_BINARY_DIR}/test_launcher.py)
-    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py ${MY_TEST_LAUNCHER} @ONLY FILE_PERMISSIONS WORLD_EXECUTE OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
-    if( NOT Python3_FOUND )
-        find_package( Python3 REQUIRED)
-    endif()
+    find_package( Python3 REQUIRED COMPONENTS Interpreter)
+    set(MY_TEST_LAUNCHER ${Python3_EXECUTABLE} ${CMAKE_BINARY_DIR}/test_launcher.py)
+    configure_file( ${CMAKE_SOURCE_DIR}/test_launcher.py.in ${CMAKE_BINARY_DIR}/test_launcher.py @ONLY FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)
 
     # Macro for adding a new GoogleTest test
     function(add_gtest testName ENGINE debug testSource )
-	    if ("{$ENGINE}" STREQUAL "")
-		    message(FATAL_ERROR "engine cannot be empty, ever!")
-	    endif()
-	    add_executable(${testName} ${testSource} ${ARGN})
-	    target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
-	    target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
-	    if (debug)
-		    target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
-		    target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
-	    else(debug)
-		    target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
-	    endif(debug)
+        if ("{$ENGINE}" STREQUAL "")
+            message(FATAL_ERROR "engine cannot be empty, ever!")
+        endif()
+        add_executable(${testName} ${testSource} ${ARGN})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_IMPL_ID=${ENGINE})
+        target_compile_definitions(${testName} PUBLIC LPF_CORE_MPI_USES_${ENGINE})
+        if (debug)
+            target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
+            target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
+        else(debug)
+            target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+        endif(debug)
 
 
-	    # Extract test-specific information from comments of tests
-	    file(READ ${testSource} fileContents)
-	    string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
-	    set(retCode ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
-	    set(minProcs ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
-	    set(maxProcs ${CMAKE_MATCH_1})
-	    string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
-	    set(lpfProbeSecs ${CMAKE_MATCH_1})
+        # Extract test-specific information from comments of tests
+        file(READ ${testSource} fileContents)
+        string(REGEX MATCH "Exit code: ([0-9]+)" _ ${fileContents})
+        set(retCode ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P >= ([0-9]+)"  _ ${fileContents})
+        set(minProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "pre P <= ([0-9]+)" _ ${fileContents})
+        set(maxProcs ${CMAKE_MATCH_1})
+        string(REGEX MATCH "-probe ([0-9]+.[0-9]+)" _ ${fileContents})
+        set(lpfProbeSecs ${CMAKE_MATCH_1})
 
-	    target_link_exe_with_core(${testName} ${ENGINE})
+        target_link_exe_with_core(${testName} ${ENGINE})
 
+        # The "\pre P <= max" comment in a test indicates the desired number of
+        # maximum LPF processes. If the test does not define a desired number of 
+        # maximum LPF processes, it will be set to 5.
+        #
+        # The "\pre P >= min" comment in a test indicates the desired number of
+        # minimum LPF processes. If the test does not define a desired minimum 
+        # number of LPF processes, it will be set to 1.
+        #
+        # Let 'processorCount' be the detected number of processors by the system.
+        # If this number is smaller than the desider minimum and/or maximum number
+        # of processes, it overwrites these
+        #
+        # Most tests only define a mininum number of desired processes, such as
+        # "\pre P >= 1". In those cases, the test will execute for the range 1,..,5
+        # (including)
 
-	    if ("${minProcs}" STREQUAL "")
-		    set(minProcs "1")
-	    endif()
-	    if ("${maxProcs}" STREQUAL "")
-		    set(maxProcs "5")
-	    endif()
-	    if ("${lpfProbeSecs}" STREQUAL "")
-		    set(lpfProbeSecs "0.0")
-	    endif()
-	    if ("${retCode}" STREQUAL "")
-		    set(retCode "0")
-	    endif()
+        if ("${minProcs}" STREQUAL "")
+            set(minProcs "1")
+        endif()
+        if ("${maxProcs}" STREQUAL "")
+            set(maxProcs "5")
+        endif()
+        # cap min with processorCount, if needed
+        if ("${minProcs}" GREATER "${processorCount}")
+            set(minProcs ${processorCount})
+        endif()
+        # cap max with processorCount, if needed
+        if ("${maxProcs}" GREATER "${processorCount}")
+            set(maxProcs ${processorCount})
+        endif()
+        if ("${lpfProbeSecs}" STREQUAL "")
+            set(lpfProbeSecs "0.0")
+        endif()
+        if ("${retCode}" STREQUAL "")
+            set(retCode "0")
+        endif()
 
-	    # Most recent approach to Gtests, recommended!
-	    set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};-e;${ENGINE};-L;${CMAKE_BINARY_DIR}/lpfrun_build;-p;${minProcs};-P;${maxProcs};-t;${lpfProbeSecs};-R;${retCode})
-	    gtest_discover_tests(${testName}
-		    TEST_PREFIX ${ENGINE}_
-		    EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
-		    DISCOVERY_MODE POST_BUILD
-		    DISCOVERY_TIMEOUT 15
-		    )
-
+        # Most recent approach to Gtests, recommended!
+        set_property(TARGET ${testName} PROPERTY TEST_LAUNCHER ${MY_TEST_LAUNCHER};--engine;${ENGINE};--parallel_launcher;${CMAKE_BINARY_DIR}/lpfrun_build;--min_process_count;${minProcs};--max_process_count;${maxProcs};--lpf_probe_timer;${lpfProbeSecs};--expected_return_code;${retCode})
+        gtest_discover_tests(${testName}
+            TEST_PREFIX ${ENGINE}_
+            EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
+            DISCOVERY_MODE POST_BUILD
+            DISCOVERY_TIMEOUT 15
+        )
 
     endfunction(add_gtest)
 

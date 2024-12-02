@@ -169,9 +169,17 @@ try_run( IBVERBS_INIT_RUNS IBVERBS_INIT_COMPILES
        )
 endif()
 
-set(ENABLE_IBVERBS FALSE)
-if (LIB_IBVERBS AND NOT IBVERBS_INIT_RUNS STREQUAL "FAILED_TO_RUN")
-  set(ENABLE_IBVERBS TRUE)
+if (LPF_ENABLE_TESTS)
+    # The Google Test integration requires that tests successfully compiled are
+    # also runnable
+    if (LIB_IBVERBS AND NOT IBVERBS_INIT_RUNS STREQUAL "FAILED_TO_RUN")
+        set(ENABLE_IBVERBS TRUE)
+    endif()
+else()
+    # Without the aforementioned Google Test requirement, we can safely build
+    # it and allow the user to deploy the built binaries on IB-enabled nodes.
+    if (LIB_IBVERBS)
+        set(ENABLE_IBVERBS TRUE)
+    endif()
 endif()
-
 

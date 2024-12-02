@@ -35,6 +35,6 @@ install(TARGETS ${libname} EXPORT lpf
         RUNTIME DESTINATION ${INSTALL_BIN}
         LIBRARY DESTINATION ${INSTALL_LIB}
         ARCHIVE DESTINATION ${INSTALL_LIB}
-       )
+)
 
 add_gtest(rwconflict_test "pthread" ON rwconflict.t.cpp rwconflict.cpp)
