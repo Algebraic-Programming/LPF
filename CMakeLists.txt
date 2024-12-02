@@ -394,6 +394,7 @@ if (LPF_ENABLE_TESTS)
         message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
     endif()
     # Enable testing in CMake
+    set(INSTALL_GTEST OFF)
     enable_testing()
     include(ProcessorCount)
     ProcessorCount(processorCount)
