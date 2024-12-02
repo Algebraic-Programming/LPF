@@ -28,7 +28,7 @@ extern "C" {
  *
  * @{
  *
- * \defgroup LPF_HYBRID Specific to Hybrid implementation
+ * \defgroup LPF_HYBRID Specific to the hybrid engine
  *
  * @{
  */

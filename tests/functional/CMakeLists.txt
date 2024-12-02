@@ -15,58 +15,143 @@
 # limitations under the License.
 #
 
-# All test sources have file names as bla.c
-file(GLOB AllTestSources "*.c" )
-# All test sources which are specific to some engine are of the form
-# bla.pthread.c
-file(GLOB AllSpecificTestSources "*.*.c")
-# All generic test sources don't have the two dots in their name
-file(GLOB AllGenericTestSources "*.c")
-list(REMOVE_ITEM AllGenericTestSources ${AllSpecificTestSources})
+set(test_sources
+    func_bsplib_example_lpf_sum.cpp
+    func_bsplib_example_lpf_sum_unsafemode.cpp
+    func_bsplib_example_put_array.cpp
+    func_bsplib_example_put_array_unsafemode.cpp
+    func_bsplib_example_reverse.cpp
+    func_bsplib_example_reverse_unsafemode.cpp
+    func_bsplib_get_exceptions.cpp
+    func_bsplib_get_normal.cpp
+    func_bsplib_get_normal_unsafemode.cpp
+    func_bsplib_get_twice_on_same_remote.cpp
+    func_bsplib_get_twice_on_same_remote_unsafemode.cpp
+    func_bsplib_getput_same_dest.cpp
+    func_bsplib_getput_same_dest_unsafemode.cpp
+    func_bsplib_getput_same_remote.cpp
+    func_bsplib_getput_same_remote_unsafemode.cpp
+    func_bsplib_getput_zero_bytes.cpp
+    func_bsplib_hpget_many.cpp
+    func_bsplib_hpput_many.cpp
+    func_bsplib_hpsend_many.cpp
+    func_bsplib_nprocs.cpp
+    func_bsplib_pid.cpp
+    func_bsplib_pushpopreg_ambiguous.cpp
+    func_bsplib_pushpopreg_different_variables.cpp
+    func_bsplib_pushpopreg_exceptions.cpp
+    func_bsplib_pushpopreg_many_same.cpp
+    func_bsplib_pushpopreg_normal.cpp
+    func_bsplib_pushpopreg_normal_unsafemode.cpp
+    func_bsplib_pushpopreg_null.cpp
+    func_bsplib_pushpopreg_pop_before_put.cpp
+    func_bsplib_pushpopreg_pop_before_put_unsafemode.cpp
+    func_bsplib_pushpopreg_pop_on_one_process.cpp
+    func_bsplib_pushpopreg_push_on_one_process.cpp
+    func_bsplib_pushpopreg_same_growing_memory.cpp
+    func_bsplib_pushpopreg_same_shrinking_memory.cpp
+    func_bsplib_pushpopreg_two_pops_before_two_puts.cpp
+    func_bsplib_put_exceptions.cpp
+    func_bsplib_put_normal.cpp
+    func_bsplib_put_normal_unsafemode.cpp
+    func_bsplib_send_empty_tag.cpp
+    func_bsplib_send_non_empty_tag.cpp
+    func_bsplib_send_none.cpp
+    func_bsplib_send_null.cpp
+    func_bsplib_send_one.cpp
+    func_bsplib_send_one_unsafemode.cpp
+    func_bsplib_set_different_tag_size.cpp
+    func_bsplib_set_tag_size.cpp
+    func_bsplib_sync_except_p0.cpp
+    func_bsplib_sync_only_p0.cpp
+    func_bsplib_time.cpp
+    func_lpf_deregister_parallel_multiple.cpp
+    func_lpf_deregister_parallel_single.cpp
+    func_lpf_exec_multiple_call_single_arg_dual_proc.cpp
+    func_lpf_exec_nested_call_single_arg_dual_proc.cpp
+    func_lpf_exec_single_call_no_arg_max_proc.cpp
+    func_lpf_exec_single_call_no_arg_single_proc.cpp
+    func_lpf_exec_single_call_single_arg_dual_proc.cpp
+    func_lpf_exec_single_call_single_arg_max_proc_early_exit_one.cpp
+    func_lpf_exec_single_call_single_arg_max_proc_early_exit_zero.cpp
+    func_lpf_exec_single_call_single_arg_single_proc.cpp
+    func_lpf_get_parallel_alltoall.cpp
+    func_lpf_get_parallel_huge.cpp
+    func_lpf_get_parallel_overlapping_complete.cpp
+    func_lpf_get_parallel_overlapping_pyramid.cpp
+    func_lpf_get_parallel_overlapping_rooftiling.cpp
+    func_lpf_get_parallel_single.cpp
+    func_lpf_probe_parallel_full.cpp
+    func_lpf_probe_parallel_nested.cpp
+    func_lpf_probe_root.cpp
+    func_lpf_put_and_get_overlapping.cpp
+    func_lpf_put_parallel_alltoall.cpp
+    func_lpf_put_parallel_big.cpp
+    func_lpf_put_parallel_huge.cpp
+    func_lpf_put_parallel_overlapping_complete.cpp
+    func_lpf_put_parallel_overlapping_pyramid.cpp
+    func_lpf_put_parallel_overlapping_rooftiling.cpp
+    func_lpf_put_parallel_single.cpp
+    func_lpf_register_and_deregister_irregularly.cpp
+    func_lpf_register_and_deregister_many_global.cpp
+    func_lpf_register_global_parallel_grow.cpp
+    func_lpf_register_global_parallel_multiple.cpp
+    func_lpf_register_global_parallel_shrink.cpp
+    func_lpf_register_global_root_multiple.cpp
+    func_lpf_register_global_root_single.cpp
+    func_lpf_register_local_parallel_multiple.cpp
+    func_lpf_resize_delayed_shrinking_memory_registers.cpp
+    func_lpf_resize_delayed_shrinking_message_queues.cpp
+    func_lpf_resize_parallel_five.cpp
+    func_lpf_resize_root_five.cpp
+    func_lpf_resize_root_outofmem.cpp
+    func_lpf_resize_root_zero.cpp
+    macro_LPF_VERSION.cpp
+    type_lpf_spmd_t.cpp
+    type_lpf_t.cpp
+    )
 
-foreach(LPF_IMPL_ID ${ENGINES})
-foreach(debug ON OFF)
+foreach (LPF_IMPL_ID ${ENGINES})
+    set(debug ON)
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
-
-    file(GLOB ThisEngineSources "*.${LPF_IMPL_ID}.c")
 
     set(mode)
     if (debug)
-       set(mode "_debug")
-    endif()
+        set(mode "_debug")
+    endif(debug)
 
     # add all source files except the ones we don't want
-    foreach(testSource ${AllGenericTestSources} ${ThisEngineSources})
-        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.c$" "" baseName ${testSource})
+    foreach(testSource ${test_sources})
+        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-        set(corelib "lpf_core_univ_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
-        set(hllib   "lpf_hl${mode}")
-        set(debuglib   "lpf_debug")
+        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
 
-        add_executable(${exeName} ${testSource})
-        target_link_libraries(${exeName} ${hllib})
-        target_link_exe_with_core(${exeName} ${LPF_IMPL_ID})
-        target_compile_flags(${exeName} PRIVATE ${hllib} "-DLPF_CORE_IMPL_ID=${LPF_IMPL_ID}" )
-
-        if (debug)
-            target_link_libraries(${exeName} ${debuglib})
-            target_include_directories( ${exeName} BEFORE PRIVATE ../../include/debug )
-        endif()
-
-    endforeach()
-    endforeach(debug)
-
-    add_test( NAME "API_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}"
-        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/run.sh" "${LPF_IMPL_ID}"
-        "${LPF_IMPL_CONFIG}" "${test_output}/api_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}.xml"
-    )
+    endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 
-include_directories(.)
+# start of engine-specific tests
+foreach (LPF_IMPL_ID ${ENGINES})
+    if ("${LPF_IMPL_ID}" STREQUAL "pthread" OR "${LPF_IMPL_ID}" STREQUAL "mpirma")
+        foreach(testSource func_lpf_hook_simple.${LPF_IMPL_ID}.cpp)
+            string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
+            get_filename_component(baseName ${testSource} NAME_WE  )
+            set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+            add_gtest(${exeName} ${LPF_IMPL_ID} ON "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        endforeach(testSource)
+    endif()
+    if ("${LPF_IMPL_ID}" STREQUAL "mpimsg")
+        add_gtest(func_lpf_hook_subset.mpimsg mpimsg ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_subset.mpimsg.cpp")
+    endif()
+    if ("${LPF_IMPL_ID}" STREQUAL "mpirma")
+        add_gtest(func_lpf_hook_tcp_timeout.mpirma mpirma ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_tcp_timeout.mpirma.cpp")
+    endif()
+endforeach(LPF_IMPL_ID)
+# end of engine-specific tests
 
-add_subdirectory(c99)
+include_directories(.)
 add_subdirectory(debug)
+add_subdirectory(collectives)
 
 
 option(LPFLIB_MAKE_TEST_DOC "Build the test documentation" OFF)

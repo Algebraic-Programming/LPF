@@ -17,6 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/pthread.h>
+#include <lpf/abort.h>
 
 #include "threadlocaldata.hpp"
 #include "machineparams.hpp"
@@ -36,6 +37,10 @@
 #endif
 
 #include <pthread.h> // for pthreads
+
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+const int LPF_HAS_ABORT = 2;
 
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
@@ -378,3 +383,15 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     return t->resizeMemreg(max_regs);
 }
 
+lpf_err_t lpf_abort(lpf_t ctx) {
+    (void) ctx;
+    // Using std::abort is not portable
+    // SIGABRT code 6 is often coverted to code 134.
+    // Therefore, use std::quick_exit(6) instead
+    // The reason we do not use std::exit is that
+    // it implies calling destructors, and this leads to 
+    // segmentation faults for pthread backend and abnormal
+    // programs. std::quick_exit does not call destructors
+    std::quick_exit(6);
+    return LPF_SUCCESS;
+}

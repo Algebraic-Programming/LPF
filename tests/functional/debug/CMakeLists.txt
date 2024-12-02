@@ -14,35 +14,90 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+set(debug_test_sources
+    func_lpf_debug_deregister_non_existing_slot.cpp
+    func_lpf_debug_exec_null_f_symbols.cpp
+    func_lpf_debug_exec_null_input.cpp
+    func_lpf_debug_exec_null_output.cpp
+    func_lpf_debug_exec_null_spmd.cpp
+    func_lpf_debug_get_local_src_slot.cpp
+    func_lpf_debug_get_overflow_dst_offset.cpp
+    func_lpf_debug_get_overflow_src_offset.cpp
+    func_lpf_debug_get_read_past_source_memory_global_known_at_sync.cpp
+    func_lpf_debug_get_read_past_source_memory_global_known_before_sync.cpp
+    func_lpf_debug_get_too_many_requests.cpp
+    func_lpf_debug_get_too_many_requests_remote.cpp
+    func_lpf_debug_get_too_many_requests_self.cpp
+    func_lpf_debug_get_unknown_dest_slot.cpp
+    func_lpf_debug_get_unknown_source_pid.cpp
+    func_lpf_debug_get_unknown_source_slot.cpp
+    func_lpf_debug_get_write_past_dest_memory_global.cpp
+    func_lpf_debug_get_write_past_dest_memory_local.cpp
+    func_lpf_debug_global_deregister_mismatch.cpp
+    func_lpf_debug_global_deregister_order_mismatch.cpp
+    func_lpf_debug_global_deregister_unequal.cpp
+    func_lpf_debug_global_register_null_memreg.cpp
+    func_lpf_debug_local_register_null_memreg.cpp
+    func_lpf_debug_put_after_deregister_dest_after_sync.cpp
+    func_lpf_debug_put_after_deregister_dest.cpp
+    func_lpf_debug_put_after_deregister_source_after_sync.cpp
+    func_lpf_debug_put_after_deregister_source.cpp
+    func_lpf_debug_put_get_too_many_requests.cpp
+    func_lpf_debug_put_get_too_many_requests_remote.cpp
+    func_lpf_debug_put_local_dest_slot.cpp
+    func_lpf_debug_put_overflow_dst_offset.cpp
+    func_lpf_debug_put_overflow_src_offset.cpp
+    func_lpf_debug_put_read_past_source_memory_global.cpp
+    func_lpf_debug_put_read_past_source_memory_local.cpp
+    func_lpf_debug_put_read_write_conflict_among_many.cpp
+    func_lpf_debug_put_read_write_conflict.cpp
+    func_lpf_debug_put_too_many_requests.cpp
+    func_lpf_debug_put_too_many_requests_remote.cpp
+    func_lpf_debug_put_too_many_requests_self.cpp
+    func_lpf_debug_put_unknown_dest_pid.cpp
+    func_lpf_debug_put_unknown_dest_slot.cpp
+    func_lpf_debug_put_unknown_source_slot.cpp
+    func_lpf_debug_put_write_past_dest_memory_global_known_at_sync.cpp
+    func_lpf_debug_put_write_past_dest_memory_global_known_before_sync.cpp
+    func_lpf_debug_register_global_dst_unsynced.cpp
+    func_lpf_debug_register_global_src_unsynced.cpp
+    func_lpf_debug_register_global_unequal.cpp
+    func_lpf_debug_rehook_null_f_symbols.cpp
+    func_lpf_debug_rehook_null_input.cpp
+    func_lpf_debug_rehook_null_output.cpp
+    func_lpf_debug_rehook_null_spmd.cpp
+    func_lpf_debug_resize_memory_register_with_size_max_minus_three.cpp
+    )
 
-# All test sources have file names as bla.c
-file(GLOB AllTestSources "*.c" )
-# All test sources which are specific to some engine are of the form
-# bla.pthread.c
-file(GLOB AllSpecificTestSources "*.*.c")
-# All generic test sources don't have the two dots in their name
-file(GLOB AllGenericTestSources "*.c")
-list(REMOVE_ITEM AllGenericTestSources ${AllSpecificTestSources})
 
-foreach(LPF_IMPL_ID ${ENGINES})
-    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+set(debug ON)
+set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+set(mode)
+if (debug)
+    set(mode "_debug")
+endif(debug)
+foreach (LPF_IMPL_ID ${ENGINES})
+    foreach(testSource ${debug_test_sources})
 
-    file(GLOB ThisEngineSources "*.${LPF_IMPL_ID}.c")
-
-    # add all source files except the ones we don't want
-    foreach(testSource ${AllGenericTestSources} ${ThisEngineSources})
-        string(REGEX REPLACE ".c$" "" baseName ${testSource})
+        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
-        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
-        set(corelib "lpf_core_univ_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
-        set(debuglib   "lpf_debug")
+        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
-        add_executable(${exeName} ${testSource})
-        target_include_directories( ${exeName} BEFORE PRIVATE ../../../include/debug )
-        target_link_libraries(${exeName} ${debuglib})
-        target_link_exe_with_core(${exeName} ${LPF_IMPL_ID})
-        target_compile_flags(${exeName} PRIVATE "-DLPF_CORE_IMPL_ID=${LPF_IMPL_ID}" )
-    endforeach()
+        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}" )
 
+    endforeach(testSource)
 endforeach(LPF_IMPL_ID)
+
+add_gtest(func_lpf_debug_hook_f_symbols_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_f_symbols.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_input_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_input.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_output_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_output.pthread.cpp)
+
+add_gtest(func_lpf_debug_hook_null_spmd_pthread "pthread" ON
+	${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_debug_hook_null_spmd.pthread.cpp)
 
