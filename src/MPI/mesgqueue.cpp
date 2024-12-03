@@ -243,6 +243,11 @@ err_t MessageQueue :: resizeMemreg( size_t nRegs )
     return LPF_SUCCESS;
 }
 
+
+memslot_t MessageQueue :: addNocReg( void * mem, std::size_t size)
+{
+    return LPF_INVALID_MEMSLOT;
+}
 memslot_t MessageQueue :: addLocalReg( void * mem, std::size_t size)
 {
     memslot_t slot = m_memreg.addLocal( mem, size );

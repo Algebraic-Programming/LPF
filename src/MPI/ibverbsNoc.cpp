@@ -1,8 +1,15 @@
+#include "ibverbsNoc.hpp"
+
 namespace lpf 
 {
 namespace mpi
 {
-    IBVerbsNoc :: SlotID IBVerbs :: regNoc( void * addr, size_t size )
+
+    struct IBVerbs::Exception : std::runtime_error {
+        Exception(const char * what) : std::runtime_error( what ) {}
+    };
+
+    IBVerbs::SlotID IBVerbsNoc :: regNoc( void * addr, size_t size )
     {
         ASSERT( size <= m_maxRegSize );
 

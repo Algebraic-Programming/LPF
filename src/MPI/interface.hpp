@@ -120,7 +120,8 @@ public:
 private:
     mpi::Comm m_comm;
     Process & m_subprocess;
-    MessageQueueNoc m_mesgQueueNoc;
+    std::shared_ptr<MessageQueue> m_mesgQueue;
+
     pid_t m_aborted;
 
     static Interface * s_root;

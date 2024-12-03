@@ -110,7 +110,7 @@ public:
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
-private:
+protected:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
 

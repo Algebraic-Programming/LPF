@@ -54,6 +54,7 @@ public:
 
     memslot_t addLocalReg( void * mem, std::size_t size );
     memslot_t addGlobalReg( void * mem, std::size_t size );
+    memslot_t addNocReg( void * mem, std::size_t size );
     void      removeReg( memslot_t slot );
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,

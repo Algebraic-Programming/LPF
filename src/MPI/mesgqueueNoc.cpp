@@ -1,5 +1,6 @@
-#include "mesgqueue.hpp"
 #include "mesgqueueNoc.hpp"
+
+#if defined LPF_CORE_MPI_USES_zero
 
 namespace lpf 
 {
@@ -12,19 +13,14 @@ namespace lpf
 memslot_t MessageQueueNoc :: addNocReg( void * mem, std::size_t size )
 {
 
-#if defined LPF_CORE_MPI_USES_zero
     return m_ibverbs.regNoc(mem, size);
-#endif
-    return LPF_INVALID_MEMSLOT;
 
 }
 
 void MessageQueueNoc :: removeNocReg( memslot_t slot )
 {
 
-#if defined LPF_CORE_MPI_USES_zero
     m_ibverbs.dereg(slot);
-#endif
 
 }
 
@@ -32,34 +28,31 @@ void MessageQueueNoc :: nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffse
         memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 
-#if defined LPF_CORE_MPI_USES_zero
-    m_ibverbs.getNoc(srcPid,
+    m_ibverbs.get(srcPid,
             m_memreg.getVerbID( srcSlot),
             srcOffset,
             m_memreg.getVerbID( dstSlot),
             dstOffset,
             size );
-#endif
 }
 
 void MessageQueueNoc :: nocPut( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
-#if defined LPF_CORE_MPI_USES_zero
-    m_ibverbs.putNoc( m_memreg.getVerbID( srcSlot),
+    m_ibverbs.put( m_memreg.getVerbID( srcSlot),
             srcOffset,
             dstPid,
             m_memreg.getVerbID( dstSlot),
             dstOffset,
             size);
-#endif
 }
 
 err_t MessageQueueNoc :: nocResizeMemreg( size_t nRegs )
 {
-#if defined LPF_CORE_MPI_USES_zero
-    return m_ibverbs.resizeMemreg(nRegs);
-#endif
+    m_ibverbs.resizeMemreg(nRegs);
+    return LPF_SUCCESS;
 }
 
 } // namespace lpf
+  //
+#endif

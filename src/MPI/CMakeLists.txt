@@ -55,7 +55,7 @@ if (MPI_FOUND)
         endif()
 
         if (LPF_IMPL_ID STREQUAL zero)
-            set(ibverbs_sources ibverbsZero.cpp)
+            set(ibverbs_sources ibverbsZero.cpp ibverbsNoc.cpp)
         endif()
 
         add_library(raw_${libname} OBJECT

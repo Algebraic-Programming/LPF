@@ -4,6 +4,7 @@
 #include "mesgqueue.hpp"
 #include "ibverbsNoc.hpp"
 
+#ifdef  LPF_CORE_MPI_USES_zero
 namespace lpf 
 {
 class _LPFLIB_LOCAL MessageQueueNoc : public MessageQueue
@@ -29,3 +30,4 @@ protected:
 };
 
 } // namespace lpf
+#endif
