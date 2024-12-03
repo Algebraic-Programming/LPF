@@ -34,7 +34,7 @@
 #endif
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-#include "ibverbs.hpp"
+#include "ibverbsNoc.hpp"
 #endif
 
 //only for HiCR
@@ -160,11 +160,13 @@ private:
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
+    std::vector< char > m_tinyMsgBuf;
+
+protected:
 #if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
     mpi::IBVerbs m_ibverbs;
 #endif
     MemoryTable m_memreg;
-    std::vector< char > m_tinyMsgBuf;
 };
 
 

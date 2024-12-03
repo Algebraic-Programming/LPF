@@ -16,6 +16,7 @@
  */
 
 #include <lpf/core.h>
+#include <lpf/noc.h>
 #include <string.h>
 #include "gtest/gtest.h"
 

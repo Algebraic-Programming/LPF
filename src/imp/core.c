@@ -16,6 +16,7 @@
  */
 
 #include <lpf/core.h>
+#include <lpf/noc.h>
 
 #include <limits.h>
 #include <stddef.h>
@@ -237,5 +238,56 @@ lpf_err_t lpf_flush( lpf_t lpf) {
 lpf_err_t lpf_abort( lpf_t lpf)
 {
     (void) lpf;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_resize_memory_register( lpf_t ctx, size_t max_regs ) 
+{
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_register(
+    lpf_t ctx,
+    void * pointer,
+    size_t size,
+    lpf_memslot_t * memslot
+) 
+{
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_deregister(
+    lpf_t ctx,
+    lpf_memslot_t memslot
+) 
+{
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_put(
+    lpf_t ctx,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+)
+{
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_get(
+    lpf_t ctx,
+    lpf_pid_t src_pid,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
+)
+{
     return LPF_SUCCESS;
 }

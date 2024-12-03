@@ -19,7 +19,7 @@
 #define LPF_CORE_MPI_INTERFACE_HPP
 
 #include "types.hpp"
-#include "mesgqueue.hpp"
+#include "mesgqueueNoc.hpp"
 #include "mpilib.hpp"
 #include "machineparams.hpp"
 #include "linkage.hpp"
@@ -61,6 +61,19 @@ public:
     err_t resizeMesgQueue( size_t nMsgs ) ; // nothrow
 
     void abort() ; // nothrow
+                   //
+    /* start NOC extensions */
+    memslot_t nocRegister( void * mem, size_t size ) ; // nothrow
+    void nocDeregister( memslot_t slot) ; // nothrow
+    err_t nocResizeMemreg( size_t nRegs ) ; // nothrow
+    void nocPut( memslot_t srcSlot, size_t srcOffset, 
+            pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+            size_t size ) ; // nothrow
+
+    void nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
+            memslot_t dstSlot, size_t dstOffset,
+            size_t size ) ;// nothrow
+    /* end NOC extensions */
 
     pid_t isAborted() const ;
  
@@ -107,7 +120,7 @@ public:
 private:
     mpi::Comm m_comm;
     Process & m_subprocess;
-    MessageQueue m_mesgQueue;
+    MessageQueueNoc m_mesgQueueNoc;
     pid_t m_aborted;
 
     static Interface * s_root;

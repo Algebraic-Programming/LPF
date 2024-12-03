@@ -75,7 +75,7 @@ void Interface :: initRoot(int *argc, char ***argv)
 Interface :: Interface( mpi::Comm machine, Process & subprocess )
 try : m_comm( machine )
     , m_subprocess( subprocess )
-    , m_mesgQueue( m_comm )
+    , m_mesgQueueNoc( m_comm )
     , m_aborted( false )
 {
      if ( machine.allreduceOr( false ) )
@@ -95,7 +95,7 @@ void Interface :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
         size_t size ) 
 {
-    m_mesgQueue.put( srcSlot, srcOffset,
+    m_mesgQueueNoc.put( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
             size );
 }
@@ -107,7 +107,7 @@ void Interface :: lockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
         size_t size ) 
 {
-    m_mesgQueue.lockSlot( srcSlot, srcOffset,
+    m_mesgQueueNoc.lockSlot( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
             size );
 }
@@ -116,36 +116,36 @@ void Interface :: unlockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
         size_t size ) 
 {
-    m_mesgQueue.unlockSlot( srcSlot, srcOffset,
+    m_mesgQueueNoc.unlockSlot( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
             size );
 }
 
 void Interface :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot) {
-    m_mesgQueue.getRcvdMsgCountPerSlot(msgs, slot);
+    m_mesgQueueNoc.getRcvdMsgCountPerSlot(msgs, slot);
 }
 
 void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
-    m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
+    m_mesgQueueNoc.getSentMsgCountPerSlot(msgs, slot);
 }
 
 void Interface :: flushSent() {
-    m_mesgQueue.flushSent();
+    m_mesgQueueNoc.flushSent();
 }
 
 void Interface :: flushReceived() {
-    m_mesgQueue.flushReceived();
+    m_mesgQueueNoc.flushReceived();
 }
 
 void Interface :: getRcvdMsgCount(size_t * msgs) {
-    m_mesgQueue.getRcvdMsgCount(msgs);
+    m_mesgQueueNoc.getRcvdMsgCount(msgs);
 }
 
 err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
 {
     if ( 0 == m_aborted )
     {
-        m_aborted = m_mesgQueue.countingSyncPerSlot(slot, expected_sent, expected_rcvd);
+        m_aborted = m_mesgQueueNoc.countingSyncPerSlot(slot, expected_sent, expected_rcvd);
         return LPF_SUCCESS;
     }
     else
@@ -158,7 +158,7 @@ err_t Interface :: syncPerSlot(memslot_t slot)
 {
     if ( 0 == m_aborted )
     {
-        m_aborted = m_mesgQueue.syncPerSlot(slot);
+        m_aborted = m_mesgQueueNoc.syncPerSlot(slot);
         return LPF_SUCCESS;
     }
     else
@@ -174,34 +174,34 @@ void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
         memslot_t dstSlot, size_t dstOffset,
         size_t size )
 {
-    m_mesgQueue.get( srcPid, srcSlot, srcOffset,
+    m_mesgQueueNoc.get( srcPid, srcSlot, srcOffset,
             dstSlot, dstOffset,
             size );
 }
 
 memslot_t Interface :: registerGlobal( void * mem, size_t size )
 {
-    return m_mesgQueue.addGlobalReg( mem, size );
+    return m_mesgQueueNoc.addGlobalReg( mem, size );
 }
 
 memslot_t Interface :: registerLocal( void * mem, size_t size ) 
 {
-    return m_mesgQueue.addLocalReg( mem, size );
+    return m_mesgQueueNoc.addLocalReg( mem, size );
 }
 
 void Interface :: deregister( memslot_t slot )
 {
-    m_mesgQueue.removeReg( slot );
+    m_mesgQueueNoc.removeReg( slot );
 }
 
 err_t Interface :: resizeMemreg( size_t nRegs ) 
 {
-    return m_mesgQueue.resizeMemreg( nRegs );
+    return m_mesgQueueNoc.resizeMemreg( nRegs );
 }
 
 err_t Interface :: resizeMesgQueue( size_t nMsgs ) 
 {
-    return m_mesgQueue.resizeMesgQueue( nMsgs );
+    return m_mesgQueueNoc.resizeMesgQueue( nMsgs );
 }
 
 void Interface :: abort()
@@ -215,9 +215,44 @@ void Interface :: abort()
 #else
     // signal all other processes at the start of the next 'sync' that
     // this process aborted.
-    m_aborted = m_mesgQueue.sync( true );
+    m_aborted = m_mesgQueueNoc.sync( true );
 #endif
 }
+
+/* start NOC extensions */
+memslot_t Interface :: nocRegister( void * mem, size_t size )
+{
+    return m_mesgQueueNoc.addNocReg( mem, size );
+}
+
+void Interface :: nocDeregister( memslot_t slot)
+{
+    m_mesgQueueNoc.removeNocReg(slot);
+}
+
+err_t Interface :: nocResizeMemreg( size_t nRegs )
+{
+    return m_mesgQueueNoc.nocResizeMemreg(nRegs);
+}
+
+void Interface :: nocPut( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size )
+{
+    m_mesgQueueNoc.nocPut( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
+void Interface :: nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
+        memslot_t dstSlot, size_t dstOffset,
+        size_t size )
+{
+    m_mesgQueueNoc.nocGet( srcPid, srcSlot, srcOffset,
+            dstSlot, dstOffset,
+            size );
+}
+/* end NOC extensions */
 
 pid_t Interface  :: isAborted() const
 {
@@ -228,7 +263,7 @@ err_t Interface ::  sync()
 {
     if ( 0 == m_aborted )
     {
-        m_aborted = m_mesgQueue.sync( false );
+        m_aborted = m_mesgQueueNoc.sync( false );
     }
     
     if ( 0 == m_aborted )
