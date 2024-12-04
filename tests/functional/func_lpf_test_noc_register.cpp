@@ -28,7 +28,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     lpf_memslot_t xSlot = LPF_INVALID_MEMSLOT;
     lpf_memslot_t ySlot = LPF_INVALID_MEMSLOT;
 
-    lpf_err_t rc = lpf_resize_memory_register( lpf, 2 );
+    printf("Hello\n");
+    lpf_err_t rc = lpf_resize_memory_register( lpf, 3);
     EXPECT_EQ( LPF_SUCCESS, rc );
     
     rc = lpf_resize_message_queue( lpf, 1 );
@@ -53,7 +54,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
 
 /** 
  * \test Testing a lpf_put with an inactive destination memory slot
- * \pre P >= 1
+ * \pre P >= 2
+ * \pre P <= 2
  * \return Message: destination memory slot was not yet active
  * \return Exit code: 0
  */

@@ -10,11 +10,12 @@ namespace lpf
         MessageQueue(comm)
     {}
 
+    /*
 memslot_t MessageQueueNoc :: addNocReg( void * mem, std::size_t size )
 {
 
+    printf("Enter MessageQueueNoc::addNocReg\n");
     return m_ibverbs.regLocal(mem, size);
-
 }
 
 void MessageQueueNoc :: removeNocReg( memslot_t slot )
@@ -52,6 +53,7 @@ err_t MessageQueueNoc :: nocResizeMemreg( size_t nRegs )
     m_ibverbs.resizeMemreg(nRegs);
     return LPF_SUCCESS;
 }
+*/
 
 } // namespace lpf
   //

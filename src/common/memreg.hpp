@@ -221,7 +221,10 @@ public:
 
     Slot addNocReg( Record record )  // nothrow
     { 
-        return toNoc( m_noc.add( record ) ); 
+        printf("Will call toNoc in addNocReg\n");
+        Slot a = toNoc( m_noc.add( record ) ); 
+        printf("Called toNoc in addNocReg\n");
+        return a;
     } 
 
     Slot addGlobalReg( Record record ) // nothrow
@@ -255,8 +258,10 @@ public:
     {
         if (isLocalSlot(slot))
             return m_local.update( fromLocal(slot));
-        else
+        else if (isGlobalSlot(slot))
             return m_global.update( fromGlobal( slot ));
+        else // noc Slot
+            return m_noc.update(fromNoc(slot));
     }
 
     void reserve( size_t size, const Record & defaultRecord = Record() )

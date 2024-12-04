@@ -246,11 +246,15 @@ err_t MessageQueue :: resizeMemreg( size_t nRegs )
 
 memslot_t MessageQueue :: addNocReg( void * mem, std::size_t size)
 {
+    printf("Enter MessageQueue::addNocReg\n");
     memslot_t slot = m_memreg.addNoc( mem, size );
     if (size > 0)
         m_msgsort.addRegister( slot, static_cast<char *>( mem ), size);
+    printf("Will return slot in MessageQueue::addNocReg\n");
     return slot;
 }
+
+
 memslot_t MessageQueue :: addLocalReg( void * mem, std::size_t size)
 {
     memslot_t slot = m_memreg.addLocal( mem, size );

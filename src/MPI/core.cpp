@@ -412,8 +412,9 @@ lpf_err_t lpf_noc_register(
     lpf::Interface * i = realContext(ctx);
     if (i->isAborted())
         return LPF_SUCCESS;
-    
+    printf("Before nocRegister\n");
     *memslot = i->nocRegister(pointer, size);
+    printf("After nocRegister");
 }
 
 lpf_err_t lpf_noc_deregister(

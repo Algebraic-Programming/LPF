@@ -11,6 +11,7 @@ namespace mpi
 
     IBVerbs::SlotID IBVerbsNoc :: regLocal( void * addr, size_t size )
     {
+        printf("Enter IBVErbsNoc::regLocal\n");
         ASSERT( size <= m_maxRegSize );
 
         MemorySlot slot;
@@ -40,7 +41,7 @@ namespace mpi
 
         m_memreg.update( id ).glob.resize( m_nprocs );
         m_memreg.update( id ).glob[m_pid] = local;
-        LOG(4, "Memory area " << addr << " of size " << size << " has been locally registered. Slot = " << id );
+        LOG(4, "Memory area " << addr << " of size " << size << " has been locally registered as NOC slot. Slot = " << id );
         return id;
     }
 

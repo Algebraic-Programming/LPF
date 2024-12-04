@@ -120,7 +120,7 @@ public:
 private:
     mpi::Comm m_comm;
     Process & m_subprocess;
-    std::shared_ptr<MessageQueue> m_mesgQueue;
+    MessageQueue m_mesgQueue;
 
     pid_t m_aborted;
 
