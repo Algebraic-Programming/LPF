@@ -165,7 +165,7 @@ private:
 
 protected:
 #if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
-    mpi::IBVerbs m_ibverbs;
+    std::shared_ptr<mpi::IBVerbs> m_ibverbs;
 #endif
     MemoryTable m_memreg;
 };

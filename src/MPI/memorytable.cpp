@@ -24,7 +24,7 @@ namespace lpf {
 
 MemoryTable :: MemoryTable( Communication & comm
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-        , mpi::IBVerbs & ibverbs
+        , std::shared_ptr<mpi::IBVerbs>  ibverbs
 #endif
         )
     : m_memreg()
@@ -43,10 +43,21 @@ MemoryTable :: MemoryTable( Communication & comm
 
 
 MemoryTable :: Slot
+MemoryTable :: addNoc( void * mem, std::size_t size )  // nothrow
+{
+#if defined LPF_CORE_MPI_USES_zero || defined LPF_CORE_MPI_USES_ibverbs
+    Memory rec( mem, size, m_ibverbs->regLocal(mem, size));
+#else
+    Memory rec(mem, size);
+#endif
+    return m_memreg.addNocReg( rec);
+}
+
+MemoryTable :: Slot
 MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 {
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-    Memory rec( mem, size, m_ibverbs.regLocal( mem, size));
+    Memory rec( mem, size, m_ibverbs->regLocal( mem, size));
 #else
     Memory rec( mem, size);
 #endif
@@ -97,7 +108,7 @@ void MemoryTable :: remove( Slot slot )   // nothrow
         m_added.erase(slot);
     }
     else {
-        m_ibverbs.dereg( m_memreg.lookup(slot).slot );
+        m_ibverbs->dereg( m_memreg.lookup(slot).slot );
     }
     m_memreg.removeReg( slot );
 #endif
@@ -127,7 +138,7 @@ void MemoryTable :: reserve( size_t size ) // throws bad_alloc, strong safe
     m_memreg.reserve( size );
     size_t range = m_memreg.range();
     m_added.resize( range );
-    m_ibverbs.resizeMemreg( size );
+    m_ibverbs->resizeMemreg( size );
 #endif
 
     m_capacity = size;
@@ -204,7 +215,7 @@ void MemoryTable :: sync(  )
             ASSERT( !isLocalSlot( *i ));
             void * base = m_memreg.lookup( *i).addr;
             size_t size = m_memreg.lookup( *i ).size;
-            mpi::IBVerbs::SlotID s = m_ibverbs.regGlobal( base, size ); 
+            mpi::IBVerbs::SlotID s = m_ibverbs->regGlobal( base, size ); 
             m_memreg.update( *i ).slot = s;
         }
 

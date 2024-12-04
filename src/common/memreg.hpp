@@ -221,7 +221,7 @@ public:
 
     Slot addNocReg( Record record )  // nothrow
     { 
-        return toNoc( m_local.add( record ) ); 
+        return toNoc( m_noc.add( record ) ); 
     } 
 
     Slot addGlobalReg( Record record ) // nothrow
@@ -245,8 +245,10 @@ public:
             return m_local.lookup( fromLocal(slot));
         else if (isGlobalSlot(slot))
             return m_global.lookup( fromGlobal( slot ));
-        else // isNocSlot(slot) == true
+        else {// isNocSlot(slot) == true
+            printf("THIS IS A NOC SLOT!\n");
             return m_noc.lookup( fromNoc( slot ));
+        }
     }
 
     Record & update( Slot slot ) // nothrow

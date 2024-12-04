@@ -65,12 +65,14 @@ public:
     { return Register::invalidSlot(); }
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-    explicit MemoryTable( Communication & comm, mpi::IBVerbs & verbs );
+    explicit MemoryTable( Communication & comm, std::shared_ptr<mpi::IBVerbs> verbs );
 #else
     explicit MemoryTable( Communication & comm );
 #endif
 
     Slot addLocal( void * mem, std::size_t size ) ; // nothrow
+
+    Slot addNoc( void * mem, std::size_t size ) ; // nothrow
 
     Slot addGlobal( void * mem, std::size_t size ); // nothrow
     
@@ -119,7 +121,7 @@ private:
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     DirtyList      m_added;
-    mpi::IBVerbs  & m_ibverbs;
+    std::shared_ptr<mpi::IBVerbs>  m_ibverbs;
     Communication & m_comm;
 #endif
 };

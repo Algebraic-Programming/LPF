@@ -13,7 +13,7 @@ namespace lpf
 memslot_t MessageQueueNoc :: addNocReg( void * mem, std::size_t size )
 {
 
-    return m_ibverbs.regNoc(mem, size);
+    return m_ibverbs.regLocal(mem, size);
 
 }
 

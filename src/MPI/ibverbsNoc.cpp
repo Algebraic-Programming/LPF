@@ -9,7 +9,7 @@ namespace mpi
         Exception(const char * what) : std::runtime_error( what ) {}
     };
 
-    IBVerbs::SlotID IBVerbsNoc :: regNoc( void * addr, size_t size )
+    IBVerbs::SlotID IBVerbsNoc :: regLocal( void * addr, size_t size )
     {
         ASSERT( size <= m_maxRegSize );
 
@@ -43,5 +43,6 @@ namespace mpi
         LOG(4, "Memory area " << addr << " of size " << size << " has been locally registered. Slot = " << id );
         return id;
     }
+
 } // namespace mpi
 } // namespace lpf

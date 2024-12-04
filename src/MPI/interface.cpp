@@ -243,22 +243,18 @@ void Interface :: nocPut( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
         size_t size )
 {
-#ifdef LPF_CORE_MPI_USES_zero
     m_mesgQueue->put( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
             size );
-#endif
 }
 
 void Interface :: nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
         size_t size )
 {
-#ifdef LPF_CORE_MPI_USES_zero
     m_mesgQueue->get( srcPid, srcSlot, srcOffset,
             dstSlot, dstOffset,
             size );
-#endif
 }
 /* end NOC extensions */
 

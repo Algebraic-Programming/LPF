@@ -55,7 +55,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
  * \test Testing a lpf_put with an inactive destination memory slot
  * \pre P >= 1
  * \return Message: destination memory slot was not yet active
- * \return Exit code: 6
+ * \return Exit code: 0
  */
 TEST( API, func_lpf_test_noc_register )
 {
