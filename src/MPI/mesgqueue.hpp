@@ -162,11 +162,10 @@ private:
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
     std::vector< char > m_tinyMsgBuf;
-
 protected:
-#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
-    std::shared_ptr<mpi::IBVerbs> m_ibverbs;
-#endif
+    #if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
+        mpi::IBVerbs m_ibverbs;
+    #endif
     MemoryTable m_memreg;
 };
 

@@ -61,6 +61,19 @@ using std::tr1::shared_ptr;
 class _LPFLIB_LOCAL IBVerbs 
 {
 public:
+
+    struct MemoryRegistration {
+        void *   addr;
+        size_t   size;
+        uint32_t lkey;
+        uint32_t rkey;
+    };
+
+    struct MemorySlot {
+        shared_ptr< struct ibv_mr > mr;    // verbs structure
+        std::vector< MemoryRegistration > glob; // array for global registrations
+    };
+
     struct Exception;
 
     typedef size_t SlotID;
@@ -110,7 +123,8 @@ public:
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
-protected:
+    
+private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
 
@@ -123,20 +137,6 @@ protected:
     void doProgress();
     void tryIncrement(Op op, Phase phase, SlotID slot);
 
-    struct MemoryRegistration {
-        void *   addr;
-        size_t   size;
-        uint32_t lkey;
-        uint32_t rkey;
-    };
-
-    struct MemorySlot {
-        shared_ptr< struct ibv_mr > mr;    // verbs structure
-        std::vector< MemoryRegistration > glob; // array for global registrations
-    };
-
-    int          m_pid; // local process ID
-    int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
     //std::atomic_size_t m_sendTotalInitMsgCount;
     std::atomic_size_t m_recvTotalInitMsgCount;
@@ -151,9 +151,7 @@ protected:
     int          m_gidIdx; 
     uint16_t     m_lid;     // LID of the IB port
     ibv_mtu      m_mtu;   
-    struct ibv_device_attr m_deviceAttr;
-    size_t       m_maxRegSize;
-    size_t       m_maxMsgSize; 
+    struct ibv_device_attr m_deviceAttr; 
     size_t		m_cqSize;
     size_t       m_minNrMsgs;
     size_t       m_maxSrs; // maximum number of sends requests per QP  
@@ -161,7 +159,6 @@ protected:
     size_t m_recvCount;
 
     shared_ptr< struct ibv_context > m_device; // device handle
-    shared_ptr< struct ibv_pd >      m_pd;     // protection domain
     shared_ptr< struct ibv_cq >      m_cq;     // complation queue
    	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
 	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
@@ -188,13 +185,20 @@ protected:
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
     std::vector< struct ibv_wc > m_wcs; // array of work completions
 
-    CombinedMemoryRegister< MemorySlot > m_memreg;
 
 
     shared_ptr< struct ibv_mr > m_dummyMemReg; // registration of dummy buffer
     std::vector< char > m_dummyBuffer; // dummy receive buffer
 
     Communication & m_comm;
+
+    protected:
+        size_t       m_maxRegSize;
+        size_t       m_maxMsgSize;
+        shared_ptr< struct ibv_pd >      m_pd;     // protection domain
+        int          m_pid; // local process ID
+        int          m_nprocs; // number of processes
+        CombinedMemoryRegister< MemorySlot > m_memreg;
 };
 
 

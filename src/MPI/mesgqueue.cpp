@@ -104,7 +104,7 @@ MessageQueue :: MessageQueue( Communication & comm )
     , m_bodyRecvs()
     , m_comm( dynamic_cast<mpi::Comm &>(comm) )
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-    , m_ibverbs(new mpi::IBVerbs(m_comm))
+    , m_ibverbs(m_comm)
     , m_memreg( m_comm, m_ibverbs )
 #else
     , m_memreg( m_comm )
@@ -180,7 +180,7 @@ err_t MessageQueue :: resizeMesgQueue( size_t nMsgs )
         m_comm.reserveMsgs( 6* nMsgs ); //another factor three stems from sending edges separately .
 #endif
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-        m_ibverbs->resizeMesgq( 6*nMsgs);
+        m_ibverbs.resizeMesgq( 6*nMsgs);
 #endif
 
         m_maxNMsgs = maxNMsgs;
@@ -248,6 +248,7 @@ memslot_t MessageQueue :: addNocReg( void * mem, std::size_t size)
 {
     printf("Enter MessageQueue::addNocReg\n");
     memslot_t slot = m_memreg.addNoc( mem, size );
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
     if (size > 0)
         m_msgsort.addRegister( slot, static_cast<char *>( mem ), size);
     printf("Will return slot in MessageQueue::addNocReg\n");
@@ -283,7 +284,7 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
         memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_zero
-    m_ibverbs->get(srcPid,
+    m_ibverbs.get(srcPid,
             m_memreg.getVerbID( srcSlot),
             srcOffset,
             m_memreg.getVerbID( dstSlot),
@@ -337,7 +338,7 @@ void MessageQueue :: lockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_zero
-m_ibverbs->blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
 #endif
 }
 
@@ -345,7 +346,7 @@ void MessageQueue :: unlockSlot( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_zero
-m_ibverbs->blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
 #endif
 }
 
@@ -353,7 +354,7 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
 #ifdef LPF_CORE_MPI_USES_zero
-    m_ibverbs->put( m_memreg.getVerbID( srcSlot),
+    m_ibverbs.put( m_memreg.getVerbID( srcSlot),
             srcOffset,
             dstPid,
             m_memreg.getVerbID( dstSlot),
@@ -402,7 +403,7 @@ int MessageQueue :: sync( bool abort )
 #ifdef LPF_CORE_MPI_USES_zero
     // if not, deal with normal sync
     m_memreg.sync();
-	m_ibverbs->sync(m_resized);
+	m_ibverbs.sync(m_resized);
     m_resized = false;
 #else
 
@@ -827,14 +828,14 @@ int MessageQueue :: sync( bool abort )
                   - e.dstOffset + e.srcOffset;
 
             if (e.canWriteHead) {
-                m_ibverbs->get( e.srcPid, m_memreg.getVerbID( e.srcSlot),
+                m_ibverbs.get( e.srcPid, m_memreg.getVerbID( e.srcSlot),
                         e.srcOffset,
                         m_memreg.getVerbID( m_edgeBufferSlot ), e.bufOffset,
                         headSize );
             }
 
             if (e.canWriteTail) {
-                m_ibverbs->get( e.srcPid, m_memreg.getVerbID( e.srcSlot),
+                m_ibverbs.get( e.srcPid, m_memreg.getVerbID( e.srcSlot),
                         tailOffset,
                         m_memreg.getVerbID( m_edgeBufferSlot ),
                         e.bufOffset + (e.canWriteHead?headSize:0),
@@ -885,12 +886,12 @@ int MessageQueue :: sync( bool abort )
 #ifdef LPF_CORE_MPI_USES_ibverbs
         ASSERT( ! m_memreg.isLocalSlot( e.dstSlot ) ) ;
         if (e.canWriteHead)
-            m_ibverbs->put( m_memreg.getVerbID( e.srcSlot), e.srcOffset,
+            m_ibverbs.put( m_memreg.getVerbID( e.srcSlot), e.srcOffset,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
                     e.bufOffset, headSize );
 
         if (e.canWriteTail)
-            m_ibverbs->put( m_memreg.getVerbID( e.srcSlot),
+            m_ibverbs.put( m_memreg.getVerbID( e.srcSlot),
                     e.srcOffset + tailOffset ,
                     e.dstPid, m_memreg.getVerbID( m_edgeBufferSlot ),
                     e.bufOffset + (e.canWriteHead?headSize:0), tailSize);
@@ -925,7 +926,7 @@ int MessageQueue :: sync( bool abort )
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
         size_t shift = r.roundedDstOffset - r.dstOffset;
-        m_ibverbs->get( r.srcPid,
+        m_ibverbs.get( r.srcPid,
             m_memreg.getVerbID( r.srcSlot),
             r.srcOffset + shift,
             m_memreg.getVerbID( r.dstSlot), r.roundedDstOffset,
@@ -957,7 +958,7 @@ int MessageQueue :: sync( bool abort )
             r.roundedSize );
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
-        m_ibverbs->put( m_memreg.getVerbID( r.srcSlot),
+        m_ibverbs.put( m_memreg.getVerbID( r.srcSlot),
             r.srcOffset + shift,
             r.dstPid,
             m_memreg.getVerbID( r.dstSlot),
@@ -981,7 +982,7 @@ int MessageQueue :: sync( bool abort )
         m_comm.fenceAll();
 #endif
 #ifdef LPF_CORE_MPI_USES_ibverbs
-    m_ibverbs->sync( m_resized );
+    m_ibverbs.sync( m_resized );
 #endif
     LOG(4, "Copying edges" );
 
@@ -1038,7 +1039,7 @@ int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_
     // if not, deal with normal sync
     m_memreg.sync();
 
-	m_ibverbs->countingSyncPerSlot(m_resized, slot, expected_sent, expected_rcvd);
+	m_ibverbs.countingSyncPerSlot(m_resized, slot, expected_sent, expected_rcvd);
 
     m_resized = false;
 
@@ -1054,7 +1055,7 @@ int MessageQueue :: syncPerSlot(SlotID slot)
     // if not, deal with normal sync
     m_memreg.sync();
 
-	m_ibverbs->syncPerSlot(m_resized, slot);
+	m_ibverbs.syncPerSlot(m_resized, slot);
 
     m_resized = false;
 
@@ -1068,7 +1069,7 @@ void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot)
 
 #ifdef LPF_CORE_MPI_USES_zero
     *msgs = 0;
-        m_ibverbs->get_rcvd_msg_count_per_slot(msgs, slot);
+        m_ibverbs.get_rcvd_msg_count_per_slot(msgs, slot);
 #endif
 }
 
@@ -1076,7 +1077,7 @@ void MessageQueue :: getRcvdMsgCount(size_t * msgs)
 {
 #ifdef LPF_CORE_MPI_USES_zero
     *msgs = 0;
-        m_ibverbs->get_rcvd_msg_count(msgs);
+        m_ibverbs.get_rcvd_msg_count(msgs);
 #endif
 }
 
@@ -1084,21 +1085,21 @@ void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot)
 {
 #ifdef LPF_CORE_MPI_USES_zero
     *msgs = 0;
-        m_ibverbs->get_sent_msg_count_per_slot(msgs, slot);
+        m_ibverbs.get_sent_msg_count_per_slot(msgs, slot);
 #endif
 }
 
 void MessageQueue :: flushSent()
 {
 #ifdef LPF_CORE_MPI_USES_zero
-        m_ibverbs->flushSent();
+        m_ibverbs.flushSent();
 #endif
 }
 
 void MessageQueue :: flushReceived()
 {
 #ifdef LPF_CORE_MPI_USES_zero
-        m_ibverbs->flushReceived();
+        m_ibverbs.flushReceived();
 #endif
 }
 

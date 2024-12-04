@@ -225,9 +225,9 @@ void Interface :: abort()
 /* start NOC extensions */
 memslot_t Interface :: nocRegister( void * mem, size_t size )
 {
-    printf("Enter Interface::nocRegister\n");
+    //printf("Enter Interface::nocRegister\n");
     memslot_t ret = m_mesgQueue.addNocReg( mem, size );
-    printf("Exiting Interface::nocRegister\n");
+    //printf("Exiting Interface::nocRegister\n");
 }
 
 void Interface :: nocDeregister( memslot_t slot)

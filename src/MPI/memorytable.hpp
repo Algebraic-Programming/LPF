@@ -23,7 +23,7 @@
 #include "assert.hpp"
 #include "linkage.hpp"
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined (LPF_CORE_MPI_USES_ibverbs) || defined (LPF_CORE_MPI_USES_zero)
 #include "ibverbs.hpp"
 #endif
 
@@ -65,7 +65,7 @@ public:
     { return Register::invalidSlot(); }
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-    explicit MemoryTable( Communication & comm, std::shared_ptr<mpi::IBVerbs> verbs );
+    explicit MemoryTable( Communication & comm, mpi::IBVerbs & verbs );
 #else
     explicit MemoryTable( Communication & comm );
 #endif
@@ -121,7 +121,7 @@ private:
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     DirtyList      m_added;
-    std::shared_ptr<mpi::IBVerbs>  m_ibverbs;
+    mpi::IBVerbs & m_ibverbs;
     Communication & m_comm;
 #endif
 };
