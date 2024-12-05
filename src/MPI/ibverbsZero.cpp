@@ -321,6 +321,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.cap.max_recv_sge = 1;
 
         struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
+        ASSERT(m_stagedQps.size() > i);
         if( ibv_new_qp_p == NULL ) {
             m_stagedQps[i].reset();
         } else {

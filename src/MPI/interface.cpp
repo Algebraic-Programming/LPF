@@ -226,7 +226,7 @@ void Interface :: abort()
 memslot_t Interface :: nocRegister( void * mem, size_t size )
 {
     //printf("Enter Interface::nocRegister\n");
-    memslot_t ret = m_mesgQueue.addNocReg( mem, size );
+    return m_mesgQueue.addNocReg( mem, size );
     //printf("Exiting Interface::nocRegister\n");
 }
 

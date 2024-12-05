@@ -9,7 +9,7 @@ namespace mpi
 {
     class _LPFLIB_LOCAL IBVerbsNoc : public IBVerbs {
         public:
-            IBVerbsNoc(Communication & comm) : IBVerbs(comm) {}
+            IBVerbsNoc(Communication & comm);
             IBVerbs::SlotID regLocal( void * addr, size_t size );
             //~IBVerbsNoc() {}
 

@@ -150,15 +150,6 @@ foreach (LPF_IMPL_ID ${ENGINES})
 
 endforeach(LPF_IMPL_ID)
 
-    # NOC test for HiCR
-    set(baseName "func_lpf_test_noc_register")
-    set(debug OFF)
-    set(mode "")
-    set(LPF_IMPL_ID "zero")
-    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
-    set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-    add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${baseName}.cpp")
-
 
 include_directories(.)
 add_subdirectory(debug)

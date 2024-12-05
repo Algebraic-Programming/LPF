@@ -5,9 +5,13 @@ namespace lpf
 namespace mpi
 {
 
-    struct IBVerbs::Exception : std::runtime_error {
+    struct IBVerbsNoc::Exception : std::runtime_error {
         Exception(const char * what) : std::runtime_error( what ) {}
     };
+
+    IBVerbsNoc::IBVerbsNoc(Communication & comm) : IBVerbs(comm)
+    {
+    }
 
     IBVerbs::SlotID IBVerbsNoc :: regLocal( void * addr, size_t size )
     {

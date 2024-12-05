@@ -201,6 +201,17 @@ if (MPI_FOUND)
         add_gtest( zero_test "zero" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+
+        # NOC test for HiCR
+        set(mode "")
+        set(LPF_IMPL_ID "zero")
+        set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+        set(exeName "func_lpf_test_noc_register_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+        add_gtest(${exeName} ${LPF_IMPL_ID} ON ${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_register.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsNoc.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+
     endif()
 
     foreach (engine ${MPI_ENGINES})
