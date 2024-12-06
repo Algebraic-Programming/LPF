@@ -35,8 +35,10 @@ extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
 TEST( API, func_lpf_test_noc_register )
 {
 
-    char buf1[30] = "HELLO\0";
-    char buf2[30] = "\0";
+    char buf1[30] = {'\0'};
+    char buf2[30] = {'\0'};
+
+    strcpy(buf1, "HELLO");
 
     MPI_Init(NULL, NULL);
     Lib::instance();
@@ -80,7 +82,7 @@ TEST( API, func_lpf_test_noc_register )
 
     verbs->sync(true);
     // Every process should copy 
-    EXPECT_EQ(buf2, "HELLO\0");
+    EXPECT_EQ(std::string(buf2), std::string(buf1));
     verbs->dereg(b1);
     verbs->dereg(b2);
     delete verbs;
