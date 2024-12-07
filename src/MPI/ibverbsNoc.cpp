@@ -9,13 +9,24 @@ namespace mpi
         Exception(const char * what) : std::runtime_error( what ) {}
     };
 
+    IBVerbsNoc::MemoryRegistration IBVerbsNoc :: getMR(SlotID slotId, int pid) 
+    {
+        const MemorySlot & slot = m_memreg.lookup( slotId );
+        IBVerbsNoc::MemoryRegistration mr = slot.glob[pid];
+        return mr;
+    }
+
+    void IBVerbsNoc::setMR(SlotID slotId, int pid, MemoryRegistration & mr)
+    {
+        m_memreg.update(slotId ).glob[pid] = mr;
+    }
+
     IBVerbsNoc::IBVerbsNoc(Communication & comm) : IBVerbs(comm)
     {
     }
 
     IBVerbs::SlotID IBVerbsNoc :: regLocal( void * addr, size_t size )
     {
-        printf("Enter IBVErbsNoc::regLocal\n");
         ASSERT( size <= m_maxRegSize );
 
         MemorySlot slot;

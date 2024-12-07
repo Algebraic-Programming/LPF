@@ -11,7 +11,8 @@ namespace mpi
         public:
             IBVerbsNoc(Communication & comm);
             IBVerbs::SlotID regLocal( void * addr, size_t size );
-            //~IBVerbsNoc() {}
+            MemoryRegistration getMR(SlotID slotId, int pid);
+            void setMR(SlotID slotId, int pid, MemoryRegistration & mr);
 
     };
 } // namespace mpi

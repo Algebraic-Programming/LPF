@@ -110,6 +110,14 @@ public:
     void get_rcvd_msg_count(size_t * rcvd_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
+
+
+    struct MemoryRegistration {
+        void *   addr;
+        size_t   size;
+        uint32_t lkey;
+        uint32_t rkey;
+    };
 protected:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
@@ -122,13 +130,6 @@ protected:
     std::vector<ibv_wc_opcode> wait_completion(int& error);
     void doProgress();
     void tryIncrement(Op op, Phase phase, SlotID slot);
-
-    struct MemoryRegistration {
-        void *   addr;
-        size_t   size;
-        uint32_t lkey;
-        uint32_t rkey;
-    };
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure

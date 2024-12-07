@@ -44,10 +44,10 @@ TEST( API, func_lpf_test_noc_register )
     Lib::instance();
     Comm * comm = new Comm();
     *comm = Lib::instance().world();
+    int rank = comm->pid();
     assert(comm->nprocs() > 0);
     comm->barrier();
     IBVerbsNoc * verbs = new IBVerbsNoc( *comm );
-    //IBVerbs * verbs = new IBVerbs( *comm );
     
     verbs->resizeMemreg(3);
     comm->barrier();
@@ -58,7 +58,6 @@ TEST( API, func_lpf_test_noc_register )
     IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
     IBVerbs::SlotID b2 = verbs->regLocal( buf2, sizeof(buf2) );
 
-    
     /*
      * Every LPF MemorySlot struct consists of
      * - shared_ptr<struct ibv_mr>
@@ -75,10 +74,31 @@ TEST( API, func_lpf_test_noc_register )
      * Left-hand partner then puts data into the slot
      * of its right-hand partner.
      */
-    
+    auto mr = verbs->getMR(b2, rank);
+
+    MPI_Aint addr;
+    uint32_t rmtLkey, rmtRkey;
+    MPI_Aint rmtAddr;
+    size_t rmtSize;
+    MPI_Get_address(mr.addr, &addr);
+       
+    int left = (comm->nprocs() + rank - 1) % comm->nprocs();
+    int right = (rank + 1) % comm->nprocs();
+    MPI_Sendrecv(&addr, 1, MPI_AINT, left, 0, &rmtAddr, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(&mr.lkey, 1, MPI_UINT32_T, left, 0, &rmtLkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+    MPI_Sendrecv(&mr.rkey, 1, MPI_UINT32_T, left, 0, &rmtRkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(&mr.size, 1, MPI_AINT, left, 0, &rmtSize, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    // translate Aint to address
+    void * rmtAddrAsPtr = (void *) rmtAddr;
+
+
+    // Populate the memory region
+    IBVerbs::MemoryRegistration newMr{rmtAddrAsPtr, rmtSize, rmtLkey, rmtRkey};
+    verbs->setMR(b2, right, newMr);
     comm->barrier();
 
-    verbs->put( b1, 0, (comm->pid() + 1)%comm->nprocs(), b2, 0, sizeof(buf1));
+
+    verbs->put( b1, 0, right, b2, 0, sizeof(buf1));
 
     verbs->sync(true);
     // Every process should copy 

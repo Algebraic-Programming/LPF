@@ -221,9 +221,7 @@ public:
 
     Slot addNocReg( Record record )  // nothrow
     { 
-        printf("Will call toNoc in addNocReg\n");
         Slot a = toNoc( m_noc.add( record ) ); 
-        printf("Called toNoc in addNocReg\n");
         return a;
     } 
 
@@ -249,7 +247,6 @@ public:
         else if (isGlobalSlot(slot))
             return m_global.lookup( fromGlobal( slot ));
         else {// isNocSlot(slot) == true
-            printf("THIS IS A NOC SLOT!\n");
             return m_noc.lookup( fromNoc( slot ));
         }
     }

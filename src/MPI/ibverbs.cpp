@@ -586,6 +586,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
             = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
         const char * remoteAddr
             = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+        printf("DEBUG: rank %d localAddr %p remoteAddr %p\n", m_pid, localAddr, remoteAddr);
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );
