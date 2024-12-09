@@ -27,7 +27,12 @@
 #include <stddef.h>
 #endif
 
-#include <lpf/core.h>
+#ifndef _LPF_NOC_STANDALONE
+ #include <lpf/core.h>
+#else
+ #include <lpf/noc-standalone.h>
+ #define _LPFLIB_API
+#endif
 
 #endif // DOXYGEN
 
