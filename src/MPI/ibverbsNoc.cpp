@@ -9,10 +9,10 @@ namespace mpi
         Exception(const char * what) : std::runtime_error( what ) {}
     };
 
-    IBVerbsNoc::MemoryRegistration IBVerbsNoc :: getMR(SlotID slotId, int pid) 
+    MemoryRegistration IBVerbsNoc :: getMR(SlotID slotId, int pid) 
     {
         const MemorySlot & slot = m_memreg.lookup( slotId );
-        IBVerbsNoc::MemoryRegistration mr = slot.glob[pid];
+        MemoryRegistration mr = slot.glob[pid];
         return mr;
     }
 
@@ -47,10 +47,10 @@ namespace mpi
             }
         }
         MemoryRegistration local;
-        local.addr = addr;
-        local.size = size;
-        local.lkey = size?slot.mr->lkey:0;
-        local.rkey = size?slot.mr->rkey:0;
+        local._addr = (char *) addr;
+        local._size = size;
+        local._lkey = size?slot.mr->lkey:0;
+        local._rkey = size?slot.mr->rkey:0;
 
         SlotID id =  m_memreg.addNocReg( slot );
 

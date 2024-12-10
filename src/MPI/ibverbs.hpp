@@ -58,6 +58,54 @@ using std::shared_ptr;
 using std::tr1::shared_ptr;
 #endif
 
+class MemoryRegistration {
+    public:
+        char *   _addr;
+        size_t   _size;
+        uint32_t _lkey;
+        uint32_t _rkey;
+        MemoryRegistration(char * addr, size_t size, uint32_t lkey, uint32_t rkey) : _addr(addr),
+        _size(size), _lkey(lkey), _rkey(rkey)
+        {}
+        MemoryRegistration() : _addr(nullptr), _size(0), _lkey(0), _rkey(0)
+        {}
+        size_t serialize(char ** buf) {
+            size_t bufSize = sizeof(_addr) + sizeof(_size) + sizeof(_lkey) + sizeof(_rkey);
+            *buf = new char[bufSize];
+            //char * ptr = *buf;
+            memcpy(&buf[0], &_addr, sizeof(char *));
+            //ptr += sizeof(_addr);
+            memcpy(&buf[sizeof(char *)], &_size, sizeof(size_t));
+            std::cout << "SIZE is now = " <<  * (size_t *)  &buf[sizeof(char *)] << " in serialize\n";
+            std::cout << "COPYING size = " << _size << " in serialize\n";
+            //*ptr += sizeof(_size);
+            memcpy(&buf[sizeof(char *) + sizeof(size_t)], &_lkey, sizeof(uint32_t));
+            //*ptr += sizeof(_rkey);
+            memcpy(&buf[sizeof(char *) + sizeof(size_t) + sizeof(uint32_t)], &_rkey, sizeof(uint32_t));
+            return bufSize;
+        }
+        static MemoryRegistration * deserialize(char * buf) {
+
+            char *   addr;
+            size_t   size;
+            uint32_t lkey;
+            uint32_t rkey;
+            //char ** ptr = &buf;
+            memcpy(&addr, &buf, sizeof(char *));
+            //*ptr += sizeof(addr);
+            std::cout << "COPYING addr = " << addr << " in deserialize\n";
+            memcpy(&size, &buf[sizeof(char *)], sizeof(size_t));
+            std::cout << "COPYING size = " << size << std::endl;
+            //*ptr += sizeof(size);
+            memcpy(&lkey, &buf[sizeof(char *) + sizeof(size_t)], sizeof(uint32_t));
+            //*ptr += sizeof(lkey);
+            memcpy(&rkey, &buf[sizeof(char *) + sizeof(size_t) + sizeof(uint32_t)], sizeof(uint32_t));
+            return new MemoryRegistration(addr, size, lkey, rkey);
+        }
+
+};
+
+
 class _LPFLIB_LOCAL IBVerbs 
 {
 public:
@@ -112,12 +160,6 @@ public:
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
 
 
-    struct MemoryRegistration {
-        void *   addr;
-        size_t   size;
-        uint32_t lkey;
-        uint32_t rkey;
-    };
 protected:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited

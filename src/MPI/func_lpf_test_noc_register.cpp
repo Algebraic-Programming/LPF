@@ -71,33 +71,57 @@ TEST( API, func_lpf_test_noc_register )
      * Specific for THIS example, we can use direct
      * MPI communication to send to left-hand
      * partner the MemoryRegistration information
-     * Left-hand partner then puts data into the slot
-     * of its right-hand partner.
      */
     auto mr = verbs->getMR(b2, rank);
+    char * buffer;
+    size_t bufSize = mr.serialize(&buffer);
+    std::cout << " BUF SIZE = " << bufSize << std::endl;
 
-    MPI_Aint addr;
-    uint32_t rmtLkey, rmtRkey;
-    MPI_Aint rmtAddr;
-    size_t rmtSize;
-    MPI_Get_address(mr.addr, &addr);
+//    MPI_Aint addr;
+//    uint32_t rmtLkey, rmtRkey;
+//    MPI_Aint rmtAddr;
+//    size_t rmtSize;
+//    MPI_Get_address(mr.addr, &addr);
        
     int left = (comm->nprocs() + rank - 1) % comm->nprocs();
     int right = (rank + 1) % comm->nprocs();
-    MPI_Sendrecv(&addr, 1, MPI_AINT, left, 0, &rmtAddr, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(&mr.lkey, 1, MPI_UINT32_T, left, 0, &rmtLkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-    MPI_Sendrecv(&mr.rkey, 1, MPI_UINT32_T, left, 0, &rmtRkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Sendrecv(&mr.size, 1, MPI_AINT, left, 0, &rmtSize, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    char buff[bufSize];
+    char rmtBuff[bufSize];
+    size_t lclSize = * (size_t *)(buff + sizeof(char *));
+    std::cout << "Got local size = " << lclSize << std::endl;
+    MPI_Sendrecv(buff, bufSize, MPI_BYTE, left, 0, rmtBuff, bufSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//    MPI_Sendrecv(&addr, 1, MPI_AINT, left, 0, &rmtAddr, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//    MPI_Sendrecv(&mr.lkey, 1, MPI_UINT32_T, left, 0, &rmtLkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+//    MPI_Sendrecv(&mr.rkey, 1, MPI_UINT32_T, left, 0, &rmtRkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//    MPI_Sendrecv(&mr.size, 1, MPI_AINT, left, 0, &rmtSize, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     // translate Aint to address
-    void * rmtAddrAsPtr = (void *) rmtAddr;
+    //void * rmtAddrAsPtr = (void *) rmtAddr;
 
+    size_t rmtSize = * (size_t *)(rmtBuff + sizeof(char *));
+    std::cout << "Got remote size = " << rmtSize << std::endl;
 
     // Populate the memory region
-    IBVerbs::MemoryRegistration newMr{rmtAddrAsPtr, rmtSize, rmtLkey, rmtRkey};
-    verbs->setMR(b2, right, newMr);
+    if (rank == 0) {
+        for (int i=0; i<bufSize; i++) {
+            printf("Index %d : %c\n", i, buff[i]);
+        }
+    }
+    else if (rank == 1) {
+        for (int i=0; i<bufSize; i++) {
+            printf("Index %d : %c\n", i, rmtBuff[i]);
+        }
+
+    }
+    MemoryRegistration * newMr = MemoryRegistration::deserialize(rmtBuff);
+    std::cout << "NewMr->size = " << newMr->_size << std::endl;
+    verbs->setMR(b2, right, *newMr);
     comm->barrier();
 
 
+    /* Having exchanged out-of-band the slot information,
+     * each left-hand partner then puts data into the slot
+     * of its right-hand partner.
+     */
     verbs->put( b1, 0, right, b2, 0, sizeof(buf1));
 
     verbs->sync(true);
