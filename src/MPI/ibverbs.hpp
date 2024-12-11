@@ -71,12 +71,18 @@ class MemoryRegistration {
         {}
         size_t serialize(char ** buf) {
             std::stringstream ss;
-            ss << reinterpret_cast<uintptr_t>(_addr) << "-"<<  _size << "-" << _lkey << "-" << _rkey;
-            std::string asStr = ss.str();
-            *buf = new char[strlen(asStr.c_str())];
-            strcpy(*buf, asStr.c_str());
-            std::string s1;
-           return asStr.size();
+            size_t bufSize = sizeof(uintptr_t) + sizeof(size_t) + 2*sizeof(uint32_t);
+            *buf = new char[bufSize];
+            char *ptr = *buf;
+            uintptr_t addrAsUintPtr = reinterpret_cast<uintptr_t>(_addr);
+            memcpy(ptr, &addrAsUintPtr, sizeof(uintptr_t));
+            ptr += sizeof(uintptr_t);
+            memcpy(ptr, &_size, sizeof(size_t));
+            ptr += sizeof(size_t);
+            memcpy(ptr, &_lkey, sizeof(uint32_t));
+            ptr += sizeof(uint32_t);
+            memcpy(ptr, &_rkey, sizeof(uint32_t));
+           return bufSize;
         }
         static MemoryRegistration * deserialize(char * buf) {
 
@@ -84,27 +90,16 @@ class MemoryRegistration {
             size_t   size;
             uint32_t lkey;
             uint32_t rkey;
-            std::stringstream ss(buf);
-            std::string tokens[4];
-            std::getline(ss, tokens[0], '-');
-            std::stringstream ss2;
-            ss2 << tokens[0];
             uintptr_t addrAsUintPtr;
-            ss2 >> addrAsUintPtr;
+            char * ptr = buf;
+            memcpy(&addrAsUintPtr, ptr, sizeof(uintptr_t));
             addr = reinterpret_cast<char *>(addrAsUintPtr);
-            std::getline(ss, tokens[1], '-');
-            ss2.clear();
-            ss2 << tokens[1];
-            ss2 >> size;
-            std::getline(ss, tokens[2], '-');
-            ss2.clear();
-            ss2 << tokens[2];
-            ss2 >> lkey;
-            std::getline(ss, tokens[3], '\0');
-            ss2.clear();
-            ss2 << tokens[3];
-            ss2 >> rkey;
-
+            ptr += sizeof(uintptr_t);
+            memcpy(&size, ptr, sizeof(size_t));
+            ptr += sizeof(size_t);
+            memcpy(&lkey, ptr, sizeof(uint32_t));
+            ptr += sizeof(uint32_t);
+            memcpy(&rkey, ptr, sizeof(uint32_t));
             return new MemoryRegistration(addr, size, lkey, rkey);
         }
 
