@@ -72,48 +72,23 @@ TEST( API, func_lpf_test_noc_register )
      * MPI communication to send to left-hand
      * partner the MemoryRegistration information
      */
-    auto mr = verbs->getMR(b2, rank);
+    auto mr = verbs->getMR(b1, rank);
+    mr = verbs->getMR(b2, rank);
+    assert(mr._addr != nullptr);
     char * buffer;
     size_t bufSize = mr.serialize(&buffer);
-    std::cout << " BUF SIZE = " << bufSize << std::endl;
-
-//    MPI_Aint addr;
-//    uint32_t rmtLkey, rmtRkey;
-//    MPI_Aint rmtAddr;
-//    size_t rmtSize;
-//    MPI_Get_address(mr.addr, &addr);
+    std::string bufAsString(buffer);
        
     int left = (comm->nprocs() + rank - 1) % comm->nprocs();
     int right = (rank + 1) % comm->nprocs();
-    char buff[bufSize];
     char rmtBuff[bufSize];
-    size_t lclSize = * (size_t *)(buff + sizeof(char *));
-    std::cout << "Got local size = " << lclSize << std::endl;
-    MPI_Sendrecv(buff, bufSize, MPI_BYTE, left, 0, rmtBuff, bufSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//    MPI_Sendrecv(&addr, 1, MPI_AINT, left, 0, &rmtAddr, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//    MPI_Sendrecv(&mr.lkey, 1, MPI_UINT32_T, left, 0, &rmtLkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-//    MPI_Sendrecv(&mr.rkey, 1, MPI_UINT32_T, left, 0, &rmtRkey, 1, MPI_UINT32_T, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//    MPI_Sendrecv(&mr.size, 1, MPI_AINT, left, 0, &rmtSize, 1, MPI_AINT, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    // translate Aint to address
-    //void * rmtAddrAsPtr = (void *) rmtAddr;
+    std::stringstream ss(buffer);
 
-    size_t rmtSize = * (size_t *)(rmtBuff + sizeof(char *));
-    std::cout << "Got remote size = " << rmtSize << std::endl;
+    MPI_Sendrecv(buffer, bufSize, MPI_BYTE, left, 0, rmtBuff, bufSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     // Populate the memory region
-    if (rank == 0) {
-        for (int i=0; i<bufSize; i++) {
-            printf("Index %d : %c\n", i, buff[i]);
-        }
-    }
-    else if (rank == 1) {
-        for (int i=0; i<bufSize; i++) {
-            printf("Index %d : %c\n", i, rmtBuff[i]);
-        }
 
-    }
     MemoryRegistration * newMr = MemoryRegistration::deserialize(rmtBuff);
-    std::cout << "NewMr->size = " << newMr->_size << std::endl;
     verbs->setMR(b2, right, *newMr);
     comm->barrier();
 

@@ -12,13 +12,12 @@ namespace mpi
     MemoryRegistration IBVerbsNoc :: getMR(SlotID slotId, int pid) 
     {
         const MemorySlot & slot = m_memreg.lookup( slotId );
-        MemoryRegistration mr = slot.glob[pid];
-        return mr;
+        return slot.glob[pid];
     }
 
     void IBVerbsNoc::setMR(SlotID slotId, int pid, MemoryRegistration & mr)
     {
-        m_memreg.update(slotId ).glob[pid] = mr;
+        m_memreg.update(slotId).glob[pid] = mr;
     }
 
     IBVerbsNoc::IBVerbsNoc(Communication & comm) : IBVerbs(comm)
