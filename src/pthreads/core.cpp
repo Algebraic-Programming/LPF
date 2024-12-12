@@ -412,6 +412,14 @@ lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_get_sent_msg_count(lpf_t ctx, size_t * msgs) {
+    *msgs = 0;
+    lpf::ThreadLocalData * t = realCtx(ctx);
+    if (t->isAborted())
+        return LPF_SUCCESS;
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_abort(lpf_t ctx) {
     (void) ctx;
     // Using std::abort is not portable

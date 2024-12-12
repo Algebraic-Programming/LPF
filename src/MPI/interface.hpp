@@ -99,6 +99,8 @@ public:
 
     void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
 
+    void getSentMsgCount(size_t * msgs);
+
     void getRcvdMsgCount(size_t * msgs);
 
     void flushSent();

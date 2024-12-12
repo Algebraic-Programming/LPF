@@ -2426,6 +2426,15 @@ extern _LPFLIB_API
 lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_memslot_t slot);
 
 /**
+ * This function returns in @rcvd_msgs the total received message count.
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[out] sent_msgs Sent message count
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_sent_msg_count( lpf_t ctx, size_t *sent_msgs);
+
+/**
  * This function blocks until all the scheduled messages via
  * ibv_post_send are completed (via ibv_poll_cq). This includes
  * both put and get calls on the local process.

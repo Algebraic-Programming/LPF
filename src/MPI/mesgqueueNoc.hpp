@@ -25,8 +25,8 @@ public:
     /*
      * end NOC extension
      */
-protected:
-    mpi::IBVerbsNoc m_ibverbs;
+//protected:
+    //mpi::IBVerbsNoc m_ibverbs;
 };
 
 } // namespace lpf

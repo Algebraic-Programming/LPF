@@ -132,16 +132,21 @@ void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
     m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
 }
 
+
+void Interface :: getRcvdMsgCount(size_t * msgs) {
+    m_mesgQueue.getRcvdMsgCount(msgs);
+}
+
+void Interface :: getSentMsgCount(size_t * msgs) {
+    m_mesgQueue.getSentMsgCount(msgs);
+}
+
 void Interface :: flushSent() {
     m_mesgQueue.flushSent();
 }
 
 void Interface :: flushReceived() {
     m_mesgQueue.flushReceived();
-}
-
-void Interface :: getRcvdMsgCount(size_t * msgs) {
-    m_mesgQueue.getRcvdMsgCount(msgs);
 }
 
 err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)

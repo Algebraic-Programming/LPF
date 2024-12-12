@@ -6,7 +6,7 @@ namespace lpf
 {
 
     MessageQueueNoc :: MessageQueueNoc( Communication & comm ) :
-        m_ibverbs( comm ),
+        //m_ibverbs( comm ),
         MessageQueue(comm)
     {}
 

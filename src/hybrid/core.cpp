@@ -414,11 +414,15 @@ _LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
 
 _LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot )
 {
+
     using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS)
+        return LPF_SUCCESS;
     ThreadState * t = realContext(ctx);
-    MPI mpi = t->nodeState().mpi();
-    mpi.abort();
-    return LPF_SUCCESS;
+    if (!t->error())
+        return t->getRcvdMsgCountPerSlot(rcvd_msgs, slot);
+    else
+        return LPF_SUCCESS;
 }
 
 _LPFLIB_API lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_memslot_t slot )
@@ -428,7 +432,19 @@ _LPFLIB_API lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_
         return LPF_SUCCESS;
     ThreadState * t = realContext(ctx);
     if (!t->error())
-        return t->getSentMsgCount(sent_msgs, slot);
+        return t->getSentMsgCountPerSlot(sent_msgs, slot);
+    else
+        return LPF_SUCCESS;
+}
+
+_LPFLIB_API lpf_err_t lpf_get_sent_msg_count( lpf_t ctx, size_t * sent_msgs)
+{
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS)
+        return LPF_SUCCESS;
+    ThreadState * t = realContext(ctx);
+    if (!t->error())
+        return t->getSentMsgCount(sent_msgs);
     else
         return LPF_SUCCESS;
 }

@@ -46,16 +46,19 @@ namespace {
 }
 
 size_t MemoryRegistration :: serialize(char ** buf) {
+    (void) buf;
     throw IBVerbs::Exception( "MemoryRegistration::serialize(char ** buf) not implemented for base IBVerbs class");
 }
 
 MemoryRegistration * MemoryRegistration :: deserialize(char * buf)
 {
+    (void) buf;
     throw IBVerbs::Exception( "MemoryRegistration::deserialize(char * buf) not implemented for base IBVerbs class");
 }
 
 IBVerbs :: IBVerbs( Communication & comm )
-    : m_pid( comm.pid() )
+    : m_comm( comm )
+    , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
     , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
@@ -80,7 +83,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
 {
     m_peerList.reserve( m_nprocs );
 

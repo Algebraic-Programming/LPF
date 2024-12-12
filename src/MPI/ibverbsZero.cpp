@@ -53,14 +53,20 @@ namespace {
 
 
 IBVerbs :: IBVerbs( Communication & comm )
-    : m_pid( comm.pid() )
+    : m_comm( comm )
+    , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
+    , m_numMsgs(0)
+    , m_recvTotalInitMsgCount(0)
+    , m_sentMsgs(0)
+    , m_recvdMsgs(0)
     , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
     , m_gidIdx( Config::instance().getIBGidIndex() )
     , m_mtu( getMTU( Config::instance().getIBMTU() ))
     , m_maxRegSize(0)
     , m_maxMsgSize(0)
+    , m_cqSize(1)
     , m_minNrMsgs(0)
     , m_maxSrs(0)
     , m_device()
@@ -78,14 +84,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
-    , m_cqSize(1)
     , m_postCount(0)
     , m_recvCount(0)
-    , m_numMsgs(0)
-    , m_recvTotalInitMsgCount(0)
-    , m_sentMsgs(0)
-    , m_recvdMsgs(0)
 {
 
     // arrays instead of hashmap for counters
@@ -306,7 +306,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
 void IBVerbs :: stageQPs( size_t maxMsgs )
 {
     // create the queue pairs
-    for ( int i = 0; i < m_nprocs; ++i) {
+    for ( size_t i = 0; i < static_cast<size_t>(m_nprocs); ++i) {
         struct ibv_qp_init_attr attr;
         std::memset(&attr, 0, sizeof(attr));
 
@@ -464,7 +464,6 @@ void IBVerbs :: reconnectQPs()
 
             struct ibv_recv_wr rr;  std::memset(&rr, 0, sizeof(rr));
             struct ibv_sge     sge; std::memset(&sge, 0, sizeof(sge));
-            struct ibv_recv_wr *bad_wr = NULL;
             sge.addr = reinterpret_cast<uintptr_t>(m_dummyBuffer.data());
             sge.length = m_dummyBuffer.size();
             sge.lkey = m_dummyMemReg->lkey;
@@ -705,7 +704,6 @@ void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dst
 	sge.length =  std::min<size_t>(size, m_maxMsgSize );
         sge.lkey = src.mr->lkey;
 
-	struct ibv_wc wcs[POLL_BATCH];
 	struct ibv_send_wr wr;
 	memset(&wr, 0, sizeof(wr));
 	wr.wr_id = srcSlot;
@@ -892,6 +890,10 @@ void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs) {
     *rcvd_msgs = m_recvdMsgs;
 }
 
+void IBVerbs :: get_sent_msg_count(size_t * sent_msgs) {
+    *sent_msgs = m_sentMsgs;
+}
+
 void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 {
     *rcvd_msgs = rcvdMsgCount[slot];
@@ -982,10 +984,8 @@ void IBVerbs :: flushSent()
 
 }
 
-void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSent, size_t expectedRecvd) {
+void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
 
-    size_t actualRecvd;
-    size_t actualSent;
     int error;
     if (slotActive[slot]) {
         do {
@@ -997,14 +997,20 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
             // this call triggers doRemoteProgress
             doRemoteProgress();
 
-        } while (
+        } while ((
+                // do we have messages (sent or received)
+                // which are only initiated but incomplete?
                 (rcvdMsgCount[slot] < m_recvInitMsgCount[slot]) ||
                 (sentMsgCount[slot] < m_sendInitMsgCount[slot])
-                );
+                ) && 
+            // do the sent and received messages
+            // match our expectations?
+            (rcvdMsgCount[slot] < expectedRecvd
+            || sentMsgCount[slot] < expectedSent));
     }
 }
 
-void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
+void IBVerbs :: syncPerSlot(SlotID slot) {
     int error;
 
     do {
@@ -1036,8 +1042,7 @@ void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
 
 void IBVerbs :: sync(bool resized)
 {
-
-    int error = 0;
+    (void) resized;
 
     // flush send queues
     flushSent();

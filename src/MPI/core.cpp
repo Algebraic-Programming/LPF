@@ -332,6 +332,15 @@ lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_get_sent_msg_count( lpf_t ctx, size_t * sent_msgs)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getSentMsgCount(sent_msgs);
+    }
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_memslot_t slot)
 {
     lpf::Interface * i = realContext(ctx);
