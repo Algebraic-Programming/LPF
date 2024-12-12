@@ -553,8 +553,8 @@ void IBVerbs :: resizeMemreg( size_t size )
         throw std::bad_alloc() ;
     }
 
-    MemoryRegistration null = { 0, 0, 0, 0 };
-    MemorySlot dflt; dflt.glob.resize( m_nprocs, null );
+    MemoryRegistration newMR = { nullptr, 0, 0, 0, m_pid};
+    MemorySlot dflt; dflt.glob.resize( m_nprocs, newMR);
 
     m_memreg.reserve( size, dflt );
 }
@@ -616,11 +616,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local;
-    local._addr = (char *) addr;
-    local._size = size;
-    local._lkey = size?slot.mr->lkey:0;
-    local._rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
     tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
@@ -662,12 +658,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local;
-    local._addr = (char *) addr;
-    local._size = size;
-    local._lkey = size?slot.mr->lkey:0;
-    local._rkey = size?slot.mr->rkey:0;
-
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
     LOG(4, "All-gathering memory register data" );
 
     m_comm.allgather( local, ref.glob.data() );

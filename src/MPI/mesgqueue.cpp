@@ -254,13 +254,13 @@ memslot_t MessageQueue :: addNocReg( void * mem, std::size_t size)
     return slot;
 }
 
-err_t MessageQueue :: serializeSlot(SlotID slot, char ** mem, std::size_t * size)
+err_t MessageQueue :: serializeSlot(memslot_t slot, char ** mem, std::size_t * size)
 {
     ASSERT(slot != LPF_INVALID_MEMSLOT);
     ASSERT(mem != nullptr);
     ASSERT(size != nullptr);
 #ifdef LPF_CORE_MPI_USES_zero
-    auto mr = m_ibverbs.getMR(slot, m_pid);
+    auto mr = m_ibverbs.getMR(m_memreg.getVerbID(slot), m_pid);
     *size = mr.serialize(mem);
     return LPF_SUCCESS;
 #else
@@ -270,13 +270,13 @@ err_t MessageQueue :: serializeSlot(SlotID slot, char ** mem, std::size_t * size
 
 }
 
-err_t MessageQueue :: deserializeSlot(char * mem, SlotID slot)
+err_t MessageQueue :: deserializeSlot(char * mem, memslot_t slot)
 {
     ASSERT(mem != nullptr);
     ASSERT(slot != LPF_INVALID_MEMSLOT);
 #ifdef LPF_CORE_MPI_USES_zero
     auto mr = mpi::MemoryRegistration::deserialize(mem);
-    m_ibverbs.setMR(slot, m_pid, *mr);
+    m_ibverbs.setMR(m_memreg.getVerbID(slot), mr->_pid, *mr);
     return LPF_SUCCESS;
 #else
     LOG( 3, "Error: deserialize slot is only implemented for zero engine at the moment.");

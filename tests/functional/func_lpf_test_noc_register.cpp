@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#include "mpi.h"
 #include <lpf/core.h>
 #include <lpf/noc.h>
 #include "gtest/gtest.h"
@@ -29,8 +30,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     char buf2[30] = {'\0'};
 
     strcpy(buf1, "HELLO");
-    rc = lpf_resize_memory_register(lpf, 2);
-    //rc = lpf_noc_resize_memory_register(lpf, 1);
+
+    rc = lpf_resize_memory_register(lpf, 2); // identical to lpf_noc_resize at the moment
     EXPECT_EQ( LPF_SUCCESS, rc );
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_resize_message_queue( lpf, 2);
@@ -38,13 +39,6 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     rc = lpf_sync( lpf, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
-
-/** 
- * \test Testing NOC functionality
- * \pre P >= 2
- * \pre P <= 2
- * \return Exit code: 0
- */
 
     lpf_memslot_t xslot = LPF_INVALID_MEMSLOT;
     lpf_memslot_t yslot = LPF_INVALID_MEMSLOT;
@@ -56,24 +50,22 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     char * buffer;
     size_t bufferSize; 
-    lpf_serialize_slot(lpf, xslot, &buffer, &bufferSize);
+    lpf_serialize_slot(lpf, yslot, &buffer, &bufferSize);
        
-    //int left = (nprocs + pid - 1) % nprocs;
+    int left = (nprocs + pid - 1) % nprocs;
     int right = ( pid + 1) % nprocs;
-    //char rmtBuff[bufSize];
+    char rmtBuff[bufferSize];
 
-    //MPI_Sendrecv(buffer, bufSize, MPI_BYTE, left, 0, rmtBuff, bufSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-
-
-    lpf_deserialize_slot(lpf, buffer, yslot);
-    lpf_noc_put(lpf, xslot, 0, right, yslot, 0, sizeof(buf1), LPF_MSG_DEFAULT);
+    rc = lpf_deserialize_slot(lpf, rmtBuff, yslot);
+    EXPECT_EQ( LPF_SUCCESS, rc );
+    rc = lpf_noc_put(lpf, xslot, 0, right, yslot, 0, sizeof(buf1), LPF_MSG_DEFAULT);
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_sync(lpf, LPF_SYNC_DEFAULT);
     EXPECT_EQ( LPF_SUCCESS, rc );
-
     EXPECT_EQ(std::string(buf2), std::string(buf1));
-    rc = lpf_noc_deregister(lpf, xslot);
+    rc = lpf_deregister(lpf, xslot);
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_noc_deregister(lpf, yslot);
     EXPECT_EQ( LPF_SUCCESS, rc );

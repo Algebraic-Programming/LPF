@@ -472,8 +472,8 @@ void IBVerbs :: resizeMemreg( size_t size )
         throw std::bad_alloc() ;
     }
 
-    MemoryRegistration null = { 0, 0, 0, 0 };
-    MemorySlot dflt; dflt.glob.resize( m_nprocs, null );
+    MemoryRegistration newMR = { nullptr, 0, 0, 0, m_pid};
+    MemorySlot dflt; dflt.glob.resize( m_nprocs, newMR );
 
     m_memreg.reserve( size, dflt );
 }
@@ -516,11 +516,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local;
-    local._addr = (char *) addr;
-    local._size = size;
-    local._lkey = size?slot.mr->lkey:0;
-    local._rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
 
@@ -560,11 +556,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local;
-    local._addr = (char *) addr;
-    local._size = size;
-    local._lkey = size?slot.mr->lkey:0;
-    local._rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     LOG(4, "All-gathering memory register data" );
 
@@ -595,7 +587,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
             = static_cast<const char *>(src.glob[m_pid]._addr) + srcOffset;
         const char * remoteAddr
             = static_cast<const char *>(dst.glob[dstPid]._addr) + dstOffset;
-        printf("DEBUG: rank %d localAddr %p remoteAddr %p\n", m_pid, localAddr, remoteAddr);
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );

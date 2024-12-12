@@ -7,7 +7,7 @@ namespace mpi
 
     size_t MemoryRegistration :: serialize(char ** buf) {
         std::stringstream ss;
-        size_t bufSize = sizeof(uintptr_t) + sizeof(size_t) + 2*sizeof(uint32_t);
+        size_t bufSize = sizeof(uintptr_t) + sizeof(size_t) + 2*sizeof(uint32_t) + sizeof(int);
         *buf = new char[bufSize];
         char *ptr = *buf;
         uintptr_t addrAsUintPtr = reinterpret_cast<uintptr_t>(_addr);
@@ -18,6 +18,8 @@ namespace mpi
         memcpy(ptr, &_lkey, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
         memcpy(ptr, &_rkey, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        memcpy(ptr, &_pid, sizeof(int));
         return bufSize;
     }
 
@@ -28,6 +30,7 @@ namespace mpi
         uint32_t lkey;
         uint32_t rkey;
         uintptr_t addrAsUintPtr;
+        int pid;
         char * ptr = buf;
         memcpy(&addrAsUintPtr, ptr, sizeof(uintptr_t));
         addr = reinterpret_cast<char *>(addrAsUintPtr);
@@ -37,7 +40,9 @@ namespace mpi
         memcpy(&lkey, ptr, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
         memcpy(&rkey, ptr, sizeof(uint32_t));
-        return new MemoryRegistration(addr, size, lkey, rkey);
+        ptr += sizeof(uint32_t);
+        memcpy(&pid, ptr, sizeof(int));
+        return new MemoryRegistration(addr, size, lkey, rkey, pid);
     }
 
     struct IBVerbsNoc::Exception : std::runtime_error {
@@ -80,14 +85,9 @@ namespace mpi
                 throw Exception("Could not register memory area");
             }
         }
-        MemoryRegistration local;
-        local._addr = (char *) addr;
-        local._size = size;
-        local._lkey = size?slot.mr->lkey:0;
-        local._rkey = size?slot.mr->rkey:0;
+        MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
         SlotID id =  m_memreg.addNocReg( slot );
-
         m_memreg.update( id ).glob.resize( m_nprocs );
         m_memreg.update( id ).glob[m_pid] = local;
         LOG(4, "Memory area " << addr << " of size " << size << " has been locally registered as NOC slot. Slot = " << id );

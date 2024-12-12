@@ -64,11 +64,11 @@ class MemoryRegistration {
         size_t   _size;
         uint32_t _lkey;
         uint32_t _rkey;
-        MemoryRegistration(char * addr, size_t size, uint32_t lkey, uint32_t rkey) : _addr(addr),
-        _size(size), _lkey(lkey), _rkey(rkey)
-        {}
-        MemoryRegistration() : _addr(nullptr), _size(0), _lkey(0), _rkey(0)
-        {}
+        int _pid;
+        MemoryRegistration(char * addr, size_t size, uint32_t lkey, uint32_t rkey, int pid) : _addr(addr),
+        _size(size), _lkey(lkey), _rkey(rkey), _pid(pid)
+        { }
+        MemoryRegistration() : _addr(nullptr), _size(0), _lkey(0), _rkey(0), _pid(-1) {}
         size_t serialize(char ** buf);
         static MemoryRegistration * deserialize(char * buf);
 
@@ -152,7 +152,6 @@ protected:
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
-    //std::atomic_size_t m_sendTotalInitMsgCount;
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
