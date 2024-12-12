@@ -26,15 +26,14 @@
 #include "messagesort.hpp"
 #include "mpilib.hpp"
 #include "linkage.hpp"
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#include "ibverbsNoc.hpp"
+#endif
 
 #if __cplusplus >= 201103L
 #include <memory>
 #else
 #include <tr1/memory>
-#endif
-
-#if defined LPF_CORE_MPI_USES_zero
-#include "ibverbsNoc.hpp"
 #endif
 
 //only for HiCR
@@ -169,10 +168,10 @@ private:
     mpi::Comm m_comm;
     std::vector< char > m_tinyMsgBuf;
 protected:
-#if defined LPF_CORE_MPI_USES_ibverbs
-        mpi::IBVerbs m_ibverbs;
+#if defined LPF_CORE_MPI_USES_ibverbs 
+    mpi::IBVerbs m_ibverbs;
 #elif defined LPF_CORE_MPI_USES_zero
-        mpi::IBVerbsNoc m_ibverbs;
+    mpi::IBVerbsNoc m_ibverbs;
 #endif
     MemoryTable m_memreg;
 };

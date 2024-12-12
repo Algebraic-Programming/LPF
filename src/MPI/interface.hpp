@@ -19,7 +19,7 @@
 #define LPF_CORE_MPI_INTERFACE_HPP
 
 #include "types.hpp"
-#include "mesgqueueNoc.hpp"
+#include "mesgqueue.hpp"
 #include "mpilib.hpp"
 #include "machineparams.hpp"
 #include "linkage.hpp"

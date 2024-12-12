@@ -61,7 +61,6 @@ if (MPI_FOUND)
         add_library(raw_${libname} OBJECT
                 memorytable.cpp
                 mesgqueue.cpp
-                mesgqueueNoc.cpp
                 mpilib.cpp
                 symbol.cpp
                 process.cpp
