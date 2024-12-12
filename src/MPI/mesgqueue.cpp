@@ -16,6 +16,7 @@
  */
 
 #include "mesgqueue.hpp"
+#include "ibverbs.hpp"
 #include "mpilib.hpp"
 #include "log.hpp"
 #include "assert.hpp"
@@ -246,13 +247,39 @@ err_t MessageQueue :: resizeMemreg( size_t nRegs )
 
 memslot_t MessageQueue :: addNocReg( void * mem, std::size_t size)
 {
-    printf("Enter MessageQueue::addNocReg\n");
     memslot_t slot = m_memreg.addNoc( mem, size );
     ASSERT(slot != LPF_INVALID_MEMSLOT);
     if (size > 0)
         m_msgsort.addRegister( slot, static_cast<char *>( mem ), size);
-    printf("Will return slot in MessageQueue::addNocReg\n");
     return slot;
+}
+
+err_t MessageQueue :: serializeSlot(SlotID slot, char ** mem, std::size_t * size)
+{
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+#ifdef LPF_CORE_MPI_USES_zero
+    auto mr = m_ibverbs.getMR(slot, m_pid);
+    *size = mr.serialize(mem);
+    return LPF_SUCCESS;
+#else
+    LOG( 3, "Error: serialize slot is only implemented for zero engine at the moment.");
+    return LPF_ERR_FATAL;
+#endif
+
+}
+
+err_t MessageQueue :: deserializeSlot(char * mem, SlotID slot)
+{
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+#ifdef LPF_CORE_MPI_USES_zero
+    auto mr = mpi::MemoryRegistration::deserialize(mem);
+    m_ibverbs.setMR(slot, m_pid, *mr);
+    return LPF_SUCCESS;
+#else
+    LOG( 3, "Error: deserialize slot is only implemented for zero engine at the moment.");
+    return LPF_ERR_FATAL;
+#endif
+
 }
 
 

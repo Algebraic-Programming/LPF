@@ -255,6 +255,16 @@ void Interface :: nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             dstSlot, dstOffset,
             size );
 }
+
+err_t Interface :: serializeSlot(SlotID slot, char ** buff, size_t *buff_size)
+{
+    return m_mesgQueue.serializeSlot(slot, buff, buff_size);
+}
+
+err_t Interface :: deserializeSlot(char * buff, SlotID slot)
+{
+    return m_mesgQueue.deserializeSlot(buff, slot);
+}
 /* end NOC extensions */
 
 pid_t Interface  :: isAborted() const

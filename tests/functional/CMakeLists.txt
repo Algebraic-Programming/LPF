@@ -150,6 +150,14 @@ foreach (LPF_IMPL_ID ${ENGINES})
 
 endforeach(LPF_IMPL_ID)
 
+# Individual test for NOC (Non-coherence) protocol, only for zero engine
+# (part of HiCR project)
+    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+    set(mode "_debug")
+    set(exeName "func_lpf_test_noc_register_zero_${LPF_IMPL_CONFIG}${mode}")
+    add_gtest(${exeName} "zero" ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_register.cpp")
+
+
 
 include_directories(.)
 add_subdirectory(debug)

@@ -386,6 +386,7 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
 }
 
 lpf_err_t lpf_get_rcvd_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
+    (void) slot;
     *msgs = 0;
     lpf::ThreadLocalData * t = realCtx(ctx);
     if (t->isAborted())
@@ -404,6 +405,7 @@ lpf_err_t lpf_get_rcvd_msg_count(lpf_t ctx, size_t * msgs) {
 
 lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
     *msgs = 0;
+    (void) slot;
     lpf::ThreadLocalData * t = realCtx(ctx);
     if (t->isAborted())
         return LPF_SUCCESS;

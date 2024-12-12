@@ -468,3 +468,31 @@ lpf_err_t lpf_noc_get(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_serialize_slot(
+        lpf_t ctx,
+        lpf_memslot_t slot,
+        char  ** buff,
+        size_t * buff_size
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        return i->serializeSlot(slot, buff, buff_size);
+
+    return LPF_ERR_FATAL;
+}
+
+lpf_err_t lpf_deserialize_slot(
+        lpf_t ctx,
+        char * buff,
+        lpf_memslot_t slot
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted())
+        return i->deserializeSlot( buff, slot);
+
+    return LPF_ERR_FATAL;
+
+}
+

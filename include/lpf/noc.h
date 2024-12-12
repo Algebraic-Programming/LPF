@@ -272,7 +272,7 @@ lpf_err_t lpf_noc_register(
  * corresponding to \a memslot.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_deregister(
+lpf_err_t lpf_noc_deregister(
     lpf_t ctx,
     lpf_memslot_t memslot
 );
@@ -438,6 +438,27 @@ lpf_err_t lpf_noc_get(
     lpf_msg_attr_t attr
 );
 
+extern _LPFLIB_API
+lpf_err_t lpf_serialize_slot(
+        lpf_t ctx,
+        lpf_memslot_t slot,
+        char  ** buff,
+        size_t * buff_size
+);
+/*
+ * lpf_deserialize_slot may only be called on a slot
+ * already registered via lpf_noc_register.
+ * This call sets the memory registration attributes from 
+ * the byte array buff with byte size buff_size.
+ * This array must have been created via a call to
+ * @lpf_serialize_slot
+ */
+extern _LPFLIB_API
+    lpf_err_t lpf_deserialize_slot(
+            lpf_t ctx,
+            char * buff,
+            lpf_memslot_t slot
+);
 /**
  * @}
  *

@@ -73,6 +73,10 @@ public:
     void nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
             memslot_t dstSlot, size_t dstOffset,
             size_t size ) ;// nothrow
+
+    err_t serializeSlot(memslot_t slot, char ** buff, size_t *buff_size);
+
+    err_t deserializeSlot(char * buff, memslot_t slot);
     /* end NOC extensions */
 
     pid_t isAborted() const ;

@@ -206,8 +206,8 @@ if (MPI_FOUND)
         set(mode "")
         set(LPF_IMPL_ID "zero")
         set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
-        set(exeName "func_lpf_test_noc_register_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-        add_gtest(${exeName} ${LPF_IMPL_ID} ON ${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_register.cpp
+        set(exeName "func_verbs_test_noc_register_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+        add_gtest(${exeName} ${LPF_IMPL_ID} ON ${CMAKE_CURRENT_SOURCE_DIR}/func_verbs_test_noc_register.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsNoc.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)

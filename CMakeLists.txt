@@ -194,10 +194,10 @@ message( STATUS "The following engines will be built: ${ENGINES}")
 
 # Enable all warning diagnostics by default
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -Wfatal-errors -Wall -Wextra")
 endif()
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wfatal-errors -Wall -Wextra")
 endif()
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")

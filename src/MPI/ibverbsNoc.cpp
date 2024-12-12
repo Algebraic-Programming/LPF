@@ -5,6 +5,41 @@ namespace lpf
 namespace mpi
 {
 
+    size_t MemoryRegistration :: serialize(char ** buf) {
+        std::stringstream ss;
+        size_t bufSize = sizeof(uintptr_t) + sizeof(size_t) + 2*sizeof(uint32_t);
+        *buf = new char[bufSize];
+        char *ptr = *buf;
+        uintptr_t addrAsUintPtr = reinterpret_cast<uintptr_t>(_addr);
+        memcpy(ptr, &addrAsUintPtr, sizeof(uintptr_t));
+        ptr += sizeof(uintptr_t);
+        memcpy(ptr, &_size, sizeof(size_t));
+        ptr += sizeof(size_t);
+        memcpy(ptr, &_lkey, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        memcpy(ptr, &_rkey, sizeof(uint32_t));
+        return bufSize;
+    }
+
+    MemoryRegistration * MemoryRegistration :: deserialize(char * buf) {
+
+        char *   addr;
+        size_t   size;
+        uint32_t lkey;
+        uint32_t rkey;
+        uintptr_t addrAsUintPtr;
+        char * ptr = buf;
+        memcpy(&addrAsUintPtr, ptr, sizeof(uintptr_t));
+        addr = reinterpret_cast<char *>(addrAsUintPtr);
+        ptr += sizeof(uintptr_t);
+        memcpy(&size, ptr, sizeof(size_t));
+        ptr += sizeof(size_t);
+        memcpy(&lkey, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        memcpy(&rkey, ptr, sizeof(uint32_t));
+        return new MemoryRegistration(addr, size, lkey, rkey);
+    }
+
     struct IBVerbsNoc::Exception : std::runtime_error {
         Exception(const char * what) : std::runtime_error( what ) {}
     };

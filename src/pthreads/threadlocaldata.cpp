@@ -442,6 +442,10 @@ err_t ThreadLocalData ::  sync( bool expectExit)
 }
 
 err_t ThreadLocalData :: countingSyncPerSlot(bool expectExit,  lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) {
+    (void) expectExit;
+    (void) slot;
+    (void) expected_sent;
+    (void)  expected_rcvd;
     return LPF_SUCCESS;
 }
 

@@ -82,9 +82,9 @@ namespace {
         {
 #ifdef VALGRIND_MEMCHECK        
 #ifdef LPF_ON_MACOS
-            pthread_yield_np();
+            sched_yield_np();
 #else
-            pthread_yield(); // allow other processes to progress
+            sched_yield(); // allow other processes to progress
 #endif
 #endif
         }
@@ -145,7 +145,7 @@ namespace {
             if (m_available )
                 _mm_mwait(0, 0);
             else 
-                pthread_yield();
+                sched_yield();
         }
 
         bool m_available;
@@ -160,9 +160,9 @@ namespace {
         void pause() 
         { 
 #ifdef LPF_ON_MACOS
-            pthread_yield_np();
+            sched_yield_np();
 #else
-            if (pthread_yield()) {
+            if (sched_yield()) {
                 LOG(2, "While waiting, the Posix thread library failed to "
                        "yield the CPU to the OS" );
             }

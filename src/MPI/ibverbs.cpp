@@ -45,6 +45,14 @@ namespace {
     }
 }
 
+size_t MemoryRegistration :: serialize(char ** buf) {
+    throw IBVerbs::Exception( "MemoryRegistration::serialize(char ** buf) not implemented for base IBVerbs class");
+}
+
+MemoryRegistration * MemoryRegistration :: deserialize(char * buf)
+{
+    throw IBVerbs::Exception( "MemoryRegistration::deserialize(char * buf) not implemented for base IBVerbs class");
+}
 
 IBVerbs :: IBVerbs( Communication & comm )
     : m_pid( comm.pid() )
@@ -96,7 +104,6 @@ IBVerbs :: IBVerbs( Communication & comm )
                 " available, which is not enough" );
         throw Exception( "No Infiniband devices available" );
     }
-
 
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
