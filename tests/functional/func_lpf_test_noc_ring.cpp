@@ -47,16 +47,16 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     rc = lpf_noc_register( lpf, buf2, sizeof(buf2), &yslot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
+       
+    //int left = (nprocs + pid - 1) % nprocs;
+    int right = ( pid + 1) % nprocs;
 
     char * buffer;
     size_t bufferSize; 
     lpf_serialize_slot(lpf, yslot, &buffer, &bufferSize);
-       
-    int left = (nprocs + pid - 1) % nprocs;
-    int right = ( pid + 1) % nprocs;
     char rmtBuff[bufferSize];
 
-    MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    //MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     rc = lpf_deserialize_slot(lpf, rmtBuff, yslot);
     EXPECT_EQ( LPF_SUCCESS, rc );
@@ -72,7 +72,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
 }
 
-TEST( API, func_lpf_put_parallel_single )
+TEST( API, func_lpf_test_noc_ring )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
     EXPECT_EQ( LPF_SUCCESS, rc );

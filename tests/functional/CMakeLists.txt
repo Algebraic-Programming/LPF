@@ -154,8 +154,8 @@ endforeach(LPF_IMPL_ID)
 # (part of HiCR project)
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
     set(mode "")
-    set(exeName "func_lpf_test_noc_register_zero_${LPF_IMPL_CONFIG}${mode}")
-    add_gtest(${exeName} "zero" OFF "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_register.cpp")
+    set(exeName "func_lpf_test_noc_ring_zero_${LPF_IMPL_CONFIG}${mode}")
+    add_gtest(${exeName} "zero" OFF "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_ring.cpp")
 
 
 
