@@ -64,13 +64,13 @@ namespace mpi
     {
     }
 
-    IBVerbs::SlotID IBVerbsNoc :: regLocal( void * addr, size_t size )
+    IBVerbs::SlotID IBVerbsNoc :: regNoc( void * addr, size_t size )
     {
         ASSERT( size <= m_maxRegSize );
 
         MemorySlot slot;
         if ( size > 0) {
-            LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
+            LOG(4, "IBVerbsNoc::regLocal: Registering locally memory area at " << addr << " of size  " << size );
             struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
                     m_pd.get(), addr, size,
                     IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE

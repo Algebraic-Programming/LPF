@@ -619,7 +619,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
-    tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
+    tryIncrement(Op::SEND, Phase::INIT, id);
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;

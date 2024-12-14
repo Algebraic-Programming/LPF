@@ -23,8 +23,10 @@
 namespace lpf {
 
 MemoryTable :: MemoryTable( Communication & comm
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs 
         , mpi::IBVerbs & ibverbs
+#elif defined LPF_CORE_MPI_USES_zero
+        , mpi::IBVerbsNoc & ibverbs
 #endif
         )
     : m_memreg()
@@ -45,12 +47,14 @@ MemoryTable :: MemoryTable( Communication & comm
 MemoryTable :: Slot
 MemoryTable :: addNoc( void * mem, std::size_t size )  // nothrow
 {
-#if defined LPF_CORE_MPI_USES_zero || defined LPF_CORE_MPI_USES_ibverbs
-    Memory rec( mem, size, m_ibverbs.regLocal(mem, size));
-#else
-    Memory rec(mem, size);
-#endif
+    ASSERT(mem != nullptr);
+    ASSERT(size != 0);
+#if defined LPF_CORE_MPI_USES_zero 
+    Memory rec( mem, size, m_ibverbs.regNoc(mem, size));
     return m_memreg.addNocReg( rec);
+#else
+    return m_memreg.invalidSlot();
+#endif
 }
 
 MemoryTable :: Slot

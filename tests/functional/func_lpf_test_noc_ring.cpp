@@ -48,7 +48,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     EXPECT_EQ( LPF_SUCCESS, rc );
 
        
-    //int left = (nprocs + pid - 1) % nprocs;
+    int left = (nprocs + pid - 1) % nprocs;
     int right = ( pid + 1) % nprocs;
 
     char * buffer;
@@ -56,7 +56,7 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
     lpf_serialize_slot(lpf, yslot, &buffer, &bufferSize);
     char rmtBuff[bufferSize];
 
-    //MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     rc = lpf_deserialize_slot(lpf, rmtBuff, yslot);
     EXPECT_EQ( LPF_SUCCESS, rc );

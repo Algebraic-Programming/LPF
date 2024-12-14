@@ -89,6 +89,7 @@ public:
     void resizeMesgq( size_t size );
     
     SlotID regLocal( void * addr, size_t size );
+    SlotID regNoc( void * addr, size_t size );
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
 

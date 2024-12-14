@@ -194,8 +194,7 @@ if (MPI_FOUND)
 # Other unit tests
     if (ENABLE_IBVERBS AND LPF_ENABLE_TESTS)
         add_gtest( ibverbs_test "ibverbs" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
-            ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp 
-            ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
+            ibverbs.cpp mpilib.cpp)
 
         add_gtest( zero_test "zero" ON ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp 
