@@ -32,7 +32,7 @@ extern "C" const int LPF_MPI_AUTO_INITIALIZE=0;
  * \pre P <= 2
  * \return Exit code: 0
  */
-TEST( API, func_lpf_test_noc_register )
+TEST( API, func_verbsAPI_zero_test_noc_ring )
 {
 
     char buf1[30] = {'\0'};
@@ -56,22 +56,8 @@ TEST( API, func_lpf_test_noc_register )
     comm->barrier();
 
     IBVerbs::SlotID b1 = verbs->regLocal( buf1, sizeof(buf1) );
-    IBVerbs::SlotID b2 = verbs->regLocal( buf2, sizeof(buf2) );
+    IBVerbs::SlotID b2 = verbs->regNoc( buf2, sizeof(buf2) );
 
-    /*
-     * Every LPF MemorySlot struct consists of
-     * - shared_ptr<struct ibv_mr>
-     * - std::vector<MemoryRegistration>
-     *
-     * For global slots, the vector of registrations needs
-     * to be allgathered. 
-     * In the case of NOC slots, this functionality needs to 
-     * be performed out-of-band
-     *
-     * Specific for THIS example, we can use direct
-     * MPI communication to send to left-hand
-     * partner the MemoryRegistration information
-     */
     auto mr = verbs->getMR(b1, rank);
     mr = verbs->getMR(b2, rank);
     assert(mr._addr != nullptr);
@@ -86,21 +72,11 @@ TEST( API, func_lpf_test_noc_register )
 
     MPI_Sendrecv(buffer, bufSize, MPI_BYTE, left, 0, rmtBuff, bufSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    // Populate the memory region
-
     MemoryRegistration * newMr = MemoryRegistration::deserialize(rmtBuff);
     verbs->setMR(b2, right, *newMr);
     comm->barrier();
-
-
-    /* Having exchanged out-of-band the slot information,
-     * each left-hand partner then puts data into the slot
-     * of its right-hand partner.
-     */
     verbs->put( b1, 0, right, b2, 0, sizeof(buf1));
-
     verbs->sync(true);
-    // Every process should copy 
     EXPECT_EQ(std::string(buf2), std::string(buf1));
     verbs->dereg(b1);
     verbs->dereg(b2);

@@ -72,7 +72,13 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
 }
 
-TEST( API, func_lpf_test_noc_ring )
+/** 
+ * \test Testing NOC functionality
+ * \pre P >= 2
+ * \pre P <= 2
+ * \return Exit code: 0
+ */
+TEST( API, func_lpfAPI_test_noc_ring )
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
     EXPECT_EQ( LPF_SUCCESS, rc );
