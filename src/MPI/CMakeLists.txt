@@ -23,7 +23,11 @@ if (MPI_FOUND)
     endif()
 
     if (ENABLE_IBVERBS)
+<<<<<<< HEAD
         list(APPEND MPI_ENGINES ibverbs zero)
+=======
+        list(APPEND MPI_ENGINES ibverbs)
+>>>>>>> master
     endif()
 
     if (MPI_IBARRIER)
@@ -35,22 +39,20 @@ if (MPI_FOUND)
     set_target_properties( lpf_proxy_dummy PROPERTIES LINK_FLAGS
             "${MPI_C_LINK_FLAGS}" )
     target_include_directories( lpf_proxy_dummy PRIVATE ${MPI_C_INCLUDE_PATH})
-    target_compile_flags(lpf_proxy_dummy PRIVATE  ${MPI_C_COMPILE_FLAGS})
     install( TARGETS lpf_proxy_dummy RUNTIME DESTINATION ${INSTALL_HELPERS} )
-        
 
     set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
 
 
-# univ_ stands for universal interface => lpf_exec, lpf_put, etc...
-# spec_ stands for specific interface => lpf_mpimsg_release_exec, lpf_mpimsg_release_put, etc...
+    # univ_ stands for universal interface => lpf_exec, lpf_put, etc...
+    # spec_ stands for specific interface => lpf_mpimsg_release_exec, lpf_mpimsg_release_put, etc...
     foreach (iface  "univ_" "spec_" )
-    foreach (LPF_IMPL_ID ${MPI_ENGINES})
-        set(libname "lpf_core_${iface}${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
-        set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
-        
-        set(ibverbs_sources)
-        if (LPF_IMPL_ID STREQUAL ibverbs)
+        foreach (LPF_IMPL_ID ${MPI_ENGINES})
+            set(libname "lpf_core_${iface}${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}")
+            set(comlib  "lpf_common_${LPFLIB_CONFIG_NAME}")
+
+            set(ibverbs_sources)
+            if (LPF_IMPL_ID STREQUAL ibverbs)
             set(ibverbs_sources ibverbs.cpp)
         endif()
 
@@ -71,15 +73,13 @@ if (MPI_FOUND)
                 spall2all.c
                 messagesort.cpp
                 spall2all.cpp
-		init.cpp
+                init.cpp
                 ${ibverbs_sources}
             )
 
 
         target_compile_flags(raw_${libname} 
-                PUBLIC ${MPI_C_COMPILE_FLAGS} 
-                INTERFACE "-fPIC"
-                )
+                INTERFACE "-fPIC")
 
         target_compile_definitions(raw_${libname} 
                 PRIVATE "LPF_CORE_MPI_USES_${LPF_IMPL_ID}=1"
@@ -107,9 +107,7 @@ if (MPI_FOUND)
                                                     MACOSX_RPATH TRUE)
 
         target_compile_flags(${libname} 
-                PUBLIC ${MPI_C_COMPILE_FLAGS} 
-                INTERFACE "-fPIC"
-        )
+                INTERFACE "-fPIC")
 
         if (iface STREQUAL "spec_")
             target_compile_definitions(${libname} 
@@ -175,20 +173,22 @@ if (MPI_FOUND)
             ${CMAKE_CURRENT_SOURCE_DIR}/dynamichook.cpp 
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
         
-                configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
-                set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
-                add_test(NAME dynamichook_1proc
-                         COMMAND bash ${dynamic_hook_t_sh} 1)
-                set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_2proc
-                         COMMAND bash ${dynamic_hook_t_sh} 2)
-                set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_3proc
-                         COMMAND bash ${dynamic_hook_t_sh} 3)
-                set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 )
-                add_test(NAME dynamichook_10proc
-                         COMMAND bash ${dynamic_hook_t_sh} 10)
-                set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 )
+            configure_file( dynamichook.t.sh.in dynamichook.t.sh @ONLY)
+            set( dynamic_hook_t_sh "${CMAKE_CURRENT_BINARY_DIR}/dynamichook.t.sh")
+            add_test(NAME dynamichook_1proc
+                COMMAND bash ${dynamic_hook_t_sh} 1)
+            # We set all dynamichook tests to run in serial mode, without any other tests,
+            # since these tests occupy the same port and would block each other
+            set_tests_properties( dynamichook_1proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+            add_test(NAME dynamichook_2proc
+                COMMAND bash ${dynamic_hook_t_sh} 2)
+            set_tests_properties( dynamichook_2proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+            add_test(NAME dynamichook_3proc
+                COMMAND bash ${dynamic_hook_t_sh} 3)
+            set_tests_properties( dynamichook_3proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+            add_test(NAME dynamichook_10proc
+                COMMAND bash ${dynamic_hook_t_sh} 10)
+            set_tests_properties( dynamichook_10proc PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
     endif()
 
 # Other unit tests
@@ -238,5 +238,4 @@ if (MPI_FOUND)
     endforeach()
 
 endif(MPI_FOUND)
-
 

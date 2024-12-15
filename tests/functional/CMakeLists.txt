@@ -77,26 +77,20 @@ set(test_sources
     func_lpf_exec_single_call_single_arg_single_proc.cpp
     func_lpf_get_parallel_alltoall.cpp
     func_lpf_get_parallel_huge.cpp
-    func_lpf_get_parallel_single.cpp
-    #func_lpf_hook_simple.mpirma.cpp
-    #func_lpf_hook_simple.pthread.cpp
-    #func_lpf_hook_subset.mpimsg.cpp
-    #func_lpf_hook_tcp.mpirma.cpp
-    #func_lpf_hook_tcp_timeout.mpirma.cpp
-    #func_lpf_put_parallel_bad_pattern.cpp <= in exception_list
-    func_lpf_put_and_get_overlapping.cpp
     func_lpf_get_parallel_overlapping_complete.cpp
-    func_lpf_put_parallel_overlapping_complete.cpp
     func_lpf_get_parallel_overlapping_pyramid.cpp
-    func_lpf_put_parallel_overlapping_pyramid.cpp
     func_lpf_get_parallel_overlapping_rooftiling.cpp
-    func_lpf_put_parallel_overlapping_rooftiling.cpp
+    func_lpf_get_parallel_single.cpp
     func_lpf_probe_parallel_full.cpp
     func_lpf_probe_parallel_nested.cpp
     func_lpf_probe_root.cpp
+    func_lpf_put_and_get_overlapping.cpp
     func_lpf_put_parallel_alltoall.cpp
     func_lpf_put_parallel_big.cpp
     func_lpf_put_parallel_huge.cpp
+    func_lpf_put_parallel_overlapping_complete.cpp
+    func_lpf_put_parallel_overlapping_pyramid.cpp
+    func_lpf_put_parallel_overlapping_rooftiling.cpp
     func_lpf_put_parallel_single.cpp
     func_lpf_register_and_deregister_irregularly.cpp
     func_lpf_register_and_deregister_many_global.cpp
@@ -158,6 +152,30 @@ endforeach(LPF_IMPL_ID)
     add_gtest(${exeName} "zero" OFF "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_ring.cpp")
 
 
+
+        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+
+    endforeach(testSource)
+endforeach(LPF_IMPL_ID)
+
+# start of engine-specific tests
+foreach (LPF_IMPL_ID ${ENGINES})
+    if ("${LPF_IMPL_ID}" STREQUAL "pthread" OR "${LPF_IMPL_ID}" STREQUAL "mpirma")
+        foreach(testSource func_lpf_hook_simple.${LPF_IMPL_ID}.cpp)
+            string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
+            get_filename_component(baseName ${testSource} NAME_WE  )
+            set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
+            add_gtest(${exeName} ${LPF_IMPL_ID} ON "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        endforeach(testSource)
+    endif()
+    if ("${LPF_IMPL_ID}" STREQUAL "mpimsg")
+        add_gtest(func_lpf_hook_subset.mpimsg mpimsg ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_subset.mpimsg.cpp")
+    endif()
+    if ("${LPF_IMPL_ID}" STREQUAL "mpirma")
+        add_gtest(func_lpf_hook_tcp_timeout.mpirma mpirma ON "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_hook_tcp_timeout.mpirma.cpp")
+    endif()
+endforeach(LPF_IMPL_ID)
+# end of engine-specific tests
 
 include_directories(.)
 add_subdirectory(debug)

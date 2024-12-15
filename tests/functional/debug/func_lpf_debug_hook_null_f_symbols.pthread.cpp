@@ -54,17 +54,25 @@ void * pthread_spmd( void * _data ) {
         &init
     );
     EXPECT_EQ( rc, LPF_SUCCESS );
-    FAIL();
+
+    rc = lpf_hook( init, &lpf_spmd, args );
+    EXPECT_EQ( rc, LPF_SUCCESS );
+
+    rc = lpf_pthread_finalize( init );
+    EXPECT_EQ( rc, LPF_SUCCESS );
 
     return NULL;
 }
+
+// the below tests for return code 134 as this is what aborted programs return
+// as an error code on modern systems
 
 /** 
  * \test Tests lpf_hook on pthread implementation with NULL f_symbols
  * \pre P <= 1
  * \pre P >= 1
  * \return Message: NULL f_symbols argument while f_size is non-zero
- * \return Exit code: 6
+ * \return Exit code: 134
  */
 TEST( API, func_lpf_hook_null_f_symbols )
 {
