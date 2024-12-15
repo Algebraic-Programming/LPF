@@ -17,7 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/mpi.h>
-#include "Test.h"
+#include "gtest/gtest.h"
 
 #include <mpi.h>
 
@@ -39,10 +39,10 @@ void subset_func(MPI_Comm comm)
 
     lpf_init_t init;
     lpf_err_t rc = lpf_mpi_initialize_with_mpicomm(comm, &init);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_hook(init, test_spmd, LPF_NO_ARGS);
-    EXPECT_EQ( "%d", LPF_SUCCESS, rc );
+    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
 /**
@@ -50,7 +50,7 @@ void subset_func(MPI_Comm comm)
  * \pre P >= 3
  * \return Exit code: 0
  */
-TEST( func_lpf_hook_subset )
+TEST(API, func_lpf_hook_subset )
 {
     MPI_Init(NULL, NULL);
 
@@ -71,5 +71,5 @@ TEST( func_lpf_hook_subset )
     MPI_Barrier(MPI_COMM_WORLD); // Paranoid barrier
 
     MPI_Finalize();
-    return 0;
+    
 }

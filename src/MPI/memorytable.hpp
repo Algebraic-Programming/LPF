@@ -23,8 +23,10 @@
 #include "assert.hpp"
 #include "linkage.hpp"
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs
 #include "ibverbs.hpp"
+#elif defined LPF_CORE_MPI_USES_zero
+#include "ibverbsNoc.hpp"
 #endif
 
 
@@ -64,13 +66,17 @@ public:
     static Slot invalidSlot() 
     { return Register::invalidSlot(); }
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs
     explicit MemoryTable( Communication & comm, mpi::IBVerbs & verbs );
+#elif defined LPF_CORE_MPI_USES_zero
+    explicit MemoryTable( Communication & comm, mpi::IBVerbsNoc & verbs );
 #else
     explicit MemoryTable( Communication & comm );
 #endif
 
     Slot addLocal( void * mem, std::size_t size ) ; // nothrow
+
+    Slot addNoc( void * mem, std::size_t size ) ; // nothrow
 
     Slot addGlobal( void * mem, std::size_t size ); // nothrow
     
@@ -117,9 +123,13 @@ private:
     Communication & m_comm;
 #endif
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs
     DirtyList      m_added;
-    mpi::IBVerbs  & m_ibverbs;
+    mpi::IBVerbs & m_ibverbs;
+    Communication & m_comm;
+#elif defined LPF_CORE_MPI_USES_zero
+    DirtyList      m_added;
+    mpi::IBVerbsNoc & m_ibverbs;
     Communication & m_comm;
 #endif
 };

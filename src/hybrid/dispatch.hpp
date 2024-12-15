@@ -19,23 +19,29 @@
 #define LPF_CORE_HYBRID_DISPATCH_HPP
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #define LPF_CORE_STATIC_DISPATCH
 #define LPF_CORE_STATIC_DISPATCH_ID pthread
 #define LPF_CORE_STATIC_DISPATCH_CONFIG LPF_CORE_IMPL_CONFIG
 #include <lpf/core.h>
+#include <lpf/abort.h>
 #undef LPF_CORE_STATIC_DISPATCH_ID
 #undef LPF_CORE_STATIC_DISPATCH_CONFIG
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #define LPF_CORE_STATIC_DISPATCH_ID LPF_CORE_MULTI_NODE_ENGINE
 #define LPF_CORE_STATIC_DISPATCH_CONFIG LPF_CORE_IMPL_CONFIG
 #include <lpf/core.h>
+#include <lpf/abort.h>
 #undef LPF_CORE_STATIC_DISPATCH_ID
 #undef LPF_CORE_STATIC_DISPATCH_CONFIG
 
 #undef LPFLIB_CORE_H
+#undef LPFLIB_ABORT_H
 #undef LPF_CORE_STATIC_DISPATCH
 #include <lpf/core.h>
+#include <lpf/abort.h>
 
 #define USE_THREAD( symbol ) \
        LPF_RENAME_PRIMITIVE4( lpf, pthread, LPF_CORE_IMPL_CONFIG, symbol )
@@ -120,6 +126,9 @@ namespace lpf { namespace hybrid {
 
         err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
         { return USE_THREAD( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
+
+        err_t get_sent_msg_count( size_t * sent_msgs) 
+        { return USE_THREAD( get_sent_msg_count)(m_ctx, sent_msgs); }
 
         err_t flush_sent()
         { return USE_THREAD(flush_sent)(m_ctx); }
@@ -223,14 +232,17 @@ namespace lpf { namespace hybrid {
         err_t deregister( memslot_t memslot) 
         { return USE_MPI( deregister)(m_ctx, memslot); }
 
+        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
+        { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
+
         err_t get_rcvd_msg_count_per_slot(size_t *rcvd_msgs, lpf_memslot_t slot) 
         { return USE_MPI( get_rcvd_msg_count_per_slot)( m_ctx, rcvd_msgs, slot); }
 
+        err_t get_sent_msg_count( size_t * sent_msgs) 
+        { return USE_MPI( get_sent_msg_count)(m_ctx, sent_msgs); }
+
         err_t get_sent_msg_count_per_slot(size_t *sent_msgs, lpf_memslot_t slot) 
         { return USE_MPI( get_sent_msg_count_per_slot)( m_ctx, sent_msgs, slot); }
-
-        err_t get_rcvd_msg_count( size_t * rcvd_msgs) 
-        { return USE_MPI( get_rcvd_msg_count)(m_ctx, rcvd_msgs); }
 
         err_t flush_sent()
         {return USE_MPI( flush_sent)(m_ctx);}

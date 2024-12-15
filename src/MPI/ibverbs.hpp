@@ -58,6 +58,23 @@ using std::shared_ptr;
 using std::tr1::shared_ptr;
 #endif
 
+class MemoryRegistration {
+    public:
+        char *   _addr;
+        size_t   _size;
+        uint32_t _lkey;
+        uint32_t _rkey;
+        int _pid;
+        MemoryRegistration(char * addr, size_t size, uint32_t lkey, uint32_t rkey, int pid) : _addr(addr),
+        _size(size), _lkey(lkey), _rkey(rkey), _pid(pid)
+        { }
+        MemoryRegistration() : _addr(nullptr), _size(0), _lkey(0), _rkey(0), _pid(-1) {}
+        size_t serialize(char ** buf);
+        static MemoryRegistration * deserialize(char * buf);
+
+};
+
+
 class _LPFLIB_LOCAL IBVerbs 
 {
 public:
@@ -72,6 +89,7 @@ public:
     void resizeMesgq( size_t size );
     
     SlotID regLocal( void * addr, size_t size );
+    SlotID regNoc( void * addr, size_t size );
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
 
@@ -93,7 +111,7 @@ public:
 
     void doRemoteProgress();
 
-    void countingSyncPerSlot(bool resized, SlotID tag, size_t sent, size_t recvd);
+    void countingSyncPerSlot(SlotID tag, size_t sent, size_t recvd);
     /**
      * @syncPerSlot only guarantees that all already scheduled sends (via put), 
      * or receives (via get) associated with a slot are completed. It does 
@@ -101,16 +119,18 @@ public:
      * no guarantee that a remote process will wait til data is put into its 
      * memory, as it does schedule the operation (one-sided).
      */
-    void syncPerSlot(bool resized, SlotID slot);
+    void syncPerSlot(SlotID slot);
 
     // Do the communication and synchronize
     // 'Reconnect' must be a globally replicated value
     void sync( bool reconnect);
 
     void get_rcvd_msg_count(size_t * rcvd_msgs);
+    void get_sent_msg_count(size_t * sent_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
-private:
+
+protected:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
 
@@ -123,22 +143,16 @@ private:
     void doProgress();
     void tryIncrement(Op op, Phase phase, SlotID slot);
 
-    struct MemoryRegistration {
-        void *   addr;
-        size_t   size;
-        uint32_t lkey;
-        uint32_t rkey;
-    };
-
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
+
+    Communication & m_comm;
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
     std::atomic_size_t m_numMsgs;
-    //std::atomic_size_t m_sendTotalInitMsgCount;
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
@@ -157,8 +171,6 @@ private:
     size_t		m_cqSize;
     size_t       m_minNrMsgs;
     size_t       m_maxSrs; // maximum number of sends requests per QP  
-    size_t m_postCount;
-    size_t m_recvCount;
 
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
@@ -173,10 +185,6 @@ private:
     // Connected queue pairs
     std::vector< shared_ptr<struct ibv_qp> > m_connectedQps; 
 
-    std::vector<size_t> rcvdMsgCount;
-    std::vector<size_t> sentMsgCount;
-    std::vector<size_t> getMsgCount;
-    std::vector<bool> slotActive;
 
 
     std::vector< struct ibv_send_wr > m_srs; // array of send requests
@@ -193,8 +201,13 @@ private:
 
     shared_ptr< struct ibv_mr > m_dummyMemReg; // registration of dummy buffer
     std::vector< char > m_dummyBuffer; // dummy receive buffer
-
-    Communication & m_comm;
+                                       //
+    std::vector<size_t> rcvdMsgCount;
+    std::vector<size_t> sentMsgCount;
+    std::vector<size_t> getMsgCount;
+    std::vector<bool> slotActive;
+    size_t m_postCount;
+    size_t m_recvCount;
 };
 
 

@@ -75,7 +75,10 @@ void Interface :: initRoot(int *argc, char ***argv)
 Interface :: Interface( mpi::Comm machine, Process & subprocess )
 try : m_comm( machine )
     , m_subprocess( subprocess )
-    , m_mesgQueue( m_comm )
+    
+//#if defined (LPF_CORE_MPI_USES_zero) || defined (LPF_CORE_MPI_USES_ibverbs)
+     ,m_mesgQueue( m_comm)
+//#endif
     , m_aborted( false )
 {
      if ( machine.allreduceOr( false ) )
@@ -129,16 +132,21 @@ void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
     m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
 }
 
+
+void Interface :: getRcvdMsgCount(size_t * msgs) {
+    m_mesgQueue.getRcvdMsgCount(msgs);
+}
+
+void Interface :: getSentMsgCount(size_t * msgs) {
+    m_mesgQueue.getSentMsgCount(msgs);
+}
+
 void Interface :: flushSent() {
     m_mesgQueue.flushSent();
 }
 
 void Interface :: flushReceived() {
     m_mesgQueue.flushReceived();
-}
-
-void Interface :: getRcvdMsgCount(size_t * msgs) {
-    m_mesgQueue.getRcvdMsgCount(msgs);
 }
 
 err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
@@ -218,6 +226,51 @@ void Interface :: abort()
     m_aborted = m_mesgQueue.sync( true );
 #endif
 }
+
+/* start NOC extensions */
+memslot_t Interface :: nocRegister( void * mem, size_t size )
+{
+    return m_mesgQueue.addNocReg( mem, size );
+}
+
+void Interface :: nocDeregister( memslot_t slot)
+{
+    m_mesgQueue.removeReg(slot);
+}
+
+err_t Interface :: nocResizeMemreg( size_t nRegs )
+{
+    return m_mesgQueue.resizeMemreg(nRegs);
+}
+
+void Interface :: nocPut( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size )
+{
+    m_mesgQueue.put( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
+void Interface :: nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
+        memslot_t dstSlot, size_t dstOffset,
+        size_t size )
+{
+    m_mesgQueue.get( srcPid, srcSlot, srcOffset,
+            dstSlot, dstOffset,
+            size );
+}
+
+err_t Interface :: serializeSlot(SlotID slot, char ** buff, size_t *buff_size)
+{
+    return m_mesgQueue.serializeSlot(slot, buff, buff_size);
+}
+
+err_t Interface :: deserializeSlot(char * buff, SlotID slot)
+{
+    return m_mesgQueue.deserializeSlot(buff, slot);
+}
+/* end NOC extensions */
 
 pid_t Interface  :: isAborted() const
 {

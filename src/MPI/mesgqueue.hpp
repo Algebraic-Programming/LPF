@@ -26,15 +26,14 @@
 #include "messagesort.hpp"
 #include "mpilib.hpp"
 #include "linkage.hpp"
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#include "ibverbsNoc.hpp"
+#endif
 
 #if __cplusplus >= 201103L
 #include <memory>
 #else
 #include <tr1/memory>
-#endif
-
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-#include "ibverbs.hpp"
 #endif
 
 //only for HiCR
@@ -53,7 +52,9 @@ public:
 
 
     memslot_t addLocalReg( void * mem, std::size_t size );
+
     memslot_t addGlobalReg( void * mem, std::size_t size );
+
     void      removeReg( memslot_t slot );
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
@@ -67,7 +68,6 @@ public:
     int sync( bool abort );
 
 //only for HiCR
-//#ifdef 
     void lockSlot( memslot_t srcSlot, size_t srcOffset,
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 
@@ -80,6 +80,8 @@ public:
 
     void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
 
+    void getSentMsgCount(size_t * msgs);
+
     void flushSent();
 
     void flushReceived();
@@ -87,8 +89,12 @@ public:
     int countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd);
 
     int syncPerSlot(SlotID slot);
+    // NOC extensions
+    memslot_t addNocReg( void * mem, std::size_t size );
+
+    err_t serializeSlot(memslot_t slot, char ** buff, std::size_t * buff_size);
+    err_t deserializeSlot(char * buff, memslot_t slot);
 // end only for HiCR
-//#endif
 
 private:
     enum Msgs { BufPut , 
@@ -160,11 +166,14 @@ private:
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
+    std::vector< char > m_tinyMsgBuf;
+protected:
+#if defined LPF_CORE_MPI_USES_ibverbs 
     mpi::IBVerbs m_ibverbs;
+#elif defined LPF_CORE_MPI_USES_zero
+    mpi::IBVerbsNoc m_ibverbs;
 #endif
     MemoryTable m_memreg;
-    std::vector< char > m_tinyMsgBuf;
 };
 
 

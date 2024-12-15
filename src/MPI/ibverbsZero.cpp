@@ -53,14 +53,20 @@ namespace {
 
 
 IBVerbs :: IBVerbs( Communication & comm )
-    : m_pid( comm.pid() )
+    : m_comm( comm )
+    , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
+    , m_numMsgs(0)
+    , m_recvTotalInitMsgCount(0)
+    , m_sentMsgs(0)
+    , m_recvdMsgs(0)
     , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
     , m_gidIdx( Config::instance().getIBGidIndex() )
     , m_mtu( getMTU( Config::instance().getIBMTU() ))
     , m_maxRegSize(0)
     , m_maxMsgSize(0)
+    , m_cqSize(1)
     , m_minNrMsgs(0)
     , m_maxSrs(0)
     , m_device()
@@ -78,14 +84,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
-    , m_cqSize(1)
     , m_postCount(0)
     , m_recvCount(0)
-    , m_numMsgs(0)
-    , m_recvTotalInitMsgCount(0)
-    , m_sentMsgs(0)
-    , m_recvdMsgs(0)
 {
 
     // arrays instead of hashmap for counters
@@ -306,7 +306,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
 void IBVerbs :: stageQPs( size_t maxMsgs )
 {
     // create the queue pairs
-    for ( int i = 0; i < m_nprocs; ++i) {
+    for ( size_t i = 0; i < static_cast<size_t>(m_nprocs); ++i) {
         struct ibv_qp_init_attr attr;
         std::memset(&attr, 0, sizeof(attr));
 
@@ -321,6 +321,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.cap.max_recv_sge = 1;
 
         struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
+        ASSERT(m_stagedQps.size() > i);
         if( ibv_new_qp_p == NULL ) {
             m_stagedQps[i].reset();
         } else {
@@ -463,7 +464,6 @@ void IBVerbs :: reconnectQPs()
 
             struct ibv_recv_wr rr;  std::memset(&rr, 0, sizeof(rr));
             struct ibv_sge     sge; std::memset(&sge, 0, sizeof(sge));
-            struct ibv_recv_wr *bad_wr = NULL;
             sge.addr = reinterpret_cast<uintptr_t>(m_dummyBuffer.data());
             sge.length = m_dummyBuffer.size();
             sge.lkey = m_dummyMemReg->lkey;
@@ -553,8 +553,8 @@ void IBVerbs :: resizeMemreg( size_t size )
         throw std::bad_alloc() ;
     }
 
-    MemoryRegistration null = { 0, 0, 0, 0 };
-    MemorySlot dflt; dflt.glob.resize( m_nprocs, null );
+    MemoryRegistration newMR = { nullptr, 0, 0, 0, m_pid};
+    MemorySlot dflt; dflt.glob.resize( m_nprocs, newMR);
 
     m_memreg.reserve( size, dflt );
 }
@@ -616,14 +616,10 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
-    tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
+    tryIncrement(Op::SEND, Phase::INIT, id);
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;
@@ -662,12 +658,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
-
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
     LOG(4, "All-gathering memory register data" );
 
     m_comm.allgather( local, ref.glob.data() );
@@ -694,9 +685,9 @@ void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dst
 	const MemorySlot & dst = m_memreg.lookup( dstSlot);
 
     char * localAddr
-        = static_cast<char *>(src.glob[m_pid].addr) + srcOffset;
+        = static_cast<char *>(src.glob[m_pid]._addr) + srcOffset;
         const char * remoteAddr
-            = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[dstPid]._addr) + dstOffset;
 
 	struct ibv_sge sge;
 	memset(&sge, 0, sizeof(sge));
@@ -704,7 +695,6 @@ void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dst
 	sge.length =  std::min<size_t>(size, m_maxMsgSize );
         sge.lkey = src.mr->lkey;
 
-	struct ibv_wc wcs[POLL_BATCH];
 	struct ibv_send_wr wr;
 	memset(&wr, 0, sizeof(wr));
 	wr.wr_id = srcSlot;
@@ -716,7 +706,7 @@ void IBVerbs :: blockingCompareAndSwap(SlotID srcSlot, size_t srcOffset, int dst
 	wr.wr.atomic.remote_addr = reinterpret_cast<uintptr_t>(remoteAddr);
 	wr.wr.atomic.compare_add = compare_add;
 	wr.wr.atomic.swap = swap;
-	wr.wr.atomic.rkey = dst.glob[dstPid].rkey;
+	wr.wr.atomic.rkey = dst.glob[dstPid]._rkey;
 	struct ibv_send_wr *bad_wr;
 	int error;
     std::vector<ibv_wc_opcode> opcodes;
@@ -763,6 +753,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
     ASSERT( src.mr );
+    ASSERT( dst.mr );
 
     int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
     if (size == 0) numMsgs = 1;
@@ -775,9 +766,9 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
         sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
         const char * localAddr
-            = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
+            = static_cast<const char *>(src.glob[m_pid]._addr) + srcOffset;
         const char * remoteAddr
-            = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[dstPid]._addr) + dstOffset;
 
         sge->addr = reinterpret_cast<uintptr_t>( localAddr );
         sge->length =  std::min<size_t>(size, m_maxMsgSize );
@@ -801,7 +792,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sr->sg_list = &sges[i];
         sr->num_sge = 1;
         sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr->wr.rdma.rkey = dst.glob[dstPid].rkey;
+        sr->wr.rdma.rkey = dst.glob[dstPid]._rkey;
 
         srs[i] = *sr;
         size -= sge->length;
@@ -843,9 +834,9 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
 
 		const char * localAddr
-			= static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
+			= static_cast<const char *>(dst.glob[m_pid]._addr) + dstOffset;
 		const char * remoteAddr
-			= static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
+			= static_cast<const char *>(src.glob[srcPid]._addr) + srcOffset;
 
 		sge->addr = reinterpret_cast<uintptr_t>( localAddr );
 		sge->length = std::min<size_t>(size, m_maxMsgSize );
@@ -861,7 +852,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 		sr->num_sge = 1;
 		sr->opcode = IBV_WR_RDMA_READ;
 		sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-		sr->wr.rdma.rkey = src.glob[srcPid].rkey;
+		sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
         // (not srcSlot, as this slot is remote)
         sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
@@ -888,6 +879,10 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
 void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs) {
     *rcvd_msgs = m_recvdMsgs;
+}
+
+void IBVerbs :: get_sent_msg_count(size_t * sent_msgs) {
+    *sent_msgs = m_sentMsgs;
 }
 
 void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
@@ -980,10 +975,8 @@ void IBVerbs :: flushSent()
 
 }
 
-void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSent, size_t expectedRecvd) {
+void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
 
-    size_t actualRecvd;
-    size_t actualSent;
     int error;
     if (slotActive[slot]) {
         do {
@@ -995,14 +988,20 @@ void IBVerbs :: countingSyncPerSlot(bool resized, SlotID slot, size_t expectedSe
             // this call triggers doRemoteProgress
             doRemoteProgress();
 
-        } while (
+        } while ((
+                // do we have messages (sent or received)
+                // which are only initiated but incomplete?
                 (rcvdMsgCount[slot] < m_recvInitMsgCount[slot]) ||
                 (sentMsgCount[slot] < m_sendInitMsgCount[slot])
-                );
+                ) && 
+            // do the sent and received messages
+            // match our expectations?
+            (rcvdMsgCount[slot] < expectedRecvd
+            || sentMsgCount[slot] < expectedSent));
     }
 }
 
-void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
+void IBVerbs :: syncPerSlot(SlotID slot) {
     int error;
 
     do {
@@ -1034,8 +1033,7 @@ void IBVerbs :: syncPerSlot(bool resized, SlotID slot) {
 
 void IBVerbs :: sync(bool resized)
 {
-
-    int error = 0;
+    (void) resized;
 
     // flush send queues
     flushSent();
