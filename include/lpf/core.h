@@ -990,7 +990,7 @@ typedef struct lpf_machine {
      *                         both bounds are inclusive.
      * \param[in] min_msg_size A byte size value that is larger or equal to 0.
      * \param[in] attr         A #lpf_sync_attr_t value. When in doubt, always
-     *                         use #LPF_SYNC_DEFAULT
+     *                         use #LPF_SYNC_DEFAULT.
      *
      * \returns The guaranteed value for the message gap given an LPF SPMD
      *          section using \a p processes, for a superstep in which a user

@@ -146,17 +146,10 @@ endforeach(LPF_IMPL_ID)
 
 # Individual test for NOC (Non-coherence) protocol, only for zero engine
 # (part of HiCR project)
-    set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
-    set(mode "")
-    set(exeName "func_lpf_test_noc_ring_zero_${LPF_IMPL_CONFIG}${mode}")
-    add_gtest(${exeName} "zero" OFF "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_ring.cpp")
-
-
-
-        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
-
-    endforeach(testSource)
-endforeach(LPF_IMPL_ID)
+set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
+set(mode "")
+set(exeName "func_lpf_test_noc_ring_zero_${LPF_IMPL_CONFIG}${mode}")
+add_gtest(${exeName} "zero" OFF "${CMAKE_CURRENT_SOURCE_DIR}/func_lpf_test_noc_ring.cpp")
 
 # start of engine-specific tests
 foreach (LPF_IMPL_ID ${ENGINES})

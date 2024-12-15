@@ -23,11 +23,7 @@ if (MPI_FOUND)
     endif()
 
     if (ENABLE_IBVERBS)
-<<<<<<< HEAD
         list(APPEND MPI_ENGINES ibverbs zero)
-=======
-        list(APPEND MPI_ENGINES ibverbs)
->>>>>>> master
     endif()
 
     if (MPI_IBARRIER)
