@@ -53,12 +53,12 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args)
 
     char * buffer;
     size_t bufferSize; 
-    lpf_serialize_slot(lpf, yslot, &buffer, &bufferSize);
+    lpf_noc_serialize_slot(lpf, yslot, &buffer, &bufferSize);
     char rmtBuff[bufferSize];
 
     MPI_Sendrecv(buffer, bufferSize, MPI_BYTE, left, 0, rmtBuff, bufferSize, MPI_BYTE, right, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    rc = lpf_deserialize_slot(lpf, rmtBuff, yslot);
+    rc = lpf_noc_deserialize_slot(lpf, rmtBuff, yslot);
     EXPECT_EQ( LPF_SUCCESS, rc );
     rc = lpf_noc_put(lpf, xslot, 0, right, yslot, 0, sizeof(buf1), LPF_MSG_DEFAULT);
     EXPECT_EQ( LPF_SUCCESS, rc );

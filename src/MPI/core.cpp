@@ -477,7 +477,7 @@ lpf_err_t lpf_noc_get(
     return LPF_SUCCESS;
 }
 
-lpf_err_t lpf_serialize_slot(
+lpf_err_t lpf_noc_serialize_slot(
         lpf_t ctx,
         lpf_memslot_t slot,
         char  ** buff,
@@ -491,7 +491,7 @@ lpf_err_t lpf_serialize_slot(
     return LPF_ERR_FATAL;
 }
 
-lpf_err_t lpf_deserialize_slot(
+lpf_err_t lpf_noc_deserialize_slot(
         lpf_t ctx,
         char * buff,
         lpf_memslot_t slot
