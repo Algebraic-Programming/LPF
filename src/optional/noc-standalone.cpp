@@ -24,4 +24,6 @@
 const lpf_t LPF_ROOT = nullptr;
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_FATAL = 255;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
+const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 

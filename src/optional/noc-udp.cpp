@@ -328,11 +328,27 @@ lpf_err_t lpf_noc_get(
 	lpf_memslot_t dst_slot, const size_t dst_offset,
 	const size_t size, lpf_msg_attr_t attr
 ) {
+	(void) attr;
 	const auto registers_it = GlobalNOCState::map.find( ctx );
 	if( registers_it == GlobalNOCState::map.cend() ) {
 		throw std::runtime_error( "Could not find context - no preceding call to "
 			"lpf_noc_resize_memory_register?\n" );
 	}
-	// TODO
+	// TODO spawn receiver thread that opens a get-specific (or
+	// memslot-specific) port. I think the latter is preferred, but not sure if
+	// such a coarser handling of incoming messages could cause h-relations be
+	// violated-- intuitively I don't think so, but requires a bit more thought.
+	// The receiver thread will issue the request to the remote listener thread,
+	// and hence this call can immediately return:
+	return LPF_SUCCESS;
 }
+
+#ifdef _LPF_NOC_STANDALONE
+lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr ) {
+	(void) attr;
+	// TODO wait on all receiver threads
+	// TODO wait on all outgoing messages
+	return LPF_SUCCESS;
+}
+#endif
 

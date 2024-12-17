@@ -39,6 +39,10 @@ typedef int lpf_sync_attr_t;
 extern const lpf_t LPF_ROOT;
 extern const lpf_err_t LPF_SUCCESS;
 extern const lpf_err_t LPF_ERR_FATAL;
+extern const lpf_msg_attr_t LPF_MSG_DEFAULT;
+extern const lpf_sync_attr_t LPF_SYNC_DEFAULT;
+
+extern lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
 
 #ifdef __cplusplus
 }
