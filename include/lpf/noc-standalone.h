@@ -28,11 +28,7 @@
 extern "C" {
 #endif
 
-typedef struct {
-
-	uint32_t port;
-
-} lpf_memslot_t;
+typedef void * lpf_memslot_t;
 
 typedef void * lpf_t;
 typedef int lpf_err_t;
@@ -40,13 +36,18 @@ typedef unsigned int lpf_pid_t;
 typedef int lpf_msg_attr_t;
 typedef int lpf_sync_attr_t;
 
-const lpf_t LPF_ROOT = nullptr;
-const lpf_err_t LPF_SUCCESS = 0;
-const lpf_err_t LPF_ERR_FATAL = 255;
+extern const lpf_t LPF_ROOT;
+extern const lpf_err_t LPF_SUCCESS;
+extern const lpf_err_t LPF_ERR_FATAL;
 
 #ifdef __cplusplus
 }
 #endif
+
+#ifndef _LPF_NOC_STANDALONE
+ #define _LPF_NOC_STANDALONE
+#endif
+#include <lpf/noc.h>
 
 #endif // LPFLIB_NOC_STANDALONE_H
 

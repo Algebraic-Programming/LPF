@@ -30,7 +30,6 @@
 #ifndef _LPF_NOC_STANDALONE
  #include <lpf/core.h>
 #else
- #include <lpf/noc-standalone.h>
  #define _LPFLIB_API
 #endif
 
@@ -434,11 +433,8 @@ lpf_err_t lpf_noc_put(
 extern _LPFLIB_API
 lpf_err_t lpf_noc_get(
     lpf_t ctx,
-    lpf_pid_t src_pid,
-    lpf_memslot_t src_slot,
-    size_t src_offset,
-    lpf_memslot_t dst_slot,
-    size_t dst_offset,
+    lpf_pid_t src_pid, lpf_memslot_t src_slot, size_t src_offset,
+    lpf_memslot_t dst_slot, size_t dst_offset,
     size_t size,
     lpf_msg_attr_t attr
 );
