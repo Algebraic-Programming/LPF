@@ -20,7 +20,11 @@
 //           enabled.
 //#include <lpf/core.h>
 
-#include <lpf/noc.h>
+#ifndef _LPF_NOC_STANDALONE
+ #include <lpf/noc.h>
+#else
+ #include <lpf/noc-standalone.h>
+#endif
 
 #include <assert.h>
 #include <pthread.h>
@@ -40,6 +44,26 @@
  * assigned from this number onwards.
  */
 constexpr uint32_t start_port = 7000;
+
+/**
+ * Which ports to listen for incoming "RDMA" requests.
+ *
+ * \note RDMA has quotes since this is not really RDMA -- both sender and
+ *       receiver are active.
+ */
+constexpr uint32_t recv_start_port = 70000;
+
+/**
+ * Maximum number of supported contexts.
+ *
+ * \warning Enlarging this number requires in-depth code changes; presently,
+ *          RDMA receive ports are numbered 7xyyy, where \a x is the context ID
+ *          and yyy is the RDMA request. There hence may be 1000 RDMA requests
+ *          active concurrently.
+ */
+constexpr uint32_t max_contexts = 10;
+
+constexpr uint32_t max_incoming_rdma = 1000;
 
 /**
  * Every get-request consists of a pointer and a requested number of bytes.
@@ -257,5 +281,58 @@ lpf_err_t lpf_noc_resize_memory_register( lpf_t ctx, size_t max_regs ) {
 	assert( registers_it != GlobalNOCState::map.cend() );
 	registers_it->second.resize_registers( max_regs );
 	return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_register(
+	lpf_t ctx,
+	void * const pointer, const size_t size,
+	lpf_memslot_t * const memslot
+) {
+	(void) ctx; (void) size;
+	(void) printf( "lpf_noc_register called, pointer %p and size: %zu\n",
+		pointer, size );
+	// TODO the below is presently not needed -- a NOC memslot is simply a pointer,
+	//      and we do not do any error checking to quickly reach a POC state first.
+	/*const auto registers_it = GlobalNOCState::map.find( ctx );
+	if( registers_it == GlobalNOCState::map.cend() ) {
+		throw std::runtime_error( "Could not find context - no preceding call to "
+			"lpf_noc_resize_memory_register?\n" );
+	}*/
+	assert( memslot != NULL );
+	*memslot = pointer;
+	return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_deregister( lpf_t ctx, lpf_memslot_t slot ) {
+	(void) ctx; (void) slot;
+	return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_put(
+	lpf_t ctx,
+	lpf_memslot_t src_slot, const size_t src_offset,
+	const lpf_pid_t dst_pid, lpf_memslot_t dst_slot, const size_t dst_offset,
+	const size_t size,
+	lpf_msg_attr_t attr
+) {
+	(void) ctx; (void) src_slot; (void) src_offset;
+	(void) dst_pid; (void) dst_slot; (void) dst_offset;
+	(void) size; (void) attr;
+	(void) fprintf( stderr, "lpf_noc_put not yet implemented\n" );
+	return LPF_ERR_FATAL;
+}
+
+lpf_err_t lpf_noc_get(
+	lpf_t ctx,
+	lpf_pid_t src_pid, lpf_memslot_t src_slot, const size_t src_offset,
+	lpf_memslot_t dst_slot, const size_t dst_offset,
+	const size_t size, lpf_msg_attr_t attr
+) {
+	const auto registers_it = GlobalNOCState::map.find( ctx );
+	if( registers_it == GlobalNOCState::map.cend() ) {
+		throw std::runtime_error( "Could not find context - no preceding call to "
+			"lpf_noc_resize_memory_register?\n" );
+	}
+	// TODO
 }
 
