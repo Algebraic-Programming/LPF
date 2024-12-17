@@ -35,7 +35,22 @@
 #include <vector>
 #include <stdexcept>
 
+/**
+ * Each unique LPF context listens for get-requests on its own port. Ports are
+ * assigned from this number onwards.
+ */
 constexpr uint32_t start_port = 7000;
+
+/**
+ * Every get-request consists of a pointer and a requested number of bytes.
+ */
+constexpr size_t meta_size = sizeof( void * ) + sizeof( size_t );
+
+/**
+ * The chunk-size used by a single UDP datagram. This refers to payload data, in
+ * bytes.
+ */
+constexpr size_t chunk_size = 65507;
 
 class NOCRegister {
 
@@ -93,16 +108,63 @@ class NOCState {
 			const std::vector< NOCRegister > &registers
 		) {
 			(void) printf( "Listener thread has started on port %u\n", port );
-			char buffer[8192];
+			char buffer[ meta_size + 1 ];
 			while( true ) {
-				const int nBytesRecv = recvfrom( fd, (char*)buffer, 8192, MSG_WAITALL,
-					NULL, NULL );
-				assert( nBytesRecv < 8192 );
+				struct sockaddr_in client;
+				socklen_t client_len = sizeof(struct sockaddr_in);
+				const ssize_t nBytesRecv = recvfrom( fd, (char*)buffer, meta_size, MSG_WAITALL,
+					(struct sockaddr *) &client, &client_len );
 				if( nBytesRecv < 0 ) {
+					(void) fprintf( stderr, "Error while waiting for incoming request\n" );
 					break;
 				}
+				assert( static_cast< size_t >(nBytesRecv) <= meta_size );
 				buffer[ nBytesRecv ] = '\0';
 				(void) printf( "Client sent: %s\n", buffer );
+				if( nBytesRecv != meta_size ) {
+					(void) fprintf( stderr, "Received message has unexpected size\n" );
+					break;
+				}
+				assert( nBytesRecv == meta_size );
+
+				// decode request
+				void * buffer_p = &(buffer[0]);
+				assert( reinterpret_cast< uintptr_t >( buffer_p ) % sizeof(int) == 0 );
+				void * const ptr = reinterpret_cast< void * >( buffer_p );
+				buffer_p = reinterpret_cast< char * >( buffer_p) + sizeof(void *);
+				assert( reinterpret_cast< uintptr_t >( buffer_p ) % sizeof(int) == 0 );
+				const size_t size = *reinterpret_cast< size_t * >( buffer_p );
+				(void) printf( "Decoded request: send %zd bytes from %p onwards\n",
+					size, ptr );
+
+				// handle request:
+				const size_t nchunks = size / chunk_size +
+					(size % chunk_size > 0
+						? 1
+						: 0
+					);
+				//std::array< bool, batch_size > mask;
+				//TODO launch ack-tracker thread
+				bool send_error = false;
+				for( size_t chunk = 0; chunk < nchunks; ++chunk ) {
+					const size_t offset = chunk * chunk_size;
+					const size_t size = offset > size
+						? (size - offset)
+						: chunk_size;
+					void * const offset_ptr = reinterpret_cast< char * >(ptr) + offset;
+					const ssize_t chksum = sendto( fd, offset_ptr, size, MSG_CONFIRM,
+						(const struct sockaddr *) &client, client_len );
+					if( chksum < 0 || static_cast< size_t >(chksum) != size ) {
+						(void) fprintf( stderr, "Error during message send, chunk %zu/%zu; "
+								"expected %zu bytes to be sent successfully but confirmed %zd only.\n",
+							chunk, nchunks, size, chksum );
+						send_error = true;
+					}
+					// TODO wait on ack-tracker
+				}
+				if( send_error ) {
+					break;
+				}
 			}
 			(void) printf( "Listener thread at port %u terminating. Register capacity at "
 				"exit was %zd\n", port, registers.size() );
