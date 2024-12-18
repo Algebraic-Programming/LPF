@@ -23,6 +23,7 @@ add_subdirectory(hybrid)
 add_subdirectory(core-libraries)
 add_subdirectory(bsplib)
 add_subdirectory(debug)
+add_subdirectory(optional)
 
 set(lpf_cflags "${lpf_cflags}" PARENT_SCOPE)
 set(lpf_lib_link_flags "${lpf_lib_link_flags}" PARENT_SCOPE)
