@@ -19,11 +19,17 @@
  #pragma error "This file should be compiled with _LPF_NOC_STANDALONE defined"
 #endif
 
-#include "lpf/noc-standalone.h"
+#include <lpf/noc-standalone.h>
+
+#include "noc-udp-internal.hpp"
 
 const lpf_t LPF_ROOT = nullptr;
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_FATAL = 255;
 const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
+
+lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr ) {
+	return lpf_noc_sync( ctx, attr );
+}
 
