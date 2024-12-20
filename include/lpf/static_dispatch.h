@@ -40,8 +40,15 @@
 #undef lpf_get
 #undef lpf_put
 #undef lpf_sync
+#undef lpf_counting_sync_per_slot
+#undef lpf_sync_per_slot
 #undef lpf_register_local
+#undef lpf_get_rcvd_msg_count
+#undef lpf_get_rcvd_msg_count_per_slot
+#undef lpf_get_sent_msg_count_per_slot
 #undef lpf_register_global
+#undef lpf_flush_sent
+#undef lpf_flush_received
 #undef lpf_deregister
 #undef lpf_probe
 #undef lpf_resize_memory_register
@@ -85,7 +92,14 @@
 #define lpf_get             LPF_FUNC(get)
 #define lpf_put             LPF_FUNC(put)
 #define lpf_sync            LPF_FUNC(sync)
+#define lpf_counting_sync_per_slot            LPF_FUNC(counting_sync_per_slot)
+#define lpf_sync_per_slot            LPF_FUNC(sync_per_slot)
 #define lpf_register_local  LPF_FUNC(register_local)
+#define lpf_get_rcvd_msg_count LPF_FUNC(get_rcvd_msg_count)
+#define lpf_get_rcvd_msg_count_per_slot LPF_FUNC(get_rcvd_msg_count_per_slot)
+#define lpf_get_sent_msg_count_per_slot LPF_FUNC(get_sent_msg_count_per_slot)
+#define lpf_flush_sent LPF_FUNC(flush_sent)
+#define lpf_flush_received LPF_FUNC(flush_received)
 #define lpf_register_global LPF_FUNC(register_global)
 #define lpf_deregister      LPF_FUNC(deregister)
 #define lpf_probe           LPF_FUNC(probe)

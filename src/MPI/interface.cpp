@@ -100,6 +100,76 @@ void Interface :: put( memslot_t srcSlot, size_t srcOffset,
             size );
 }
 
+// only for HiCR
+//#ifdef 
+
+void Interface :: lockSlot( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size ) 
+{
+    m_mesgQueue.lockSlot( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
+void Interface :: unlockSlot( memslot_t srcSlot, size_t srcOffset, 
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+        size_t size ) 
+{
+    m_mesgQueue.unlockSlot( srcSlot, srcOffset,
+            dstPid, dstSlot, dstOffset, 
+            size );
+}
+
+void Interface :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot) {
+    m_mesgQueue.getRcvdMsgCountPerSlot(msgs, slot);
+}
+
+void Interface :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot) {
+    m_mesgQueue.getSentMsgCountPerSlot(msgs, slot);
+}
+
+void Interface :: flushSent() {
+    m_mesgQueue.flushSent();
+}
+
+void Interface :: flushReceived() {
+    m_mesgQueue.flushReceived();
+}
+
+void Interface :: getRcvdMsgCount(size_t * msgs) {
+    m_mesgQueue.getRcvdMsgCount(msgs);
+}
+
+err_t Interface :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+    if ( 0 == m_aborted )
+    {
+        m_aborted = m_mesgQueue.countingSyncPerSlot(slot, expected_sent, expected_rcvd);
+        return LPF_SUCCESS;
+    }
+    else
+    {
+        return LPF_ERR_FATAL;
+    }
+}
+
+err_t Interface :: syncPerSlot(memslot_t slot)
+{
+    if ( 0 == m_aborted )
+    {
+        m_aborted = m_mesgQueue.syncPerSlot(slot);
+        return LPF_SUCCESS;
+    }
+    else
+    {
+        return LPF_ERR_FATAL;
+    }
+}
+
+// only for HiCR
+//#endif
+
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
         size_t size )
@@ -137,9 +207,16 @@ err_t Interface :: resizeMesgQueue( size_t nMsgs )
 void Interface :: abort()
 {
     ASSERT( 0 == m_aborted );
+#ifdef LPF_CORE_MPI_USES_zero
+    int vote = 1;
+    int voted;
+    m_comm.allreduceSum(&vote, &voted, 1);
+    m_aborted = voted;
+#else
     // signal all other processes at the start of the next 'sync' that
     // this process aborted.
     m_aborted = m_mesgQueue.sync( true );
+#endif
 }
 
 pid_t Interface  :: isAborted() const

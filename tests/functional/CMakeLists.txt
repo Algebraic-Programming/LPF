@@ -125,8 +125,20 @@ foreach (LPF_IMPL_ID ${ENGINES})
         string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
         get_filename_component(baseName ${testSource} NAME_WE  )
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
-        add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
 
+        # Following tests are NOT run with zero engine:
+        # - bsplib tests, as their semantics is not clear
+        # - simple early_exit tests fail, as only a subset of
+        #   processes call lpf_sync - zero engine does not support that,
+        #   and lpf_sync has an implicit barrier in zero engine
+        # - overlapping tests perform conflict resolution, but
+        #   zero engine does not support that
+        string(REGEX MATCH "overlapping|early|bsplib" foundTest ${testSource})
+        if (NOT ${LPF_IMPL_ID} STREQUAL "zero") 
+            add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        elseif ("${foundTest}" STREQUAL "")
+            add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
+        endif()
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)
 

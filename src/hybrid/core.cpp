@@ -343,6 +343,23 @@ _LPFLIB_API lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
     return realContext(ctx)->sync();
 }
 
+_LPFLIB_API lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+    (void) attr;
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS) 
+        return LPF_SUCCESS;
+    return realContext(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
+}
+
+_LPFLIB_API lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot)
+{
+    (void) attr;
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS) 
+        return LPF_SUCCESS;
+    return realContext(ctx)->syncPerSlot(slot);
+}
 
 _LPFLIB_API lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )
 {
@@ -387,10 +404,43 @@ _LPFLIB_API lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
         return LPF_SUCCESS;
 }
 
+_LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
+{
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS)
+        return LPF_SUCCESS;
+    ThreadState * t = realContext(ctx);
+    if (!t->error())
+        return t->getRcvdMsgCount(rcvd_msgs);
+    else
+        return LPF_SUCCESS;
+}
+
+_LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot )
+{
+    using namespace lpf::hybrid;
+    ThreadState * t = realContext(ctx);
+    MPI mpi = t->nodeState().mpi();
+    mpi.abort();
+    return LPF_SUCCESS;
+}
+
+_LPFLIB_API lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_memslot_t slot )
+{
+    using namespace lpf::hybrid;
+    if (ctx == LPF_SINGLE_PROCESS)
+        return LPF_SUCCESS;
+    ThreadState * t = realContext(ctx);
+    if (!t->error())
+        return t->getSentMsgCount(sent_msgs, slot);
+    else
+        return LPF_SUCCESS;
+}
+
 _LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx)
 {
     using namespace lpf::hybrid;
-    ThreadState * const t = realContext(ctx);
+    ThreadState * t = realContext(ctx);
     MPI mpi = t->nodeState().mpi();
     mpi.abort();
     return LPF_SUCCESS;
