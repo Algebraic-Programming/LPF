@@ -169,6 +169,7 @@ try_run( IBVERBS_INIT_RUNS IBVERBS_INIT_COMPILES
        )
 endif()
 
+set(ENABLE_IBVERBS FALSE)
 if (LPF_ENABLE_TESTS)
     # The Google Test integration requires that tests successfully compiled are
     # also runnable

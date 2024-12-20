@@ -176,7 +176,6 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
 
     if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
-        list(APPEND ENGINES "zero")
     endif()
 
 endif()
@@ -253,8 +252,8 @@ option(LPF_ENABLE_TESTS
        "Enable unit and API tests. This uses Google Testing and Mocking Framework"
        OFF)
 option(GTEST_AGREE_TO_LICENSE
-	"Does the user agree to the GoogleTest license"
-	OFF)
+      "Does the user agree to the GoogleTest license"
+      OFF)
 
 # C++ standard -- Google tests require newer C++ standard than C++11
 if (LPF_ENABLE_TESTS)
@@ -392,10 +391,12 @@ if (LPF_ENABLE_TESTS)
     message(STATUS "Unit and API tests will be built. This requires CMake version 3.29 or higher, since we use recent features of the GoogleTest package in CMake.")
 
     if (NOT GTEST_AGREE_TO_LICENSE)
-	    message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
+        message(FATAL_ERROR "The user needs to agree with the GoogleTest license to use tests (option GTEST_AGREE_TO_LICENSE=TRUE)")
     endif()
     # Enable testing in CMake
     enable_testing()
+    include(ProcessorCount)
+    ProcessorCount(processorCount)
     find_package(GTest)
     include(GoogleTest)
     if(NOT GTest_FOUND) # if not found, download it and pull it in
@@ -505,10 +506,11 @@ else(LPF_ENABLE_TESTS)
 
 endif(LPF_ENABLE_TESTS)
 
+# Main LPF library includes and sources
 include_directories(include)
 include_directories(src/common)
-
 add_subdirectory(src)
+
 # Apps
 add_subdirectory(src/utils)
 
