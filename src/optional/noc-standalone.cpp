@@ -24,12 +24,27 @@
 #include "noc-udp-internal.hpp"
 
 const lpf_t LPF_ROOT = nullptr;
+const lpf_pid_t LPF_MAX_P = nocUDP::max_P;
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_FATAL = 255;
 const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
+lpf_err_t lpf_noc_init( lpf_pid_t s, lpf_pid_t p, lpf_t * const ctx ) {
+	// TODO this is a dummy implementation that allows for the creation of a single
+	//      context only.
+	(void) s;
+	(void) p;
+	*ctx = LPF_ROOT;
+	return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr ) {
 	return lpf_noc_sync( ctx, attr );
+}
+
+lpf_err_t lpf_noc_finalize( lpf_t ctx ) {
+	(void) ctx;
+	return LPF_SUCCESS;
 }
 

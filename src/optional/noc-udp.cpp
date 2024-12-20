@@ -59,7 +59,7 @@ NOCState::NOCState() {
 	if( fd < 0 ) {
 		throw std::runtime_error( "Could not open a socket" );
 	}
-	port = start_port + GlobalNOCState::contextID;
+	port = nocUDP::start_port + GlobalNOCState::contextID;
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = htonl( port );

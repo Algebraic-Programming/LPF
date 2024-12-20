@@ -37,12 +37,15 @@ typedef int lpf_msg_attr_t;
 typedef int lpf_sync_attr_t;
 
 extern const lpf_t LPF_ROOT;
+extern const lpf_pid_t LPF_MAX_P;
 extern const lpf_err_t LPF_SUCCESS;
 extern const lpf_err_t LPF_ERR_FATAL;
 extern const lpf_msg_attr_t LPF_MSG_DEFAULT;
 extern const lpf_sync_attr_t LPF_SYNC_DEFAULT;
 
+extern lpf_err_t lpf_noc_init( lpf_pid_t s, lpf_pid_t P, lpf_t * const ctx );
 extern lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr );
+extern lpf_err_t lpf_noc_finalize( lpf_t ctx );
 
 #ifdef __cplusplus
 }

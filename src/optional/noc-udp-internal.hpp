@@ -41,31 +41,38 @@
 #include <vector>
 #include <thread>
 
-/**
- * Each unique LPF context listens for get-requests on its own port. Ports are
- * assigned from this number onwards.
- */
-constexpr uint32_t start_port = 7000;
+namespace nocUDP {
 
-/**
- * Which ports to listen for incoming "RDMA" requests.
- *
- * \note RDMA has quotes since this is not really RDMA -- both sender and
- *       receiver are active.
- */
-constexpr uint32_t recv_start_port = 70000;
+	/**
+	 * Each unique LPF context listens for get-requests on its own port. Ports are
+	 * assigned from this number onwards.
+	 */
+	constexpr uint32_t start_port = 7000;
 
-/**
- * Maximum number of supported contexts.
- *
- * \warning Enlarging this number requires in-depth code changes; presently,
- *          RDMA receive ports are numbered 7xyyy, where \a x is the context ID
- *          and yyy is the RDMA request. There hence may be 1000 RDMA requests
- *          active concurrently.
- */
-constexpr uint32_t max_contexts = 10;
+	/**
+	 * Which ports to listen for incoming "RDMA" requests.
+	 *
+	 * \note RDMA has quotes since this is not really RDMA -- both sender and
+	 *       receiver are active.
+	 */
+	constexpr uint32_t recv_start_port = 70000;
 
-constexpr uint32_t max_incoming_rdma = 1000;
+	/**
+	 * Maximum number of supported contexts.
+	 *
+	 * \warning Enlarging this number requires in-depth code changes; presently,
+	 *          RDMA receive ports are numbered 7xyyy, where \a x is the context ID
+	 *          and yyy is the RDMA request. There hence may be 1000 RDMA requests
+	 *          active concurrently.
+	 */
+	constexpr uint32_t max_contexts = 10;
+
+	/**
+	 * Maximum number of supported P
+	 */
+	constexpr uint32_t max_P = 100;
+
+} // end namespace nocUDP
 
 /**
  * Every get-request consists of a pointer and a requested number of bytes.
