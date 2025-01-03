@@ -80,6 +80,7 @@ lpf_err_t lpf_collectives_init(
 	lpf_t ctx,
 	lpf_pid_t s,
 	lpf_pid_t p,
+    lpf_pid_t * peers,
 	size_t max_calls,
 	size_t max_elem_size,
 	size_t max_byte_size,
@@ -88,6 +89,24 @@ lpf_err_t lpf_collectives_init(
 	(void)max_calls;
 
 	coll->inv_translate = coll->translate = NULL;
+
+    ASSERT(p > 0);
+
+    /**
+     * peers = NULL : will talk to all peers (full comm)
+     * peers != NULL : pass explicit list of peers ( ~ subcommunicator)
+     */
+
+    if (peers != NULL) {
+        coll->peers = malloc(p * sizeof(lpf_pid_t));
+        ASSERT(coll->peers != NULL);
+        for (lpf_pid_t k = 0; k < p; k++) {
+            coll->peers[k] = peers[k];
+        }
+    }
+    else {
+        coll->peers = NULL;
+    }
 
 	coll->ctx = ctx;
 	coll->P   = p;
@@ -172,6 +191,11 @@ lpf_err_t lpf_collectives_destroy( lpf_coll_t coll ) {
 	if( rc != LPF_SUCCESS ) {
 		return rc;
 	}
+
+    // If subcommunicator was used, free extra data
+    if (coll.peers != NULL) {
+        free(coll.peers);
+    }
 
 	free( coll.buffer );
 	return LPF_SUCCESS;
@@ -383,6 +407,33 @@ lpf_err_t lpf_allgather(
 		if( exclude_myself && _k == coll.s ) continue;
 		const lpf_pid_t k = (coll.translate == NULL) ? _k : coll.translate[ _k ];
 		const lpf_err_t rc = lpf_put( coll.ctx, src, 0, k, dst, offset, size, LPF_MSG_DEFAULT );
+		if( rc != LPF_SUCCESS ) {
+			return rc;
+		}
+	}
+	return LPF_SUCCESS;
+}
+
+
+lpf_err_t lpf_subcomm_allgather(
+	lpf_coll_t coll,
+	lpf_memslot_t src,
+	lpf_memslot_t dst,
+	size_t size, 
+	bool exclude_myself
+) {
+	ASSERT( coll.P > 0 );
+	ASSERT( coll.s < coll.P );
+
+    // @kiril : what is the translate thing - don't implement yet
+    ASSERT(coll.translate == NULL);
+    //const lpf_pid_t k = (coll.translate == NULL) ? _k : coll.translate[ _k ]; 
+	const size_t offset = coll.s * size;
+
+    ASSERT(coll.peers != NULL);
+	for( lpf_pid_t _k = 0; _k < coll.P; ++_k ) {
+		if( exclude_myself && coll.peers[_k] == coll.s ) continue;
+		const lpf_err_t rc = lpf_put( coll.ctx, src, 0, coll.peers[_k], dst, offset, size, LPF_MSG_DEFAULT );
 		if( rc != LPF_SUCCESS ) {
 			return rc;
 		}

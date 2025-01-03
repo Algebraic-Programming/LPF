@@ -33,16 +33,16 @@ void spmd( lpf_t ctx, lpf_pid_t s, lpf_pid_t p, lpf_args_t args)
     rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, 1, 0, 0, &coll1 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, 1, 0, 0, &coll1 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, 1, 8, 0, &coll2 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, 1, 8, 0, &coll2 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, (1<<7), 0, (1<<19), &coll3 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, (1<<7), 0, (1<<19), &coll3 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, (1<<4), 8, (1<<25), &coll4 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, (1<<4), 8, (1<<25), &coll4 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_collectives_destroy( coll1 );

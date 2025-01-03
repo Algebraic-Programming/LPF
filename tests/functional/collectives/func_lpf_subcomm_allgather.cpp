@@ -22,32 +22,21 @@
 
 #include <math.h>
 
-void min( const size_t n, const void * const _in, void * const _out ) {
-    double * const out = (double*) _out;
-    const double * const array = (const double*) _in;
-    for( size_t i = 0; i < n; ++i ) {
-        if( array[ i ] < *out ) {
-            *out = array[ i ];
-        } 
-    }
-}
-
 void spmd( lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p, const lpf_args_t args )
 {
     (void) args; // ignore any arguments passed through call to lpf_exec
-    lpf_memslot_t elem_slot;
+    lpf_memslot_t src_slot, dst_slot;
     lpf_coll_t coll;
     lpf_err_t rc;
 
     rc = lpf_resize_message_queue( ctx, 2*p - 2);
     EXPECT_EQ( LPF_SUCCESS, rc );
-    rc = lpf_resize_memory_register( ctx, 2 );
+    rc = lpf_resize_memory_register( ctx, 3 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    double reduced_value       = INFINITY;
     const size_t byte_size = (1 << 19) / sizeof(double);
     const size_t      size = byte_size / sizeof(double);
     double * data              = new double[size];
@@ -57,36 +46,56 @@ void spmd( lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p, const lpf_args_t arg
         data[ i ] = s * size + i;
     }
 
-    rc = lpf_register_global( ctx, &reduced_value, sizeof(double), &elem_slot );
+    double * allgatheredData = new double[size * p/2];
+    rc = lpf_register_global( ctx, data, size * sizeof(double), &src_slot );
+    EXPECT_EQ( LPF_SUCCESS, rc );
+    rc = lpf_register_global( ctx, allgatheredData, p/2 * size * sizeof(double), &dst_slot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, NULL, 1, sizeof(double), 0, &coll );
+    /**
+     * Choose a subset of peers
+     */
+    lpf_pid_t peers[p/2];
+
+    for (lpf_pid_t _k = 0; _k < p/2 ; _k++) {
+        peers[_k] = _k;
+    }
+
+    // explicitly set this collective to include p/2 peers only!
+    rc = lpf_collectives_init( ctx, s, p/2, peers, 1, p/2 * sizeof(double), 0, &coll );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    min( size, data, &reduced_value );
-    rc = lpf_allreduce( coll, &reduced_value, elem_slot, sizeof(double), &min );
+    // modified collective iterating over subset of processes
+    rc = lpf_subcomm_allgather( coll, src_slot, dst_slot, sizeof(double), false );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
+    // modified sync waiting on a subset of received messages
+    rc = lpf_counting_sync_per_slot( ctx, LPF_SYNC_DEFAULT, dst_slot, 0, p/2);
     EXPECT_EQ( LPF_SUCCESS, rc );
-
-    EXPECT_EQ(  0.0, reduced_value );
 
     rc = lpf_collectives_destroy( coll );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_deregister( ctx, elem_slot );
+    rc = lpf_sync(ctx, LPF_SYNC_DEFAULT);
+    EXPECT_EQ( LPF_SUCCESS, rc );
+
+    rc = lpf_deregister( ctx, src_slot );
+    EXPECT_EQ( LPF_SUCCESS, rc );
+    rc = lpf_deregister( ctx, dst_slot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     delete[] data;
+
 }
 
 /** 
- * \test Initialises one \a lpf_coll_t objects, performs an allreduce, and deletes the \a lpf_coll_t object.
- * \pre P >= 1
+ * \test Performs an allgather on a subset of processes, relying on zero engine 
+ * semantics 
+ * \pre P >= 8
+ * \pre P <= 8
  * \return Exit code: 0
  */
-TEST( COLL, func_lpf_allreduce )
+TEST( COLL, func_lpf_subcomm_allgather)
 {
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
     EXPECT_EQ( LPF_SUCCESS, rc );

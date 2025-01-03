@@ -75,7 +75,7 @@ namespace lpf {
             m_mesgq_cap = 4*nprocs;
             fence();
             if (LPF_SUCCESS != lpf_collectives_init( m_ctx, 
-                        m_pid, m_nprocs, 0,
+                        m_pid, m_nprocs, NULL, 0,
                         m_coll_max_elem_size, m_coll_max_byte_size,
                         &m_coll ))
                 throw std::bad_alloc();
@@ -290,7 +290,7 @@ namespace lpf {
                     m_coll_max_elem_size = std::max( m_coll_max_elem_size, elem_size );
                     m_coll_max_byte_size = std::max( m_coll_max_byte_size, size );
                     if ( LPF_SUCCESS != lpf_collectives_init( m_ctx, 
-                            m_pid, m_nprocs, 0,
+                            m_pid, m_nprocs, NULL, 0,
                             m_coll_max_elem_size, m_coll_max_byte_size,
                             &m_coll )) 
                     {

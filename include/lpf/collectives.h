@@ -62,6 +62,9 @@ typedef struct lpf_coll {
 	/** The number of processes involved with this #lpf_coll_t. */
 	lpf_pid_t P;
 
+    /** explicit list of the processes taking part in this collective */
+    lpf_pid_t * peers;
+
 	/** The process ID within this #lpf_coll_t. May differ from the global s. */
 	lpf_pid_t s;
 } lpf_coll_t;
@@ -126,6 +129,17 @@ lpf_err_t lpf_allgatherv(
         size_t *sizes, 
         bool exclude_myself
         );
+
+/**
+ * ToDo: document allgather on subcomm
+ */
+lpf_err_t lpf_subcomm_allgather(
+        lpf_coll_t coll,
+        lpf_memslot_t src,
+        lpf_memslot_t dst,
+        size_t size, 
+        bool exclude_myself
+        );
 /**
  * Initialises a collectives struct, which allows the scheduling of collective
  * calls. The initialised struct is only valid after a next call to lpf_sync().
@@ -175,6 +189,7 @@ lpf_err_t lpf_collectives_init(
 	lpf_t ctx,
 	lpf_pid_t s,
 	lpf_pid_t p,
+    lpf_pid_t * peers,
 	size_t max_calls,
 	size_t max_elem_size,
 	size_t max_byte_size,

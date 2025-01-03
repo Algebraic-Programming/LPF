@@ -35,29 +35,29 @@ void spmd( lpf_t ctx, lpf_pid_t s, lpf_pid_t p, lpf_args_t args)
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     //make sure the base case is OK
-    rc = lpf_collectives_init( ctx, s, p, (1<<7), (1<<7), (1<<7), &coll1 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, (1<<7), (1<<7), (1<<7), &coll1 );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     //now let us create some overflows
     const size_t tooBig = (size_t)(-1);
 
     //overflow in the number of calls: may or may not be encountered by an implementation:
-    const lpf_err_t rc1 = lpf_collectives_init( ctx, s, p, tooBig, (1<<7), (1<<7), &coll2 );
+    const lpf_err_t rc1 = lpf_collectives_init( ctx, s, p, NULL, tooBig, (1<<7), (1<<7), &coll2 );
     bool success = (rc1 == LPF_SUCCESS) || (rc1 == LPF_ERR_OUT_OF_MEMORY);
     EXPECT_EQ( true, success );
 
     //overflow in the element size required for reduction buffers: an implementation MUST detect this:
-    rc = lpf_collectives_init( ctx, s, p, (1<<7), tooBig, (1<<7), &coll3 );
+    rc = lpf_collectives_init( ctx, s, p, NULL, (1<<7), tooBig, (1<<7), &coll3 );
     EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
 
     //overflow in the collective buffer size: may or may not be encountered by an implementation:
-    const lpf_err_t rc2 = lpf_collectives_init( ctx, s, p, (1<<7), (1<<7), tooBig, &coll4 );
+    const lpf_err_t rc2 = lpf_collectives_init( ctx, s, p, NULL, (1<<7), (1<<7), tooBig, &coll4 );
     success = (rc2 == LPF_SUCCESS) || (rc2 == LPF_ERR_OUT_OF_MEMORY);
     EXPECT_EQ( true, success );
 
     //overflow that if not detected would lead to a very small buffer: an implementation MUST detect this:
     if( p > 1 ) {
-        rc = lpf_collectives_init( ctx, s, p, (1<<7), tooBig / p + 1, (1<<7), &coll5 );
+        rc = lpf_collectives_init( ctx, s, p, NULL, (1<<7), tooBig / p + 1, (1<<7), &coll5 );
         EXPECT_EQ( LPF_ERR_OUT_OF_MEMORY, rc );
     }
 
