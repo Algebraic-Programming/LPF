@@ -433,7 +433,7 @@ if (LPF_ENABLE_TESTS)
             target_include_directories( ${testName} BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/debug )
             target_link_libraries(${testName} lpf_debug lpf_hl_debug GTest::gtest GTest::gtest_main)
         else(debug)
-            target_link_libraries(${testName} GTest::gtest GTest::gtest_main)
+            target_link_libraries(${testName} lpf_hl GTest::gtest GTest::gtest_main)
         endif(debug)
 
 

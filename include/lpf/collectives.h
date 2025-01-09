@@ -62,11 +62,22 @@ typedef struct lpf_coll {
 	/** The number of processes involved with this #lpf_coll_t. */
 	lpf_pid_t P;
 
+
+    /** number of processes taking part in this sub-communicator collective 
+     * peers_p = 0 if MPI_COMM_WORLD is used, 
+     * 1 <= peers_p <= P else
+     * */
+    size_t peers_p;
+
     /** explicit list of the processes taking part in this collective */
     lpf_pid_t * peers;
 
 	/** The process ID within this #lpf_coll_t. May differ from the global s. */
 	lpf_pid_t s;
+
+    /** For sub-communicator collectives, flag at initialization
+     * if I will be involved in this collective */
+    bool involved;
 } lpf_coll_t;
 
 /**
@@ -189,6 +200,7 @@ lpf_err_t lpf_collectives_init(
 	lpf_t ctx,
 	lpf_pid_t s,
 	lpf_pid_t p,
+	size_t peers_p,
     lpf_pid_t * peers,
 	size_t max_calls,
 	size_t max_elem_size,

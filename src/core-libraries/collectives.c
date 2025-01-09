@@ -46,6 +46,7 @@ static lpf_err_t lpf_collectives_finish_init(
 	const size_t base_size = (max_elem_size > max_byte_size) ? max_elem_size : max_byte_size;
 	const size_t size = p * base_size;
 	ASSERT( p > 0 );
+    /*
 	if( size / p != base_size ) {
 		coll->buffer = NULL;
 		coll->slot   = LPF_INVALID_MEMSLOT;
@@ -74,12 +75,15 @@ static lpf_err_t lpf_collectives_finish_init(
 	} else {
 		return lpf_sync( coll->ctx, LPF_SYNC_DEFAULT );
 	}
+    */
+    return LPF_SUCCESS;
 }
 
 lpf_err_t lpf_collectives_init(
 	lpf_t ctx,
 	lpf_pid_t s,
 	lpf_pid_t p,
+	size_t peers_p,
     lpf_pid_t * peers,
 	size_t max_calls,
 	size_t max_elem_size,
@@ -97,20 +101,25 @@ lpf_err_t lpf_collectives_init(
      * peers != NULL : pass explicit list of peers ( ~ subcommunicator)
      */
 
-    if (peers != NULL) {
-        coll->peers = malloc(p * sizeof(lpf_pid_t));
+	coll->ctx = ctx;
+	coll->P   = p;
+    coll->peers_p = peers_p;
+	coll->s   = s;
+
+    coll->involved = false;
+    if (peers_p > 0) {
+        coll->peers = malloc(peers_p * sizeof(lpf_pid_t));
         ASSERT(coll->peers != NULL);
-        for (lpf_pid_t k = 0; k < p; k++) {
+        for (lpf_pid_t k = 0; k < peers_p; k++) {
             coll->peers[k] = peers[k];
+            if (coll->peers[k] == coll->s) {
+                coll->involved = true;
+            }
         }
     }
     else {
         coll->peers = NULL;
     }
-
-	coll->ctx = ctx;
-	coll->P   = p;
-	coll->s   = s;
 
 	return lpf_collectives_finish_init( p, max_elem_size, max_byte_size, coll );
 }
@@ -182,6 +191,7 @@ lpf_err_t lpf_collectives_destroy( lpf_coll_t coll ) {
 		free( coll.inv_translate );
 	}
 
+    /*
 	if( coll.buffer == NULL ) {
 		ASSERT( coll.slot == LPF_INVALID_MEMSLOT );
 		return LPF_SUCCESS;
@@ -191,13 +201,14 @@ lpf_err_t lpf_collectives_destroy( lpf_coll_t coll ) {
 	if( rc != LPF_SUCCESS ) {
 		return rc;
 	}
+    */
 
     // If subcommunicator was used, free extra data
-    if (coll.peers != NULL) {
+    if (coll.peers_p > 0) {
         free(coll.peers);
     }
 
-	free( coll.buffer );
+	//free( coll.buffer );
 	return LPF_SUCCESS;
 }
 
@@ -422,16 +433,24 @@ lpf_err_t lpf_subcomm_allgather(
 	size_t size, 
 	bool exclude_myself
 ) {
-	ASSERT( coll.P > 0 );
-	ASSERT( coll.s < coll.P );
+
+    ASSERT( coll.peers_p > 0 );
+    ASSERT(coll.peers != NULL);
+    ASSERT( coll.P > 0 );
+    ASSERT( coll.s < coll.P );
+
+    /*
+     * Am I really involved in this collective?
+     */
+    if (!coll.involved)
+        return LPF_SUCCESS;
 
     // @kiril : what is the translate thing - don't implement yet
     ASSERT(coll.translate == NULL);
     //const lpf_pid_t k = (coll.translate == NULL) ? _k : coll.translate[ _k ]; 
 	const size_t offset = coll.s * size;
 
-    ASSERT(coll.peers != NULL);
-	for( lpf_pid_t _k = 0; _k < coll.P; ++_k ) {
+	for( lpf_pid_t _k = 0; _k < coll.peers_p; ++_k ) {
 		if( exclude_myself && coll.peers[_k] == coll.s ) continue;
 		const lpf_err_t rc = lpf_put( coll.ctx, src, 0, coll.peers[_k], dst, offset, size, LPF_MSG_DEFAULT );
 		if( rc != LPF_SUCCESS ) {

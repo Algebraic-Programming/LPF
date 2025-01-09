@@ -56,7 +56,7 @@ void spmd( lpf_t ctx, const lpf_pid_t s, const lpf_pid_t p, const lpf_args_t arg
     rc = lpf_register_global( ctx, data, byte_size, &data_slot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, NULL, 1, 0, byte_size, &coll );
+    rc = lpf_collectives_init( ctx, s, p, 0, NULL, 1, 0, byte_size, &coll );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_allcombine( coll, data, data_slot, size, sizeof(double), &elementwise_add );

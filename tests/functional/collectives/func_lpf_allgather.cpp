@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
+#define ITERS 10
 
 #include <lpf/core.h>
 #include <lpf/collectives.h>
 #include "gtest/gtest.h"
 
+#include <chrono>
 
 void spmd( lpf_t ctx, const lpf_pid_t s, lpf_pid_t p, lpf_args_t args )
 {
     (void) args; // ignore any arguments passed through call to lpf_exec
     const size_t size = (1 << 19);
 
+    std::cout << " s = " << s << " p = " << p << std::endl;
     lpf_memslot_t src_slot, dst_slot;
     lpf_coll_t coll;
     lpf_err_t rc;
@@ -56,14 +59,23 @@ void spmd( lpf_t ctx, const lpf_pid_t s, lpf_pid_t p, lpf_args_t args )
     rc = lpf_register_global( ctx, dst, p * size, &dst_slot );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_collectives_init( ctx, s, p, NULL, 1, 0, p * size, &coll );
+    rc = lpf_collectives_init( ctx, s, p, 0, NULL, 1, 0, p * size, &coll );
     EXPECT_EQ( LPF_SUCCESS, rc );
 
-    rc = lpf_allgather( coll, src_slot, dst_slot, size, true );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+    /* start block to benchmark */
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < ITERS; i++) {
 
-    rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
-    EXPECT_EQ( LPF_SUCCESS, rc );
+        rc = lpf_allgather( coll, src_slot, dst_slot, size, true );
+        EXPECT_EQ( LPF_SUCCESS, rc );
+
+        rc = lpf_sync( ctx, LPF_SYNC_DEFAULT );
+        EXPECT_EQ( LPF_SUCCESS, rc );
+    } 
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+    if (s == 0) std::cout << " allgather duration = " << ms_double.count() << std::endl;
+    /* end block to benchmark */
 
     for( size_t i = 0; i < size; ++i ) {
         EXPECT_EQ( (char)s, src[ i ] );
@@ -100,7 +112,9 @@ void spmd( lpf_t ctx, const lpf_pid_t s, lpf_pid_t p, lpf_args_t args )
  */
 TEST(COLL, func_lpf_allgather )
 {
+
     lpf_err_t rc = lpf_exec( LPF_ROOT, LPF_MAX_P, spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc);
+    EXPECT_EQ(LPF_SUCCESS, rc);
+
 }
 
