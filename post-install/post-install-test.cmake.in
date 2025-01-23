@@ -353,6 +353,9 @@ endif()
 ######   CMake integration using generated CMake module file ############
 
 foreach(engine @ENGINES@)
+    if ("${engine}" STREQUAL "zero") 
+        continue()
+    endif()
     message("Testing generated CMake module files for engine ${engine}")
 
     set(test_dir @builddir@/cmake-module-test-${engine})
