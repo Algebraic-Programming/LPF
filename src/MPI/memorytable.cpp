@@ -68,6 +68,15 @@ MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
     return m_memreg.addLocalReg( rec);
 }
 
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+mpi::IBVerbs::SlotID MemoryTable :: getVerbID(MemoryTable::Slot slot) const
+{
+    Memory sl = m_memreg.lookup(slot);
+    ASSERT(sl.slot != m_memreg.invalidSlot());
+    return m_memreg.lookup( slot ).slot;
+}
+#endif
+
 MemoryTable :: Slot
 MemoryTable :: addGlobal( void * mem, std::size_t size ) // nothrow
 { 

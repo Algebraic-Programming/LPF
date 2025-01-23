@@ -96,8 +96,7 @@ public:
 #endif
 
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
-    mpi::IBVerbs::SlotID getVerbID( Slot slot ) const
-    { return m_memreg.lookup( slot ).slot; }
+    mpi::IBVerbs::SlotID getVerbID( Slot slot ) const;
 #endif
 
     void reserve( size_t size ); // throws bad_alloc, strong safe

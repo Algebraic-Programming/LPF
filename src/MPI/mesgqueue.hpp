@@ -37,7 +37,6 @@
 #endif
 
 //only for HiCR
-typedef size_t SlotID;
 
 namespace lpf {
 
@@ -74,11 +73,11 @@ public:
     void unlockSlot( memslot_t srcSlot, size_t srcOffset,
 		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
 
-    void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
+    void getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot);
 
     void getRcvdMsgCount(size_t * msgs);
 
-    void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
+    void getSentMsgCountPerSlot(size_t * msgs, memslot_t slot);
 
     void getSentMsgCount(size_t * msgs);
 
@@ -86,9 +85,9 @@ public:
 
     void flushReceived();
 
-    int countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd);
+    int countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
 
-    int syncPerSlot(SlotID slot);
+    int syncPerSlot(memslot_t slot);
     // NOC extensions
     memslot_t addNocReg( void * mem, std::size_t size );
 
@@ -97,7 +96,7 @@ public:
 // end only for HiCR
 
 private:
-    enum Msgs { BufPut , 
+    enum Msgs { BufPut ,
         BufGet, BufGetReply,
         HpPut, HpGet , HpBodyReply ,
         HpEdges, HpEdgesReply };
@@ -106,7 +105,7 @@ private:
         SrcPid, DstPid,
         SrcOffset, DstOffset, BufOffset,
         SrcSlot, DstSlot, Size,
-        RoundedDstOffset, RoundedSize, 
+        RoundedDstOffset, RoundedSize,
         Payload, Head, Tail};
 
     struct Edge {
@@ -168,7 +167,7 @@ private:
     mpi::Comm m_comm;
     std::vector< char > m_tinyMsgBuf;
 protected:
-#if defined LPF_CORE_MPI_USES_ibverbs 
+#if defined LPF_CORE_MPI_USES_ibverbs
     mpi::IBVerbs m_ibverbs;
 #elif defined LPF_CORE_MPI_USES_zero
     mpi::IBVerbsNoc m_ibverbs;

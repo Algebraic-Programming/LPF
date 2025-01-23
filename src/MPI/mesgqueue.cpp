@@ -1074,7 +1074,7 @@ int MessageQueue :: sync( bool abort )
 
 }
 
-int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_t expected_rcvd)
+int MessageQueue :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
 {
 
     ASSERT(slot != LPF_INVALID_MEMSLOT);
@@ -1084,7 +1084,7 @@ int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_
 
     // if not, deal with normal sync
     m_memreg.sync();
-	m_ibverbs.countingSyncPerSlot(slot, expected_sent, expected_rcvd);
+	m_ibverbs.countingSyncPerSlot(m_memreg.getVerbID(slot), expected_sent, expected_rcvd);
     m_resized = false;
 
 
@@ -1092,7 +1092,7 @@ int MessageQueue :: countingSyncPerSlot(SlotID slot, size_t expected_sent, size_
 	return 0;
 }
 
-int MessageQueue :: syncPerSlot(SlotID slot)
+int MessageQueue :: syncPerSlot(memslot_t slot)
 {
 
     ASSERT(slot != LPF_INVALID_MEMSLOT);
@@ -1100,7 +1100,7 @@ int MessageQueue :: syncPerSlot(SlotID slot)
 
     // if not, deal with normal sync
     m_memreg.sync();
-	m_ibverbs.syncPerSlot(slot);
+	m_ibverbs.syncPerSlot(m_memreg.getVerbID(slot));
     m_resized = false;
 
 #endif
@@ -1108,14 +1108,14 @@ int MessageQueue :: syncPerSlot(SlotID slot)
 }
 
 
-void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot)
+void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot)
 {
 
     ASSERT(msgs != nullptr);
     ASSERT(slot != LPF_INVALID_MEMSLOT);
 #ifdef LPF_CORE_MPI_USES_zero
     *msgs = 0;
-    m_ibverbs.get_rcvd_msg_count_per_slot(msgs, slot);
+    m_ibverbs.get_rcvd_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
 #endif
 }
 
@@ -1136,14 +1136,13 @@ void MessageQueue :: getSentMsgCount(size_t * msgs)
     m_ibverbs.get_sent_msg_count(msgs);
 #endif
 }
-
-void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, SlotID slot)
+void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, memslot_t slot)
 {
     ASSERT(msgs != nullptr);
     ASSERT(slot != LPF_INVALID_MEMSLOT);
 #ifdef LPF_CORE_MPI_USES_zero
     *msgs = 0;
-    m_ibverbs.get_sent_msg_count_per_slot(msgs, slot);
+    m_ibverbs.get_sent_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
 #endif
 }
 

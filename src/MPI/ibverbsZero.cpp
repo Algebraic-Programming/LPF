@@ -260,7 +260,7 @@ IBVerbs :: ~IBVerbs()
 
 
 inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
-    
+
     switch (phase) {
         case Phase::INIT:
             rcvdMsgCount[slot] = 0;
@@ -353,7 +353,7 @@ void IBVerbs :: doRemoteProgress() {
 		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
             LOG(3, "Process " << m_pid << " signals: I received " << pollResult << " remote messages in doRemoteProgress");
-        }  
+        }
         else if (pollResult < 0)
         {
             LOG( 1, "Failed to poll IB completion queue" );
@@ -368,10 +368,10 @@ void IBVerbs :: doRemoteProgress() {
                         << wcs[i].vendor_err );
             }
             else {
-                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
-                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
-                LOG(2, "Process " << m_pid << " Recv wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
+                LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
 
                 /**
                  * Here is a trick:
@@ -719,7 +719,7 @@ blockingCompareAndSwap:
 	}
 
     /**
-     * Keep waiting on a completion of events until you 
+     * Keep waiting on a completion of events until you
      * register a completed atomic compare-and-swap
      */
     do {
@@ -731,7 +731,7 @@ blockingCompareAndSwap:
     } while (std::find(opcodes.begin(), opcodes.end(), IBV_WC_COMP_SWAP) == opcodes.end());
 
 	uint64_t * remoteValueFound = reinterpret_cast<uint64_t *>(localAddr);
-	/* 
+	/*
      * if we fetched the value we expected, then
      * we are holding the lock now (that is, we swapped successfully!)
      * else, re-post your request for the lock
@@ -753,7 +753,6 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
     ASSERT( src.mr );
-    ASSERT( dst.mr );
 
     int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
     if (size == 0) numMsgs = 1;
@@ -782,9 +781,9 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
         /* use wr_id to later demultiplex srcSlot */
-        sr->wr_id = srcSlot; 
+        sr->wr_id = srcSlot;
         /*
-         * In HiCR, we need to know at receiver end which slot 
+         * In HiCR, we need to know at receiver end which slot
          * has received the message. But here is a trick:
          */
         sr->imm_data = dstSlot;
@@ -887,23 +886,23 @@ void IBVerbs :: get_sent_msg_count(size_t * sent_msgs) {
 
 void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 {
-    *rcvd_msgs = rcvdMsgCount[slot];
+    *rcvd_msgs = rcvdMsgCount[slot] + getMsgCount[slot];
 }
 
 void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
 {
-    *sent_msgs = sentMsgCount.at(slot);
+    *sent_msgs = sentMsgCount[slot];
 }
 
 std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
 
     error = 0;
-    LOG(5, "Polling for messages" );
+    LOG(1, "Polling for messages" );
     struct ibv_wc wcs[POLL_BATCH];
     int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
     std::vector<ibv_wc_opcode> opcodes;
     if ( pollResult > 0) {
-        LOG(3, "Process " << m_pid << ": Received " << pollResult << " acknowledgements");
+        LOG(4, "Process " << m_pid << ": Received " << pollResult << " acknowledgements");
 
         for (int i = 0; i < pollResult ; ++i) {
             if (wcs[i].status != IBV_WC_SUCCESS)
@@ -918,10 +917,10 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
                 error = 1;
             }
             else {
-                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
-                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
-                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
-                LOG(3, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
+                LOG(4, "Process " << m_pid << " Send wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
+                LOG(4, "Process " << m_pid << " Send wcs[" << i << "].slid = "<< wcs[i].slid);
+                LOG(4, "Process " << m_pid << " Send wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
+                LOG(4, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
             }
 
             SlotID slot = wcs[i].wr_id;
@@ -931,18 +930,20 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
                 // This is a get call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_READ) {
                     tryIncrement(Op::GET, Phase::POST, slot);
+					LOG(4, "Rank " << m_pid << " with GET, increments getMsgCount to " << getMsgCount[slot] << " for LPF slot " << slot);
                 }
                 // This is a put call completing
-                if (wcs[i].opcode == IBV_WC_RDMA_WRITE)
+                if (wcs[i].opcode == IBV_WC_RDMA_WRITE) {
                     tryIncrement(Op::SEND, Phase::POST, slot);
+					LOG(4, "Rank " << m_pid << " with SEND, increments getMsgCount to " << sentMsgCount[slot] << " for LPF slot " << slot);
+				}
 
-                LOG(3, "Rank " << m_pid << " increments sent message count to " << sentMsgCount[slot] << " for LPF slot " << slot);
             }
         }
     }
     else if (pollResult < 0)
     {
-        LOG( 5, "Failed to poll IB completion queue" );
+        LOG( 1, "Failed to poll IB completion queue" );
         throw Exception("Poll CQ failure");
     }
     return opcodes;
@@ -977,6 +978,10 @@ void IBVerbs :: flushSent()
 
 void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
 
+	bool sentOK = false;
+	bool recvdOK = false;
+	if (expectedSent == 0) sentOK = true;
+	if (expectedRecvd == 0) recvdOK = true;
     int error;
     if (slotActive[slot]) {
         do {
@@ -988,16 +993,21 @@ void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t exp
             // this call triggers doRemoteProgress
             doRemoteProgress();
 
-        } while ((
-                // do we have messages (sent or received)
-                // which are only initiated but incomplete?
-                (rcvdMsgCount[slot] < m_recvInitMsgCount[slot]) ||
-                (sentMsgCount[slot] < m_sendInitMsgCount[slot])
-                ) && 
-            // do the sent and received messages
-            // match our expectations?
-            (rcvdMsgCount[slot] < expectedRecvd
-            || sentMsgCount[slot] < expectedSent));
+			/*
+			 * 1) Are we expecting nothing here (sentOK/recvdOK = true)
+             * 2) do the sent and received messages  match our expectations?
+			 */
+			sentOK = (sentOK || sentMsgCount[slot] >= expectedSent);
+			// We can receive messages passively (from remote puts) and actively (from our gets)
+			recvdOK = (recvdOK || (rcvdMsgCount[slot] + getMsgCount[slot]) >= expectedRecvd);
+		    LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << slot << "] = " << rcvdMsgCount[slot]
+					<< " expectedRecvd = " << expectedRecvd
+					<< " sentMsgCount[" << slot << "] = " << sentMsgCount[slot]
+					<< " expectedSent = " << expectedSent
+					<< " m_recvInitMsgCount[" << slot << "] = " << m_recvInitMsgCount[slot]
+					<< " m_sendInitMsgCount[" << slot << "] = " << m_sendInitMsgCount[slot]);
+
+        } while (!(sentOK && recvdOK));
     }
 }
 
@@ -1040,7 +1050,7 @@ void IBVerbs :: sync(bool resized)
     // flush receive queues
     flushReceived();
 
-    LOG(1, "Process " << m_pid << " will call barrier\n");
+    LOG(4, "Process " << m_pid << " will call barrier at end of sync\n");
     m_comm.barrier();
 
 
