@@ -2452,17 +2452,6 @@ lpf_err_t lpf_flush_sent( lpf_t ctx);
 extern _LPFLIB_API
 lpf_err_t lpf_flush_received( lpf_t ctx);
 
-/**
- * This function portably aborts the application in different ways
- * for different backends. It never calls std::abort
- * \param[in] ctx The LPF context
- * \returns The return code #LPF_SUCCESS (or any other code)
- * is never reached, as this function aborts the execution.
- */
-extern _LPFLIB_API 
-lpf_err_t lpf_abort(lpf_t ctx);
-
-
 #ifdef __cplusplus
 }
 #endif

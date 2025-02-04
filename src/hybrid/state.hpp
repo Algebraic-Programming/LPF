@@ -111,13 +111,6 @@ public:
         return m_mpi.sync();
     }
 
-//    MPI::err_t counting_sync_per_slot(lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) 
-//    {
-//        m_memreg.flush( m_mpi );
-//        m_msgQueue.flush( m_mpi, m_memreg );
-//        return m_mpi.counting_sync_per_slot(slot, expected_sent, expected_rcvd);
-//    }
-
     static double messageGap( lpf_pid_t nprocs, size_t minMsgSize, lpf_sync_attr_t attr)
     {
         (void) nprocs;
