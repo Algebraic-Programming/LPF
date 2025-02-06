@@ -984,13 +984,13 @@ typedef struct lpf_machine {
      * byte. This value may depend on the actual number of processes \a p used,
      * the minimum message size \a min_msg_size the user aims to send and
      * receive, and the type of synchronisation requested via \a attr. The
-	 * value is bitwise equivalent across all processes.
+     * value is bitwise equivalent across all processes.
      *
      * \param[in] p            A value between 1 and #lpf_machine_t.p, where
      *                         both bounds are inclusive.
      * \param[in] min_msg_size A byte size value that is larger or equal to 0.
      * \param[in] attr         A #lpf_sync_attr_t value. When in doubt, always
-     *                         use #LPF_SYNC_DEFAULT
+     *                         use #LPF_SYNC_DEFAULT.
      *
      * \returns The guaranteed value for the message gap given an LPF SPMD
      *          section using \a p processes, for a superstep in which a user
