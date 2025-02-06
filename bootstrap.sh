@@ -278,13 +278,13 @@ echo "--------------------------------------------------"
 echo
 ${CMAKE_EXE} -Wno-dev \
       -DCMAKE_INSTALL_PREFIX="$installdir" \
-      -DCMAKE_BUILD_TYPE=$config           \
-      -DLPFLIB_MAKE_DOC=$doc         \
-      -DLPFLIB_MAKE_TEST_DOC=$doc    \
-      -DLPF_ENABLE_TESTS=$functests  \
+      -DCMAKE_BUILD_TYPE=$config \
+      -DLPFLIB_MAKE_DOC=$doc \
+      -DLPFLIB_MAKE_TEST_DOC=$doc \
+      -DLPF_ENABLE_TESTS=$functests \
       -DGTEST_AGREE_TO_LICENSE=$googletest_license_agreement \
-      -DLPFLIB_PERFTESTS=$perftests  \
-      -DLPFLIB_CONFIG_NAME=${config_name:-${config}}\
+      -DLPFLIB_PERFTESTS=$perftests \
+      -DLPFLIB_CONFIG_NAME=${config_name:-${config}} \
       -DLPF_HWLOC="${hwloc}" \
       $hwloc_found_flag \
       $mpi_cmake_flags \
