@@ -275,60 +275,69 @@ void MessageQueue :: removeReg( memslot_t slot )
 void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
         memslot_t dstSlot, size_t dstOffset, size_t size )
 {
+    if( size == 0 ) { return; }
+    ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
+    if ( srcPid == static_cast<pid_t>(m_pid) )
+    {
+        void * const address = m_memreg.getAddress( dstSlot, dstOffset );
+        (void) std::memcpy(
+            address,
+            m_memreg.getAddress( srcSlot, srcOffset), size
+        );
+        return;
+    }
 #ifdef LPF_CORE_MPI_USES_zero
-    m_ibverbs.get(srcPid,
-            m_memreg.getVerbID( srcSlot),
+    m_ibverbs.get(
+            srcPid,
+            m_memreg.getVerbID( srcSlot ),
             srcOffset,
-            m_memreg.getVerbID( dstSlot),
+            m_memreg.getVerbID( dstSlot ),
             dstOffset,
             size );
 #else
-    if (size > 0)
-    {
-        ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
-        void * address = m_memreg.getAddress( dstSlot, dstOffset );
-        if ( srcPid == static_cast<pid_t>(m_pid) )
-        {
-            std::memcpy( address, m_memreg.getAddress( srcSlot, srcOffset), size);
-        }
-        else
-        {
-            using mpi::ipc::newMsg;
+    using mpi::ipc::newMsg;
 
-            if (size <= m_tinyMsgSize )
-            {
-                // send immediately the request to the source
-                newMsg( BufGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( DstPid ,  m_pid )
-                    .write( SrcSlot, srcSlot)
-                    .write( DstSlot, dstSlot)
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    .send( *m_firstQueue, srcPid );
-            }
-            else
-            {
-                // send the request to the destination process (this process)
-                // for write conflict resolution
-                newMsg( HpGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( SrcPid, srcPid )
-                    .write( DstPid, m_pid )
-                    .write( SrcSlot, srcSlot )
-                    .write( DstSlot, dstSlot )
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    . send( *m_firstQueue, m_pid );
-            }
-        }
-    }
+    if (size <= m_tinyMsgSize )
+    {
+        // send immediately the request to the source
+        newMsg( BufGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( DstPid ,  m_pid )
+            .write( SrcSlot, srcSlot)
+            .write( DstSlot, dstSlot)
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, srcPid );
+    } else {
+        // send the request to the destination process (this process)
+        // for write conflict resolution
+        newMsg( HpGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( SrcPid, srcPid )
+            .write( DstPid, m_pid )
+            .write( SrcSlot, srcSlot )
+            .write( DstSlot, dstSlot )
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, m_pid );
+     }
 #endif
 }
 
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
+    if (size == 0 ) { return; }
+    ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
+    if ( dstPid == static_cast<pid_t>(m_pid) )
+    {
+        void * const address = m_memreg.getAddress( srcSlot, srcOffset );
+        (void) std::memcpy(
+            m_memreg.getAddress( dstSlot, dstOffset),
+            address, size
+        );
+        return;
+    }
 #ifdef LPF_CORE_MPI_USES_zero
     m_ibverbs.put( m_memreg.getVerbID( srcSlot),
             srcOffset,
@@ -337,41 +346,26 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             dstOffset,
             size);
 #else
-    if (size > 0)
+    using mpi::ipc::newMsg;
+    if (size <= m_tinyMsgSize )
     {
-        ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
-        void * address = m_memreg.getAddress( srcSlot, srcOffset );
-        if ( dstPid == static_cast<pid_t>(m_pid) )
-        {
-            std::memcpy( m_memreg.getAddress( dstSlot, dstOffset), address, size);
-        }
-        else
-        {
-            using mpi::ipc::newMsg;
-            if (size <= m_tinyMsgSize )
-            {
-                newMsg( BufPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( DstSlot, dstSlot )
-                    .write( DstOffset, dstOffset )
-                    .write( Payload, address, size )
-                    . send( *m_firstQueue, dstPid );
-            }
-            else
-            {
-                newMsg( HpPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( SrcPid, m_pid )
-                    .write( DstPid, dstPid )
-                    .write( SrcSlot, srcSlot )
-                    .write( DstSlot, dstSlot )
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    .send( *m_firstQueue, dstPid );
-            }
-        }
+        newMsg( BufPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( DstSlot, dstSlot )
+            .write( DstOffset, dstOffset )
+            .write( Payload, address, size )
+            .send( *m_firstQueue, dstPid );
+    } else {
+        newMsg( HpPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( SrcPid, m_pid )
+            .write( DstPid, dstPid )
+            .write( SrcSlot, srcSlot )
+            .write( DstSlot, dstSlot )
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, dstPid );
     }
 #endif
-
 }
 
 int MessageQueue :: sync( bool abort )
@@ -380,7 +374,7 @@ int MessageQueue :: sync( bool abort )
     // if not, deal with normal sync
     (void) abort;
     m_memreg.sync();
-	m_ibverbs.sync(m_resized);
+    m_ibverbs.sync(m_resized);
     m_resized = false;
 #else
 
@@ -1034,11 +1028,11 @@ int MessageQueue :: syncPerSlot(memslot_t slot)
 
     // if not, deal with normal sync
     m_memreg.sync();
-	m_ibverbs.syncPerSlot(m_memreg.getVerbID(slot));
+    m_ibverbs.syncPerSlot(m_memreg.getVerbID(slot));
     m_resized = false;
 
 #endif
-	return 0;
+    return 0;
 }
 
 
