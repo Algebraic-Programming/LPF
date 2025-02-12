@@ -329,9 +329,9 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 {
     if (size == 0 ) { return; }
     ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
+    void * const address = m_memreg.getAddress( srcSlot, srcOffset );
     if ( dstPid == static_cast<pid_t>(m_pid) )
     {
-        void * const address = m_memreg.getAddress( srcSlot, srcOffset );
         (void) std::memcpy(
             m_memreg.getAddress( dstSlot, dstOffset),
             address, size
