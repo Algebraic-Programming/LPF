@@ -423,7 +423,7 @@ err_t ThreadLocalData :: resizeMemreg( size_t nRegs ) // nothrow
     }
 }
 
-err_t ThreadLocalData ::  sync( bool expectExit) 
+err_t ThreadLocalData ::  sync( bool expectExit )
 { 
     if ( m_state->sync(m_pid) )
     {
