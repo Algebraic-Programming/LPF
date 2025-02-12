@@ -66,13 +66,6 @@ public:
     // returns how many processes have entered in an aborted state
     int sync( bool abort );
 
-//only for HiCR
-    void lockSlot( memslot_t srcSlot, size_t srcOffset,
-            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
-
-    void unlockSlot( memslot_t srcSlot, size_t srcOffset,
-		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
-
     void getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot);
 
     void getRcvdMsgCount(size_t * msgs);
@@ -88,7 +81,6 @@ public:
     int countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
 
     int syncPerSlot(memslot_t slot);
-// end only for HiCR
 
 private:
     enum Msgs { BufPut ,

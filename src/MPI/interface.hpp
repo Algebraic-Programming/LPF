@@ -70,8 +70,6 @@ public:
 
     static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
 
-    // only for HiCR
-    // #if
     err_t countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
                                                                                            
     err_t syncPerSlot(memslot_t slot);
@@ -90,16 +88,6 @@ public:
 
     void flushReceived();
 
-    void lockSlot( memslot_t srcSlot, size_t srcOffset, 
-		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-		    size_t size );
-
-    void unlockSlot( memslot_t srcSlot, size_t srcOffset, 
-		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-		    size_t size );
-
-    // only for HiCR
-//#endif
     err_t rehook( spmd_t spmd, args_t args);
 
     void probe( machine_t & machine ) ;

@@ -100,27 +100,6 @@ void Interface :: put( memslot_t srcSlot, size_t srcOffset,
             size );
 }
 
-// only for HiCR
-//#ifdef 
-
-void Interface :: lockSlot( memslot_t srcSlot, size_t srcOffset, 
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-        size_t size ) 
-{
-    m_mesgQueue.lockSlot( srcSlot, srcOffset,
-            dstPid, dstSlot, dstOffset, 
-            size );
-}
-
-void Interface :: unlockSlot( memslot_t srcSlot, size_t srcOffset, 
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-        size_t size ) 
-{
-    m_mesgQueue.unlockSlot( srcSlot, srcOffset,
-            dstPid, dstSlot, dstOffset, 
-            size );
-}
-
 void Interface :: getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot) {
     m_mesgQueue.getRcvdMsgCountPerSlot(msgs, slot);
 }
@@ -171,9 +150,6 @@ err_t Interface :: syncPerSlot(memslot_t slot)
         return LPF_ERR_FATAL;
     }
 }
-
-// only for HiCR
-//#endif
 
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,

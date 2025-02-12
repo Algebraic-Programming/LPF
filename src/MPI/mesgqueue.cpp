@@ -322,34 +322,6 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
 #endif
 }
 
-void MessageQueue :: lockSlot( memslot_t srcSlot, size_t srcOffset,
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
-{
-    ASSERT(srcSlot != LPF_INVALID_MEMSLOT);
-    ASSERT(dstSlot != LPF_INVALID_MEMSLOT);
-    (void) srcOffset;
-    (void) dstOffset;
-    (void) dstPid;
-    (void) size;
-#ifdef LPF_CORE_MPI_USES_zero
-m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
-#endif
-}
-
-void MessageQueue :: unlockSlot( memslot_t srcSlot, size_t srcOffset,
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
-{
-    ASSERT(srcSlot != LPF_INVALID_MEMSLOT);
-    ASSERT(dstSlot != LPF_INVALID_MEMSLOT);
-    (void) srcOffset;
-    (void) dstOffset;
-    (void) dstPid;
-    (void) size;
-#ifdef LPF_CORE_MPI_USES_zero
-m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
-#endif
-}
-
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {

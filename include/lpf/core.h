@@ -2337,68 +2337,6 @@ extern _LPFLIB_API
 lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs );
 
 /**
- * This call blockingly locks a destination slot #dst_slot, relying
- * on IBVerbs Compare-and-Swap atomics.
- * For an example, check tests/functional/func_lpf_compare_and_swap.ibverbs.c
- * It is only implemented for the zero backend (on Infiniband)
- * \param[in] ctx The LPF context
- * \param[in] src_slot Local slot used as source for the 
- * operation to lock the destination slot, registered via lpf_register_local()
- * \param[in] src_offset Source offset to use (0 in most cases)
- * \param[in] dst_pid The process ID of the destination process
- * \param[in] dst_slot The memory slot of the remote destination memory area
- * registered via lpf_register_global().
- * \param[in] dst_offset Destinaton offset (0 in most cases)
- * \param[in] size The number of bytes to copy from the source memory area to
- *                 the destination memory area (#lpf_memslot_t in most cases)
- * \param[in] attr A #lpf_sync_attr_t value (use #LPF_MSG_DEFAULT)
- * \returns #LPF_SUCCESS
- *            When this process successfully locks the slot
- */
-extern _LPFLIB_API
-lpf_err_t lpf_lock_slot(
-    lpf_t ctx,
-    lpf_memslot_t src_slot,
-    size_t src_offset,
-    lpf_pid_t dst_pid,
-    lpf_memslot_t dst_slot,
-    size_t dst_offset,
-    size_t size,
-    lpf_msg_attr_t attr
-);
-
-/**
- * This call blockingly unlocks a destination slot #dst_slot, relying
- * on IBVerbs Compare-and-Swap atomics.
- * For an example, check tests/functional/func_lpf_compare_and_swap.ibverbs.c
- * It is only implemented for the zero backend (on Infiniband)
- * \param[in] ctx The LPF context
- * \param[in] src_slot Local slot used as source for the 
- * operation to lock the destination slot, registered via lpf_register_local()
- * \param[in] src_offset Source offset to use (0 in most cases)
- * \param[in] dst_pid The process ID of the destination process
- * \param[in] dst_slot The memory slot of the remote destination memory area
- * registered via lpf_register_global().
- * \param[in] dst_offset Destinaton offset (0 in most cases)
- * \param[in] size The number of bytes to copy from the source memory area to
- *                 the destination memory area (#lpf_memslot_t in most cases)
- * \param[in] attr A #lpf_sync_attr_t value (use #LPF_MSG_DEFAULT)
- * \returns #LPF_SUCCESS
- *            When this process successfully locks the slot
- */
-extern _LPFLIB_API
-lpf_err_t lpf_unlock_slot(
-    lpf_t ctx,
-    lpf_memslot_t src_slot,
-    size_t src_offset,
-    lpf_pid_t dst_pid,
-    lpf_memslot_t dst_slot,
-    size_t dst_offset,
-    size_t size,
-    lpf_msg_attr_t attr
-);
-
-/**
  * This function returns in @rcvd_msgs the received message count on 
  * LPF slot #slot. It is only implemented for the zero backend (on Infiniband)
  * \param[in] ctx The LPF context
