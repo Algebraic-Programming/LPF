@@ -21,7 +21,7 @@
 #include <string>
 #include <atomic>
 #include <vector>
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
   #include <memory>
 #else
   #include <tr1/memory>
@@ -47,12 +47,12 @@ typedef enum Phase {
 } Phase;
 
 namespace lpf {
-    
+
     class Communication;
-    
+
     namespace mpi {
 
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
 using std::shared_ptr;
 #else
 using std::tr1::shared_ptr;
@@ -86,7 +86,7 @@ public:
 
     void resizeMemreg( size_t size );
     void resizeMesgq( size_t size );
-    
+
     SlotID regLocal( void * addr, size_t size );
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
@@ -97,10 +97,10 @@ public:
 
     void blockingCompareAndSwap(SlotID srSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap);
 
-    void put( SlotID srcSlot, size_t srcOffset, 
+    void put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
 
-    void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
+    void get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size );
 
     void flushSent();
@@ -111,10 +111,10 @@ public:
 
     void countingSyncPerSlot(SlotID tag, size_t sent, size_t recvd);
     /**
-     * @syncPerSlot only guarantees that all already scheduled sends (via put), 
-     * or receives (via get) associated with a slot are completed. It does 
+     * @syncPerSlot only guarantees that all already scheduled sends (via put),
+     * or receives (via get) associated with a slot are completed. It does
      * not guarantee that not scheduled operations will be scheduled (e.g.
-     * no guarantee that a remote process will wait til data is put into its 
+     * no guarantee that a remote process will wait til data is put into its
      * memory, as it does schedule the operation (one-sided).
      */
     void syncPerSlot(SlotID slot);
@@ -132,8 +132,8 @@ protected:
     Zero & operator=(const Zero & ); // assignment prohibited
     Zero( const Zero & ); // copying prohibited
 
-    void stageQPs(size_t maxMsgs ); 
-    void reconnectQPs(); 
+    void stageQPs(size_t maxMsgs );
+    void reconnectQPs();
 
     std::vector<ibv_wc_opcode> wait_completion(int& error);
     void doProgress();
@@ -171,14 +171,14 @@ protected:
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with
-    int          m_gidIdx; 
+    int          m_gidIdx;
     uint16_t     m_lid;     // LID of the IB port
-    ibv_mtu      m_mtu;   
+    ibv_mtu      m_mtu;
     struct ibv_device_attr m_deviceAttr;
     size_t       m_maxRegSize;
-    size_t       m_maxMsgSize; 
+    size_t       m_maxMsgSize;
     size_t       m_minNrMsgs;
-    size_t       m_maxSrs; // maximum number of sends requests per QP  
+    size_t       m_maxSrs; // maximum number of sends requests per QP
 
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
@@ -193,7 +193,7 @@ protected:
     std::vector< struct ibv_send_wr > m_srs; // array of send requests
     std::vector< size_t >        m_srsHeads; // head of send queue per peer
     std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
-    SparseSet< pid_t >           m_activePeers; // 
+    SparseSet< pid_t >           m_activePeers; //
     std::vector< pid_t >         m_peerList;
 
     std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
