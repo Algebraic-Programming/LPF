@@ -73,7 +73,7 @@ public:
     static Slot invalidSlot() 
     { return Register::invalidSlot(); }
 
-#if defined LPF_CORE_MPI_USES_ibverbs
+#ifdef LPF_CORE_MPI_USES_ibverbs
     explicit MemoryTable( Communication & comm, mpi::IBVerbs & verbs );
 #elif defined LPF_CORE_MPI_USES_zero
     explicit MemoryTable( Communication & comm, mpi::Zero & verbs );
