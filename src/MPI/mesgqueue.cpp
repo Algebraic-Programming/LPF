@@ -16,6 +16,7 @@
  */
 
 #include "mesgqueue.hpp"
+#include "ibverbs.hpp"
 #include "mpilib.hpp"
 #include "log.hpp"
 #include "assert.hpp"
@@ -97,19 +98,19 @@ MessageQueue :: MessageQueue( Communication & comm )
     , m_edgeRecv()
     , m_edgeSend()
     , m_edgeBuffer()
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     , m_edgeBufferSlot( m_memreg.invalidSlot() )
 #endif
     , m_bodySends()
     , m_bodyRecvs()
     , m_comm( dynamic_cast<mpi::Comm &>(comm) )
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    , m_ibverbs( m_comm )
+    , m_tinyMsgBuf( m_tinyMsgSize + largestHeader(m_nprocs, m_memRange, 0, 0))
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+    , m_ibverbs(m_comm)
     , m_memreg( m_comm, m_ibverbs )
 #else
     , m_memreg( m_comm )
 #endif
-    , m_tinyMsgBuf( m_tinyMsgSize + largestHeader(m_nprocs, m_memRange, 0, 0))
 {
     m_memreg.reserve(1); // reserve slot for edgeBuffer
 }
@@ -179,7 +180,7 @@ err_t MessageQueue :: resizeMesgQueue( size_t nMsgs )
 #ifdef LPF_CORE_MPI_USES_mpimsg
         m_comm.reserveMsgs( 6* nMsgs ); //another factor three stems from sending edges separately .
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
         m_ibverbs.resizeMesgq( 6*nMsgs);
 #endif
 
@@ -270,6 +271,14 @@ void MessageQueue :: removeReg( memslot_t slot )
 void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
         memslot_t dstSlot, size_t dstOffset, size_t size )
 {
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.get(srcPid,
+            m_memreg.getVerbID( srcSlot),
+            srcOffset,
+            m_memreg.getVerbID( dstSlot),
+            dstOffset,
+            size );
+#else
     if (size > 0)
     {
         ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
@@ -310,11 +319,48 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             }
         }
     }
+#endif
+}
+
+void MessageQueue :: lockSlot( memslot_t srcSlot, size_t srcOffset,
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
+{
+    ASSERT(srcSlot != LPF_INVALID_MEMSLOT);
+    ASSERT(dstSlot != LPF_INVALID_MEMSLOT);
+    (void) srcOffset;
+    (void) dstOffset;
+    (void) dstPid;
+    (void) size;
+#ifdef LPF_CORE_MPI_USES_zero
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 0ULL, 1ULL);
+#endif
+}
+
+void MessageQueue :: unlockSlot( memslot_t srcSlot, size_t srcOffset,
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
+{
+    ASSERT(srcSlot != LPF_INVALID_MEMSLOT);
+    ASSERT(dstSlot != LPF_INVALID_MEMSLOT);
+    (void) srcOffset;
+    (void) dstOffset;
+    (void) dstPid;
+    (void) size;
+#ifdef LPF_CORE_MPI_USES_zero
+m_ibverbs.blockingCompareAndSwap(m_memreg.getVerbID(srcSlot), srcOffset, dstPid, m_memreg.getVerbID(dstSlot), dstOffset, size, 1ULL, 0ULL);
+#endif
 }
 
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
 {
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.put( m_memreg.getVerbID( srcSlot),
+            srcOffset,
+            dstPid,
+            m_memreg.getVerbID( dstSlot),
+            dstOffset,
+            size);
+#else
     if (size > 0)
     {
         ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
@@ -348,10 +394,20 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             }
         }
     }
+#endif
+
 }
 
 int MessageQueue :: sync( bool abort )
 {
+#ifdef LPF_CORE_MPI_USES_zero
+    // if not, deal with normal sync
+    (void) abort;
+    m_memreg.sync();
+	m_ibverbs.sync(m_resized);
+    m_resized = false;
+#else
+
     LOG(4, "mpi :: MessageQueue :: sync( abort " << (abort?"true":"false")
             << " )");
     using mpi::ipc::newMsg;
@@ -971,9 +1027,96 @@ int MessageQueue :: sync( bool abort )
     ASSERT( m_bodyRecvs.empty() );
 
     LOG(4, "End of synchronisation");
+#endif
     return 0;
+
 }
 
+int MessageQueue :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
+{
+
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+    (void) expected_sent;
+    (void) expected_rcvd;
+#ifdef LPF_CORE_MPI_USES_zero
+
+    // if not, deal with normal sync
+    m_memreg.sync();
+	m_ibverbs.countingSyncPerSlot(m_memreg.getVerbID(slot), expected_sent, expected_rcvd);
+    m_resized = false;
+
+
+#endif
+	return 0;
+}
+
+int MessageQueue :: syncPerSlot(memslot_t slot)
+{
+
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+#ifdef LPF_CORE_MPI_USES_zero
+
+    // if not, deal with normal sync
+    m_memreg.sync();
+	m_ibverbs.syncPerSlot(m_memreg.getVerbID(slot));
+    m_resized = false;
+
+#endif
+	return 0;
+}
+
+
+void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot)
+{
+
+    ASSERT(msgs != nullptr);
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+#ifdef LPF_CORE_MPI_USES_zero
+    *msgs = 0;
+    m_ibverbs.get_rcvd_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
+#endif
+}
+
+void MessageQueue :: getRcvdMsgCount(size_t * msgs)
+{
+    ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+    *msgs = 0;
+    m_ibverbs.get_rcvd_msg_count(msgs);
+#endif
+}
+
+void MessageQueue :: getSentMsgCount(size_t * msgs)
+{
+    ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+    *msgs = 0;
+    m_ibverbs.get_sent_msg_count(msgs);
+#endif
+}
+void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, memslot_t slot)
+{
+    ASSERT(msgs != nullptr);
+    ASSERT(slot != LPF_INVALID_MEMSLOT);
+#ifdef LPF_CORE_MPI_USES_zero
+    *msgs = 0;
+    m_ibverbs.get_sent_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
+#endif
+}
+
+void MessageQueue :: flushSent()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.flushSent();
+#endif
+}
+
+void MessageQueue :: flushReceived()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.flushReceived();
+#endif
+}
 
 
 } // namespace lpf

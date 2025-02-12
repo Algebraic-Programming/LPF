@@ -33,14 +33,16 @@
 #include <tr1/memory>
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
 #include "ibverbs.hpp"
 #endif
+
 
 namespace lpf {
 
 class _LPFLIB_LOCAL MessageQueue
 {
+
 public:
     explicit MessageQueue( Communication & comm );
 
@@ -49,7 +51,9 @@ public:
 
 
     memslot_t addLocalReg( void * mem, std::size_t size );
+
     memslot_t addGlobalReg( void * mem, std::size_t size );
+
     void      removeReg( memslot_t slot );
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
@@ -62,8 +66,32 @@ public:
     // returns how many processes have entered in an aborted state
     int sync( bool abort );
 
+//only for HiCR
+    void lockSlot( memslot_t srcSlot, size_t srcOffset,
+            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+
+    void unlockSlot( memslot_t srcSlot, size_t srcOffset,
+		    pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+
+    void getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot);
+
+    void getRcvdMsgCount(size_t * msgs);
+
+    void getSentMsgCountPerSlot(size_t * msgs, memslot_t slot);
+
+    void getSentMsgCount(size_t * msgs);
+
+    void flushSent();
+
+    void flushReceived();
+
+    int countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
+
+    int syncPerSlot(memslot_t slot);
+// end only for HiCR
+
 private:
-    enum Msgs { BufPut , 
+    enum Msgs { BufPut ,
         BufGet, BufGetReply,
         HpPut, HpGet , HpBodyReply ,
         HpEdges, HpEdgesReply };
@@ -72,7 +100,7 @@ private:
         SrcPid, DstPid,
         SrcOffset, DstOffset, BufOffset,
         SrcSlot, DstSlot, Size,
-        RoundedDstOffset, RoundedSize, 
+        RoundedDstOffset, RoundedSize,
         Payload, Head, Tail};
 
     struct Edge {
@@ -126,13 +154,13 @@ private:
     std::vector< Edge > m_edgeRecv;
     std::vector< Edge > m_edgeSend;
     std::vector< char > m_edgeBuffer;
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     memslot_t m_edgeBufferSlot;
 #endif
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
     mpi::IBVerbs m_ibverbs;
 #endif
     MemoryTable m_memreg;

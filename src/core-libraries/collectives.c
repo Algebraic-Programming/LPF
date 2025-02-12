@@ -390,6 +390,41 @@ lpf_err_t lpf_allgather(
 	return LPF_SUCCESS;
 }
 
+
+lpf_err_t lpf_allgatherv(
+        lpf_coll_t coll,
+        lpf_memslot_t src,
+        lpf_memslot_t dst,
+        size_t *sizes, 
+        bool exclude_myself
+        ) {
+
+	ASSERT( coll.P > 0 );
+	ASSERT( coll.s < coll.P );
+
+    size_t allgatherv_start_addresses[coll.P];
+
+    for (size_t i=0; i<coll.P; i++) allgatherv_start_addresses[i] = 0;
+
+    for (size_t i=1; i<coll.P; i++) {
+        allgatherv_start_addresses[i] = allgatherv_start_addresses[i-1]+sizes[i-1];
+    }
+
+    size_t me = coll.s;
+    // Do I have anything to send? If no, then, skip, as
+    //  I haven't access to the remote global slots
+    if (sizes[me] > 0) {
+        for (size_t i=0; i<coll.P; i++) {
+            if ((i != me) || !exclude_myself) {
+                const lpf_err_t rc = lpf_put( coll.ctx, src, 0, i, dst, allgatherv_start_addresses[me], sizes[me], LPF_MSG_DEFAULT);
+                if (rc != LPF_SUCCESS) return rc;
+            }
+        }
+    }
+    
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_alltoall(
 	lpf_coll_t coll,
 	lpf_memslot_t src,
