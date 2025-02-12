@@ -135,8 +135,6 @@ protected:
 
     void stageQPs(size_t maxMsgs ); 
     void reconnectQPs(); 
-    void tryLock(SlotID id, int dstPid);
-    void tryUnlock(SlotID id, int dstPid);
 
     std::vector<ibv_wc_opcode> wait_completion(int& error);
     void doProgress();
