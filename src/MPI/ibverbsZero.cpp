@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "ibverbs.hpp"
+#include "ibverbsZero.hpp"
 #include "log.hpp"
 #include "communication.hpp"
 #include "config.hpp"
