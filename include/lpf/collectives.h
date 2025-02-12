@@ -117,6 +117,16 @@ typedef void (*lpf_combiner_t) (size_t n, const void * combine, void * into );
 extern _LPFLIB_API const lpf_coll_t LPF_INVALID_COLL;
 
 /**
+ * ToDo: document allgatherv
+ */
+lpf_err_t lpf_allgatherv(
+        lpf_coll_t coll,
+        lpf_memslot_t src,
+        lpf_memslot_t dst,
+        size_t *sizes, 
+        bool exclude_myself
+        );
+/**
  * Initialises a collectives struct, which allows the scheduling of collective
  * calls. The initialised struct is only valid after a next call to lpf_sync().
  * 

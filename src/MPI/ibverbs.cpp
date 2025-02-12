@@ -45,9 +45,9 @@ namespace {
     }
 }
 
-
 IBVerbs :: IBVerbs( Communication & comm )
-    : m_pid( comm.pid() )
+    : m_comm( comm )
+    , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
     , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
@@ -72,7 +72,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
 {
     m_peerList.reserve( m_nprocs );
 
@@ -96,7 +95,6 @@ IBVerbs :: IBVerbs( Communication & comm )
                 " available, which is not enough" );
         throw Exception( "No Infiniband devices available" );
     }
-
 
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
@@ -144,7 +142,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     // maximum number of work requests per Queue Pair
     m_maxSrs = std::min<size_t>( m_deviceAttr.max_qp_wr, // maximum work requests per QP
                                  m_deviceAttr.max_cqe ); // maximum entries per CQ
-    LOG(3, "Maximum number of send requests is the minimum of "
+
+    LOG(3, "Initial maximum number of send requests is the minimum of "
             << m_deviceAttr.max_qp_wr << " (the maximum of work requests per QP)"
             << " and " << m_deviceAttr.max_cqe << " (the maximum of completion "
             << " queue entries per QP), nameley " << m_maxSrs );
@@ -196,6 +195,58 @@ IBVerbs :: IBVerbs( Communication & comm )
 
     LOG(3, "Allocated completion queue with " << m_nprocs << " entries.");
 
+    /* 
+     * Unfortunately, some RDMA devices advertise max_qp_wr but 
+     * support a much smaller number. We can probe that.
+     * Note that the inofficial documentation on rdmamojo.com states:
+     * <quote>
+     * There may be RDMA devices that for specific transport types may support less outstanding Work Requests than the maximum reported value."
+     * </quote>
+    * Therefore, we here do binary search to find the actual value
+    */
+    struct ibv_qp_init_attr testAttr;
+    std::memset(&testAttr, 0, sizeof(testAttr));
+
+    // We only care about the attr.cap.max_send_wr
+    testAttr.qp_type = IBV_QPT_RC;
+
+    struct ibv_qp * ibv_new_qp_p; 
+    testAttr.cap.max_send_wr = m_maxSrs;
+    testAttr.send_cq = m_cq.get();
+    testAttr.recv_cq = m_cq.get();
+    ibv_new_qp_p = ibv_create_qp(m_pd.get(), &testAttr);
+    if (ibv_new_qp_p == NULL) {
+        size_t left = 1;
+        size_t right = m_maxSrs;
+        size_t largestOkaySize = 0;
+        while (left <= right) 
+        {
+            size_t mid = (left + right) / 2;
+            testAttr.cap.max_send_wr = mid;
+            // test if call succeeds
+            ibv_new_qp_p = ibv_create_qp(m_pd.get(), &testAttr);
+            if (ibv_new_qp_p == NULL) {
+                if (errno != EINVAL) { // error points to unsupported max_send_wr by device
+                    throw Exception("Unexpected error code during binary search for maximum send WR.");
+                }
+                else {
+                    right = mid - 1;
+                }
+            }
+            else {
+                // clean up dummy QP
+                ibv_destroy_qp(ibv_new_qp_p);
+                left = mid + 1;
+                // record that we still succeed
+                largestOkaySize = mid;
+            }
+        }
+        ASSERT(largestOkaySize > 0);
+        m_maxSrs = largestOkaySize;
+        LOG(3, "Revised maximum number of send requests is " << m_maxSrs );
+    }
+
+
     // allocate dummy buffer
     m_dummyBuffer.resize( 8 );
     struct ibv_mr * const ibv_reg_mr_new_p = ibv_reg_mr(
@@ -237,11 +288,8 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.cap.max_recv_sge = 1;
 
         struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
-        if( ibv_new_qp_p == NULL ) {
-            m_stagedQps[i].reset();
-        } else {
-            m_stagedQps[i].reset( ibv_new_qp_p, ibv_destroy_qp );
-        }
+
+        m_stagedQps[i].reset( ibv_new_qp_p, ibv_destroy_qp );
         if (!m_stagedQps[i]) {
             LOG( 1, "Could not create Infiniband Queue pair number " << i );
             throw std::bad_alloc();
@@ -413,8 +461,8 @@ void IBVerbs :: resizeMemreg( size_t size )
         throw std::bad_alloc() ;
     }
 
-    MemoryRegistration null = { 0, 0, 0, 0 };
-    MemorySlot dflt; dflt.glob.resize( m_nprocs, null );
+    MemoryRegistration newMR = { nullptr, 0, 0, 0, m_pid};
+    MemorySlot dflt; dflt.glob.resize( m_nprocs, newMR );
 
     m_memreg.reserve( size, dflt );
 }
@@ -457,11 +505,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
 
@@ -501,11 +545,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     LOG(4, "All-gathering memory register data" );
 
@@ -533,13 +573,13 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
         const char * localAddr
-            = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
+            = static_cast<const char *>(src.glob[m_pid]._addr) + srcOffset;
         const char * remoteAddr
-            = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[dstPid]._addr) + dstOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );
-        sge.lkey = src.mr->lkey;
+            sge.lkey = src.mr->lkey;
         m_sges.push_back( sge );
 
         bool lastMsg = ! m_activePeers.contains( dstPid );
@@ -553,7 +593,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sr.num_sge = 1;
         sr.opcode = IBV_WR_RDMA_WRITE;
         sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = dst.glob[dstPid].rkey;
+        sr.wr.rdma.rkey = dst.glob[dstPid]._rkey;
 
         m_srsHeads[ dstPid ] = m_srs.size();
         m_srs.push_back( sr );
@@ -582,9 +622,9 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
         const char * localAddr
-            = static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[m_pid]._addr) + dstOffset;
         const char * remoteAddr
-            = static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
+            = static_cast<const char *>(src.glob[srcPid]._addr) + srcOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );
@@ -602,7 +642,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr.num_sge = 1;
         sr.opcode = IBV_WR_RDMA_READ;
         sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = src.glob[srcPid].rkey;
+        sr.wr.rdma.rkey = src.glob[srcPid]._rkey;
 
         m_srsHeads[ srcPid ] = m_srs.size();
         m_srs.push_back( sr );

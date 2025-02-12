@@ -53,6 +53,8 @@ void spmd( lpf_t lpf, lpf_pid_t pid, lpf_pid_t nprocs, lpf_args_t args )
     lpf_memslot_t mem_slot = LPF_INVALID_MEMSLOT;
     lpf_register_global( lpf, mem, nprocs, &mem_slot );
 
+    lpf_sync(lpf, LPF_SYNC_DEFAULT);
+
     if (pid != 0) 
         lpf_get( lpf, 0, params_slot, 0, params_slot, 0, sizeof(params), LPF_MSG_DEFAULT );
 

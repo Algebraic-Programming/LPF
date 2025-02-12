@@ -19,10 +19,10 @@
 #include "gtest/gtest.h"
 
 #ifdef _LPF_VERSION
-  #if _LPF_VERSION == 202000L
+  #if _LPF_VERSION == 202400L
     // everything is OK
   #else
-     #error Macro _LPF_VERSION has not been defined as 202000L
+     #error Macro _LPF_VERSION has not been defined as 202400L
   #endif
 #else
    #error Macro _LPF_VERSION has not been defined
@@ -35,5 +35,5 @@
  */
 TEST( API, macro_LPF_VERSION )
 {
-    EXPECT_EQ( 202000L, _LPF_VERSION );
+    EXPECT_EQ( 202400L, _LPF_VERSION );
 }
