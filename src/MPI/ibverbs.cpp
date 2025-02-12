@@ -289,7 +289,11 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
 
         struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
 
-        m_stagedQps[i].reset( ibv_new_qp_p, ibv_destroy_qp );
+        if( ibv_new_qp_p == NULL ) {
+            m_stagedQps[i].reset();
+        } else {
+            m_stagedQps[i].reset( ibv_new_qp_p, ibv_destroy_qp );
+        }
         if (!m_stagedQps[i]) {
             LOG( 1, "Could not create Infiniband Queue pair number " << i );
             throw std::bad_alloc();
