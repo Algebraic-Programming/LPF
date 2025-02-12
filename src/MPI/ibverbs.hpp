@@ -20,7 +20,7 @@
 
 #include <string>
 #include <vector>
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
   #include <memory>
 #else
   #include <tr1/memory>
@@ -34,18 +34,18 @@
 #include "memreg.hpp"
 
 namespace lpf {
-    
+
     class Communication;
-    
+
     namespace mpi {
 
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
 using std::shared_ptr;
 #else
 using std::tr1::shared_ptr;
 #endif
 
-class _LPFLIB_LOCAL IBVerbs 
+class _LPFLIB_LOCAL IBVerbs
 {
 public:
     struct Exception;
@@ -57,7 +57,7 @@ public:
 
     void resizeMemreg( size_t size );
     void resizeMesgq( size_t size );
-    
+
     SlotID regLocal( void * addr, size_t size );
     SlotID regGlobal( void * addr, size_t size );
     void dereg( SlotID id );
@@ -66,10 +66,10 @@ public:
         return m_maxMsgSize;
     }
 
-    void put( SlotID srcSlot, size_t srcOffset, 
+    void put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
 
-    void get( int srcPid, SlotID srcSlot, size_t srcOffset, 
+    void get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size );
 
     // Do the communication and synchronize
@@ -81,8 +81,8 @@ private:
     IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
     IBVerbs( const IBVerbs & ); // copying prohibited
 
-    void stageQPs(size_t maxMsgs ); 
-    void reconnectQPs(); 
+    void stageQPs(size_t maxMsgs );
+    void reconnectQPs();
 
     struct MemoryRegistration {
         void * addr;
@@ -99,11 +99,11 @@ private:
     int    m_pid;    // local process ID
     int    m_nprocs; // number of processes
     int    m_ibPort; // local IB port to work with
-    int    m_gidIdx; 
+    int    m_gidIdx;
     size_t m_maxRegSize;
-    size_t m_maxMsgSize; 
+    size_t m_maxMsgSize;
     size_t m_minNrMsgs;
-    size_t m_maxSrs; // maximum number of sends requests per QP  
+    size_t m_maxSrs; // maximum number of sends requests per QP
 
     shared_ptr< struct ibv_context > m_device;      // device handle
     shared_ptr< struct ibv_pd >      m_pd;          // protection domain
@@ -112,7 +112,7 @@ private:
                                                     // buffer
     Communication & m_comm;
 
-    ibv_mtu m_mtu;   
+    ibv_mtu m_mtu;
 
     std::string m_devName; // IB device name
 
