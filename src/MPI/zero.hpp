@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef LPF_CORE_MPI_IBVERBS_HPP
-#define LPF_CORE_MPI_IBVERBS_HPP
+#ifndef LPF_CORE_MPI_ZERO_HPP
+#define LPF_CORE_MPI_ZERO_HPP
 
 #include <string>
 #include <atomic>
@@ -74,16 +74,15 @@ class MemoryRegistration {
 
 };
 
-
-class _LPFLIB_LOCAL IBVerbs 
+class _LPFLIB_LOCAL Zero
 {
 public:
     struct Exception;
 
     typedef size_t SlotID;
 
-    explicit IBVerbs( Communication & );
-    ~IBVerbs();
+    explicit Zero( Communication & );
+    ~Zero();
 
     void resizeMemreg( size_t size );
     void resizeMesgq( size_t size );
@@ -130,8 +129,8 @@ public:
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
 
 protected:
-    IBVerbs & operator=(const IBVerbs & ); // assignment prohibited
-    IBVerbs( const IBVerbs & ); // copying prohibited
+    Zero & operator=(const Zero & ); // assignment prohibited
+    Zero( const Zero & ); // copying prohibited
 
     void stageQPs(size_t maxMsgs ); 
     void reconnectQPs(); 

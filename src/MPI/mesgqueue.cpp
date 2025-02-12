@@ -16,7 +16,11 @@
  */
 
 #include "mesgqueue.hpp"
+#ifdef LPF_CORE_MPI_USES_zero
+#include "zero.hpp"
+#else
 #include "ibverbs.hpp"
+#endif
 #include "mpilib.hpp"
 #include "log.hpp"
 #include "assert.hpp"
@@ -104,13 +108,13 @@ MessageQueue :: MessageQueue( Communication & comm )
     , m_bodySends()
     , m_bodyRecvs()
     , m_comm( dynamic_cast<mpi::Comm &>(comm) )
-    , m_tinyMsgBuf( m_tinyMsgSize + largestHeader(m_nprocs, m_memRange, 0, 0))
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     , m_ibverbs(m_comm)
     , m_memreg( m_comm, m_ibverbs )
 #else
     , m_memreg( m_comm )
 #endif
+    , m_tinyMsgBuf( m_tinyMsgSize + largestHeader(m_nprocs, m_memRange, 0, 0))
 {
     m_memreg.reserve(1); // reserve slot for edgeBuffer
 }
@@ -1014,12 +1018,12 @@ int MessageQueue :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, si
 
     // if not, deal with normal sync
     m_memreg.sync();
-	m_ibverbs.countingSyncPerSlot(m_memreg.getVerbID(slot), expected_sent, expected_rcvd);
+    m_ibverbs.countingSyncPerSlot(m_memreg.getVerbID(slot), expected_sent, expected_rcvd);
     m_resized = false;
 
 
 #endif
-	return 0;
+    return 0;
 }
 
 int MessageQueue :: syncPerSlot(memslot_t slot)

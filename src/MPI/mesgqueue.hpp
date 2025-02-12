@@ -33,8 +33,11 @@
 #include <tr1/memory>
 #endif
 
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#ifdef LPF_CORE_MPI_USES_ibverbs
 #include "ibverbs.hpp"
+#endif
+#ifdef LPF_CORE_MPI_USES_zero
+#include "zero.hpp"
 #endif
 
 
@@ -152,8 +155,11 @@ private:
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#if defined LPF_CORE_MPI_USES_ibverbs  || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs
     mpi::IBVerbs m_ibverbs;
+#endif
+#if defined LPF_CORE_MPI_USES_zero
+    mpi::Zero m_ibverbs;
 #endif
     MemoryTable m_memreg;
     std::vector< char > m_tinyMsgBuf;

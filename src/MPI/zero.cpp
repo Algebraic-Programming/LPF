@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "ibverbsZero.hpp"
+#include "zero.hpp"
 #include "log.hpp"
 #include "communication.hpp"
 #include "config.hpp"
@@ -33,7 +33,7 @@
 namespace lpf { namespace mpi {
 
 
-struct IBVerbs::Exception : std::runtime_error {
+struct Zero::Exception : std::runtime_error {
     Exception(const char * what) : std::runtime_error( what ) {}
 };
 
@@ -45,14 +45,14 @@ namespace {
             case 1024: return IBV_MTU_1024;
             case 2048: return IBV_MTU_2048;
             case 4096: return IBV_MTU_4096;
-            default: throw IBVerbs::Exception("Illegal MTU size");
+            default: throw Zero::Exception("Illegal MTU size");
         }
         return IBV_MTU_4096;
     }
 }
 
 
-IBVerbs :: IBVerbs( Communication & comm )
+Zero :: Zero( Communication & comm )
     : m_comm( comm )
     , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
@@ -255,11 +255,11 @@ IBVerbs :: IBVerbs( Communication & comm )
 
 }
 
-IBVerbs :: ~IBVerbs()
+Zero :: ~Zero()
 { }
 
 
-inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
+inline void Zero :: tryIncrement(Op op, Phase phase, SlotID slot) {
 
     switch (phase) {
         case Phase::INIT:
@@ -303,7 +303,7 @@ inline void IBVerbs :: tryIncrement(Op op, Phase phase, SlotID slot) {
     }
 }
 
-void IBVerbs :: stageQPs( size_t maxMsgs )
+void Zero :: stageQPs( size_t maxMsgs )
 {
     // create the queue pairs
     for ( size_t i = 0; i < static_cast<size_t>(m_nprocs); ++i) {
@@ -336,7 +336,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
     }
 }
 
-void IBVerbs :: doRemoteProgress() {
+void Zero :: doRemoteProgress() {
 	struct ibv_wc wcs[POLL_BATCH];
 	struct ibv_recv_wr wr;
 	struct ibv_sge sg;
@@ -398,7 +398,7 @@ void IBVerbs :: doRemoteProgress() {
 	} while (pollResult == POLL_BATCH && totalResults < MAX_POLLING);
 }
 
-void IBVerbs :: reconnectQPs()
+void Zero :: reconnectQPs()
 {
     ASSERT( m_stagedQps[0] );
     m_comm.barrier();
@@ -539,7 +539,7 @@ void IBVerbs :: reconnectQPs()
         }
 
 
-void IBVerbs :: resizeMemreg( size_t size )
+void Zero :: resizeMemreg( size_t size )
 {
     if ( size > size_t(std::numeric_limits<int>::max()) )
     {
@@ -559,7 +559,7 @@ void IBVerbs :: resizeMemreg( size_t size )
     m_memreg.reserve( size, dflt );
 }
 
-void IBVerbs :: resizeMesgq( size_t size )
+void Zero :: resizeMesgq( size_t size )
 {
 
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
@@ -595,7 +595,7 @@ void IBVerbs :: resizeMesgq( size_t size )
     LOG(4, "Message queue has been reallocated to size " << size );
 }
 
-IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
+Zero :: SlotID Zero :: regLocal( void * addr, size_t size )
 {
     ASSERT( size <= m_maxRegSize );
 
@@ -627,7 +627,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     return id;
 }
 
-IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
+Zero :: SlotID Zero :: regGlobal( void * addr, size_t size )
 {
     ASSERT( size <= m_maxRegSize );
 
@@ -666,7 +666,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     return id;
 }
 
-void IBVerbs :: dereg( SlotID id )
+void Zero :: dereg( SlotID id )
 {
     slotActive[id] = false;
     m_recvInitMsgCount[id] = 0;
@@ -679,7 +679,7 @@ void IBVerbs :: dereg( SlotID id )
 }
 
 
-void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
+void Zero :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
@@ -745,7 +745,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
     tryIncrement(Op::SEND, Phase::PRE, srcSlot);
 }
 
-void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
+void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
               SlotID dstSlot, size_t dstOffset, size_t size )
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
@@ -809,25 +809,25 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
 }
 
-void IBVerbs :: get_rcvd_msg_count(size_t * rcvd_msgs) {
+void Zero :: get_rcvd_msg_count(size_t * rcvd_msgs) {
     *rcvd_msgs = m_recvdMsgs;
 }
 
-void IBVerbs :: get_sent_msg_count(size_t * sent_msgs) {
+void Zero :: get_sent_msg_count(size_t * sent_msgs) {
     *sent_msgs = m_sentMsgs;
 }
 
-void IBVerbs :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
+void Zero :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 {
     *rcvd_msgs = rcvdMsgCount[slot] + getMsgCount[slot];
 }
 
-void IBVerbs :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
+void Zero :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
 {
     *sent_msgs = sentMsgCount[slot];
 }
 
-std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
+std::vector<ibv_wc_opcode> Zero :: wait_completion(int& error) {
 
     error = 0;
     LOG(1, "Polling for messages" );
@@ -882,11 +882,11 @@ std::vector<ibv_wc_opcode> IBVerbs :: wait_completion(int& error) {
     return opcodes;
 }
 
-void IBVerbs :: flushReceived() {
+void Zero :: flushReceived() {
         doRemoteProgress();
 }
 
-void IBVerbs :: flushSent()
+void Zero :: flushSent()
 {
     int isError = 0;
 
@@ -909,7 +909,7 @@ void IBVerbs :: flushSent()
 
 }
 
-void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
+void Zero :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
 
 	bool sentOK = false;
 	bool recvdOK = false;
@@ -944,7 +944,7 @@ void IBVerbs :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t exp
     }
 }
 
-void IBVerbs :: syncPerSlot(SlotID slot) {
+void Zero :: syncPerSlot(SlotID slot) {
     int error;
 
     do {
@@ -974,7 +974,7 @@ void IBVerbs :: syncPerSlot(SlotID slot) {
 
 }
 
-void IBVerbs :: sync(bool resized)
+void Zero :: sync(bool resized)
 {
     (void) resized;
 
