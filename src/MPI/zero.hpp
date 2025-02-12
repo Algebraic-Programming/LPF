@@ -65,13 +65,18 @@ class MemoryRegistration {
         uint32_t _lkey;
         uint32_t _rkey;
         int _pid;
-        MemoryRegistration(char * addr, size_t size, uint32_t lkey, uint32_t rkey, int pid) : _addr(addr),
-        _size(size), _lkey(lkey), _rkey(rkey), _pid(pid)
-        { }
-        MemoryRegistration() : _addr(nullptr), _size(0), _lkey(0), _rkey(0), _pid(-1) {}
+        MemoryRegistration(
+            char * addr, size_t size,
+            uint32_t lkey, uint32_t rkey,
+            int pid
+        ) : _addr(addr), _size(size), _lkey(lkey), _rkey(rkey), _pid(pid)
+        {}
+        MemoryRegistration() :
+            _addr(nullptr), _size(0),
+            _lkey(0), _rkey(0), _pid(-1)
+        {}
         size_t serialize(char ** buf);
         static MemoryRegistration * deserialize(char * buf);
-
 };
 
 class _LPFLIB_LOCAL Zero
@@ -94,8 +99,6 @@ public:
     size_t getMaxMsgSize() const {
         return m_maxMsgSize;
     }
-
-    void blockingCompareAndSwap(SlotID srSlot, size_t srcOffset, int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, uint64_t compare_add, uint64_t swap);
 
     void put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size );
@@ -144,45 +147,44 @@ protected:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
+    int    m_pid;    // local process ID
+    int    m_nprocs; // number of processes
+    int    m_ibPort; // local IB port to work with
+    int    m_gidIdx;
+    size_t m_maxRegSize;
+    size_t m_maxMsgSize;
+    size_t m_cqSize;
+    size_t m_minNrMsgs;
+    size_t m_maxSrs; // maximum number of sends requests per QP
+    size_t m_postCount;
+    size_t m_recvCount;
 
-    Communication & m_comm;
-    int             m_pid; // local process ID
-    int             m_nprocs; // number of processes
-
-    // additions for IBZero
+    shared_ptr< struct ibv_context > m_device;      // device handle
+    shared_ptr< struct ibv_pd >      m_pd;          // protection domain
+    shared_ptr< struct ibv_cq >      m_cq;          // complation queue
+    shared_ptr< struct ibv_cq >	     m_cqLocal;     // completion queue
+    shared_ptr< struct ibv_cq >	     m_cqRemote;    // completion queue
+    shared_ptr< struct ibv_srq >     m_srq;         // shared receive queue
+    shared_ptr< struct ibv_mr >      m_dummyMemReg; // registration of dummy
+                                                    // buffer
     std::atomic_size_t m_numMsgs;
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
     std::atomic_size_t m_recvdMsgs;
+
+    uint16_t     m_lid;     // LID of the IB port
+
+    Communication & m_comm;
+
+    std::string  m_devName; // IB device name
+
+    ibv_mtu      m_mtu;
+
+    struct ibv_device_attr m_deviceAttr;
+
     std::vector<size_t> m_recvInitMsgCount;
     std::vector<size_t> m_getInitMsgCount;
     std::vector<size_t> m_sendInitMsgCount;
-    size_t              m_cqSize;
-    shared_ptr< struct ibv_cq >	 m_cqLocal;  // completion queue
-    shared_ptr< struct ibv_cq >	 m_cqRemote; // completion queue
-    shared_ptr< struct ibv_srq > m_srq;      // shared receive queue
-    std::vector<size_t> rcvdMsgCount;
-    std::vector<size_t> sentMsgCount;
-    std::vector<size_t> getMsgCount;
-    std::vector<bool> slotActive;
-    size_t m_postCount;
-    size_t m_recvCount;
-    // end additions
-
-    std::string  m_devName; // IB device name
-    int          m_ibPort;  // local IB port to work with
-    int          m_gidIdx;
-    uint16_t     m_lid;     // LID of the IB port
-    ibv_mtu      m_mtu;
-    struct ibv_device_attr m_deviceAttr;
-    size_t       m_maxRegSize;
-    size_t       m_maxMsgSize;
-    size_t       m_minNrMsgs;
-    size_t       m_maxSrs; // maximum number of sends requests per QP
-
-    shared_ptr< struct ibv_context > m_device; // device handle
-    shared_ptr< struct ibv_pd >      m_pd;     // protection domain
-    shared_ptr< struct ibv_cq >      m_cq;     // complation queue
 
     // Disconnected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_stagedQps;
@@ -190,21 +192,27 @@ protected:
     // Connected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_connectedQps;
 
-    std::vector< struct ibv_send_wr > m_srs; // array of send requests
-    std::vector< size_t >        m_srsHeads; // head of send queue per peer
-    std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
-    SparseSet< pid_t >           m_activePeers; //
-    std::vector< pid_t >         m_peerList;
+    std::vector< struct ibv_send_wr > m_srs;          // array of send requests
+    std::vector< size_t >             m_srsHeads;     // head of send queue per
+                                                      // peer
+    std::vector< size_t >             m_nMsgsPerPeer; // number of messages per
+                                                      // peer
+    std::vector< pid_t >              m_peerList;
 
-    std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
-    std::vector< struct ibv_wc > m_wcs; // array of work completions
+    std::vector< struct ibv_sge > m_sges;        // array of scatter/gather
+                                                 // entries
+    std::vector< struct ibv_wc >  m_wcs;         // array of work completions
+    std::vector< char >           m_dummyBuffer; // dummy receive buffer
+
+    std::vector<size_t> rcvdMsgCount;
+    std::vector<size_t> sentMsgCount;
+    std::vector<size_t> getMsgCount;
+    std::vector<bool>   slotActive;
+
+    SparseSet< pid_t > m_activePeers;
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
-
-    shared_ptr< struct ibv_mr > m_dummyMemReg; // registration of dummy buffer
-    std::vector< char > m_dummyBuffer; // dummy receive buffer
-                                       //
 };
 
 
