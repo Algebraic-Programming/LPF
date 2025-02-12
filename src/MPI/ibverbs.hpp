@@ -96,24 +96,29 @@ private:
         std::vector< MemoryRegistration > glob; // array for global registrations
     };
 
+    int    m_pid;    // local process ID
+    int    m_nprocs; // number of processes
+    int    m_ibPort; // local IB port to work with
+    int    m_gidIdx; 
+    size_t m_maxRegSize;
+    size_t m_maxMsgSize; 
+    size_t m_minNrMsgs;
+    size_t m_maxSrs; // maximum number of sends requests per QP  
+
+    shared_ptr< struct ibv_context > m_device;      // device handle
+    shared_ptr< struct ibv_pd >      m_pd;          // protection domain
+    shared_ptr< struct ibv_cq >      m_cq;          // complation queue
+    shared_ptr< struct ibv_mr >      m_dummyMemReg; // registration of dummy
+                                                    // buffer
     Communication & m_comm;
 
-    int          m_pid; // local process ID
-    int          m_nprocs; // number of processes
-    std::string  m_devName; // IB device name
-    int          m_ibPort;  // local IB port to work with
-    int          m_gidIdx; 
-    uint16_t     m_lid;     // LID of the IB port
-    ibv_mtu      m_mtu;   
-    struct ibv_device_attr m_deviceAttr;
-    size_t       m_maxRegSize;
-    size_t       m_maxMsgSize; 
-    size_t       m_minNrMsgs;
-    size_t       m_maxSrs; // maximum number of sends requests per QP  
+    ibv_mtu m_mtu;   
 
-    shared_ptr< struct ibv_context > m_device; // device handle
-    shared_ptr< struct ibv_pd >      m_pd;     // protection domain
-    shared_ptr< struct ibv_cq >      m_cq;     // complation queue
+    std::string m_devName; // IB device name
+
+    struct ibv_device_attr m_deviceAttr;
+
+    uint16_t m_lid;     // LID of the IB port
 
     // Disconnected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_stagedQps;
@@ -121,20 +126,22 @@ private:
     // Connected queue pairs
     std::vector< shared_ptr< struct ibv_qp > > m_connectedQps;
 
-    std::vector< struct ibv_send_wr > m_srs; // array of send requests
-    std::vector< size_t >        m_srsHeads; // head of send queue per peer
-    std::vector< size_t >        m_nMsgsPerPeer; // number of messages per peer
-    SparseSet< pid_t >           m_activePeers; // 
-    std::vector< pid_t >         m_peerList;
+    std::vector< struct ibv_send_wr > m_srs;          // array of send requests
+    std::vector< size_t >             m_srsHeads;     // head of send queue per
+                                                      // peer
+    std::vector< size_t >             m_nMsgsPerPeer; // number of messages per
+                                                      // peer
+    std::vector< pid_t >              m_peerList;
 
-    std::vector< struct ibv_sge > m_sges; // array of scatter/gather entries
-    std::vector< struct ibv_wc > m_wcs; // array of work completions
+    std::vector< struct ibv_sge > m_sges;        // array of scatter/gather
+                                                 // entries
+    std::vector< struct ibv_wc >  m_wcs;         // array of work completions
+    std::vector< char >           m_dummyBuffer; // dummy receive buffer
+
+    SparseSet< pid_t >           m_activePeers;
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
-
-    shared_ptr< struct ibv_mr > m_dummyMemReg; // registration of dummy buffer
-    std::vector< char > m_dummyBuffer; // dummy receive buffer
 };
 
 
