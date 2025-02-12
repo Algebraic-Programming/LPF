@@ -155,7 +155,7 @@ private:
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#if defined LPF_CORE_MPI_USES_ibverbs
+#ifdef LPF_CORE_MPI_USES_ibverbs
     mpi::IBVerbs m_ibverbs;
 #endif
 #if defined LPF_CORE_MPI_USES_zero
