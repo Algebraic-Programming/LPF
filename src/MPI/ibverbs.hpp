@@ -146,9 +146,11 @@ protected:
     };
 
 
-    Communication & m_comm;
     int          m_pid; // local process ID
     int          m_nprocs; // number of processes
+
+    // additions for IBZero
+    Communication & m_comm;
     std::atomic_size_t m_numMsgs;
     std::atomic_size_t m_recvTotalInitMsgCount;
     std::atomic_size_t m_sentMsgs;
@@ -156,6 +158,17 @@ protected:
     std::vector<size_t> m_recvInitMsgCount;
     std::vector<size_t> m_getInitMsgCount;
     std::vector<size_t> m_sendInitMsgCount;
+    size_t              m_cqSize;
+    shared_ptr< struct ibv_cq >	 m_cqLocal;  // completion queue
+    shared_ptr< struct ibv_cq >	 m_cqRemote; // completion queue
+    shared_ptr< struct ibv_srq > m_srq;      // shared receive queue
+    std::vector<size_t> rcvdMsgCount;
+    std::vector<size_t> sentMsgCount;
+    std::vector<size_t> getMsgCount;
+    std::vector<bool> slotActive;
+    size_t m_postCount;
+    size_t m_recvCount;
+    // end additions
 
     std::string  m_devName; // IB device name
     int          m_ibPort;  // local IB port to work with
@@ -165,24 +178,18 @@ protected:
     struct ibv_device_attr m_deviceAttr;
     size_t       m_maxRegSize;
     size_t       m_maxMsgSize; 
-    size_t		m_cqSize;
     size_t       m_minNrMsgs;
     size_t       m_maxSrs; // maximum number of sends requests per QP  
 
     shared_ptr< struct ibv_context > m_device; // device handle
     shared_ptr< struct ibv_pd >      m_pd;     // protection domain
     shared_ptr< struct ibv_cq >      m_cq;     // complation queue
-   	shared_ptr< struct ibv_cq >		 m_cqLocal;	// completion queue
-	shared_ptr< struct ibv_cq >		 m_cqRemote;	// completion queue
-    shared_ptr< struct ibv_srq >		 m_srq;	 	// shared receive queue
 
     // Disconnected queue pairs
-    std::vector< shared_ptr<struct ibv_qp> > m_stagedQps; 
+    std::vector< shared_ptr< struct ibv_qp > > m_stagedQps;
 
     // Connected queue pairs
-    std::vector< shared_ptr<struct ibv_qp> > m_connectedQps; 
-
-
+    std::vector< shared_ptr< struct ibv_qp > > m_connectedQps;
 
     std::vector< struct ibv_send_wr > m_srs; // array of send requests
     std::vector< size_t >        m_srsHeads; // head of send queue per peer
@@ -199,12 +206,6 @@ protected:
     shared_ptr< struct ibv_mr > m_dummyMemReg; // registration of dummy buffer
     std::vector< char > m_dummyBuffer; // dummy receive buffer
                                        //
-    std::vector<size_t> rcvdMsgCount;
-    std::vector<size_t> sentMsgCount;
-    std::vector<size_t> getMsgCount;
-    std::vector<bool> slotActive;
-    size_t m_postCount;
-    size_t m_recvCount;
 };
 
 
