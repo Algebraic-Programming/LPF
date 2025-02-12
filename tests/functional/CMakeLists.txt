@@ -77,13 +77,20 @@ set(test_sources
     func_lpf_exec_single_call_single_arg_single_proc.cpp
     func_lpf_get_parallel_alltoall.cpp
     func_lpf_get_parallel_huge.cpp
+    func_lpf_get_parallel_overlapping_complete.cpp
+    func_lpf_get_parallel_overlapping_pyramid.cpp
+    func_lpf_get_parallel_overlapping_rooftiling.cpp
     func_lpf_get_parallel_single.cpp
     func_lpf_probe_parallel_full.cpp
     func_lpf_probe_parallel_nested.cpp
     func_lpf_probe_root.cpp
+    func_lpf_put_and_get_overlapping.cpp
     func_lpf_put_parallel_alltoall.cpp
     func_lpf_put_parallel_big.cpp
     func_lpf_put_parallel_huge.cpp
+    func_lpf_put_parallel_overlapping_complete.cpp
+    func_lpf_put_parallel_overlapping_pyramid.cpp
+    func_lpf_put_parallel_overlapping_rooftiling.cpp
     func_lpf_put_parallel_single.cpp
     func_lpf_register_and_deregister_irregularly.cpp
     func_lpf_register_and_deregister_many_global.cpp
