@@ -36,6 +36,8 @@ extern "C" {
  *
  * This mechanism is implemented by allowing tags to be tied to LPF message
  * attributes as well as to LPF synchronisation attributes.
+ *
+ * @{
  */
 
 /**

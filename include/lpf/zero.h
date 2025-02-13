@@ -43,6 +43,8 @@ extern "C" {
  * [1] Alpert, R. and Philbin, J., 1997. cBSP: Zero-cost synchronization in a
  *     modified BSP model. NEC Research Institute, Princeton, NJ, USA,
  *     Tech. Rep, pp.97-054.
+ *
+ * @{
  */
 
 /**
