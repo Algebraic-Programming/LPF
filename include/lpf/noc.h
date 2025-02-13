@@ -439,6 +439,46 @@ lpf_err_t lpf_noc_get(
 );
 
 /**
+ * Processes completed outgoing RDMA requests that have occurred without calling
+ * #lpf_sync.
+ *
+ * \note Two example such mechanisms could be #lpf_noc_get and/or #lpf_noc_put.
+ *
+ * Some fabrics require user-space to regularly flush internal queues at a rate
+ * that does matches (or exceeds) that of outgoing RDMA request completions.
+ *
+ * @param[in] ctx  The LPF context.
+ * @param[in] attr The synchronisation attribute.
+ *
+ * \note Rationale: \a attr is requested as given different attributes,
+ *       different internal queues may be processed.
+ *
+ * @returns #LPF_SUCCESS When the flush has completed.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
+
+/**
+ * Processes completed incoming RDMA requests that have occurred without calling
+ * #lpf_sync.
+ *
+ * \note Two example such mechanisms could be #lpf_noc_get and/or #lpf_noc_put.
+ *
+ * Some fabrics require user-space to regularly flush internal queues at a rate
+ * that does matches (or exceeds) that of outgoing RDMA request completions.
+ *
+ * @param[in] ctx  The LPF context.
+ * @param[in] attr The synchronisation attribute.
+ *
+ * \note Rationale: \a attr is requested as given different attributes,
+ *       different internal queues may be processed.
+ *
+ * @returns #LPF_SUCCESS When the flush has completed.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_flush_received( lpf_t ctx, lpf_sync_attr_t attr );
+
+/**
  * @}
  *
  * @}
