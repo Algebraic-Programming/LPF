@@ -406,6 +406,11 @@ _LPFLIB_API lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
 
 _LPFLIB_API lpf_err_t lpf_abort(lpf_t ctx) 
 {
+    using namespace lpf::hybrid;
+    ThreadState * const t = realContext(ctx);
+    MPI mpi = t->nodeState().mpi();
+    mpi.abort();
+    return LPF_SUCCESS;
 }
 
 _LPFLIB_API lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
