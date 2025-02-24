@@ -47,8 +47,6 @@ MemoryTable :: MemoryTable( Communication & comm
 MemoryTable :: Slot
 MemoryTable :: addNoc( void * mem, std::size_t size )  // nothrow
 {
-    ASSERT(mem != nullptr);
-    ASSERT(size != 0);
 #if defined LPF_CORE_MPI_USES_zero 
     Memory rec( mem, size, m_ibverbs.regNoc(mem, size));
     return m_memreg.addNocReg( rec);
