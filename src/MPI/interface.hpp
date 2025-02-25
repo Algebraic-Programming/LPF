@@ -27,7 +27,8 @@
 
 namespace lpf
 {
-    class _LPFLIB_LOCAL Process;
+
+class _LPFLIB_LOCAL Process;
 
 class _LPFLIB_LOCAL Interface  
 {
@@ -55,10 +56,16 @@ public:
 
     memslot_t registerLocal( void * mem, size_t size ) ;  // nothrow
 
+    tag_t registerTag() ; // can throw(!)
+
     void deregister( memslot_t slot ) ; // nothrow
+
+    void destroyTag( tag_t tag ) ; // can throw(!)
 
     err_t resizeMemreg( size_t nRegs ) ; // nothrow
     err_t resizeMesgQueue( size_t nMsgs ) ; // nothrow
+
+    err_t resizeTagRegister( size_t nTags ) ; // can throw(!)
 
     void abort() ; // nothrow
 

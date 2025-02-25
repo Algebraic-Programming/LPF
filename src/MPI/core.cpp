@@ -70,6 +70,8 @@ const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ;
 
 const lpf_machine_t LPF_INVALID_MACHINE = { 0, 0, NULL, NULL };
 
+const lpf_tag_t LPF_INVALID_TAG = std::numeric_limits< uint32_t >::max();
+
 namespace {
     lpf::Interface * realContext( lpf_t ctx )
     { 
@@ -211,6 +213,23 @@ lpf_err_t lpf_register_local(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_tag_create(
+    lpf_t ctx,
+    lpf_tag_t * tag
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        try {
+            *tag = i->registerTag();
+        } catch (const std::exception & e) {
+            LOG(1, "lpf_tag_create fatal error: " << e.what());
+            return LPF_ERR_FATAL;
+	}
+    }
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_deregister(
     lpf_t ctx,
     lpf_memslot_t memslot
@@ -219,6 +238,23 @@ lpf_err_t lpf_deregister(
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())
         i->deregister(memslot);
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_tag_destroy(
+    lpf_t ctx,
+    lpf_tag_t tag
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        try {
+            i->destroyTag(tag);
+	} catch (const std::exception & e) {
+            LOG(1, "lpf_tag_destroy fatal error: " << e.what());
+	    return LPF_ERR_FATAL;
+        }
+    }
     return LPF_SUCCESS;
 }
 
@@ -351,7 +387,7 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
     lpf::Interface * i = realContext(ctx);
     if (i->isAborted())
         return LPF_SUCCESS;
-    
+
     return i->resizeMemreg(max_regs);
 }
 
@@ -360,8 +396,25 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
     lpf::Interface * i = realContext(ctx);
     if (i->isAborted())
         return LPF_SUCCESS;
-    
+
     return i->resizeMesgQueue(max_msgs);
+}
+
+lpf_err_t lpf_resize_tag_register(
+    lpf_t ctx,
+    size_t max_tags
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (i->isAborted())
+        return LPF_SUCCESS;
+
+    try {
+        return i->resizeTagRegister(max_tags);
+    } catch (const std::exception & e) {
+        LOG(1, "lpf_resize_tag_register fatal error: " << e.what());
+	return LPF_ERR_FATAL;
+    }
 }
 
 lpf_err_t lpf_abort( lpf_t ctx ) {
@@ -369,5 +422,4 @@ lpf_err_t lpf_abort( lpf_t ctx ) {
     MPI_Abort(MPI_COMM_WORLD, 6);
     return LPF_SUCCESS;
 }
-
 

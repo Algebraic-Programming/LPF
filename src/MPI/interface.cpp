@@ -170,9 +170,19 @@ memslot_t Interface :: registerLocal( void * mem, size_t size )
     return m_mesgQueue.addLocalReg( mem, size );
 }
 
+tag_t Interface :: registerTag()
+{
+    return m_mesgQueue.addTag();
+}
+
 void Interface :: deregister( memslot_t slot )
 {
     m_mesgQueue.removeReg( slot );
+}
+
+void Interface :: destroyTag( tag_t tag )
+{
+    m_mesgQueue.removeTag( tag );
 }
 
 err_t Interface :: resizeMemreg( size_t nRegs ) 
@@ -183,6 +193,11 @@ err_t Interface :: resizeMemreg( size_t nRegs )
 err_t Interface :: resizeMesgQueue( size_t nMsgs ) 
 {
     return m_mesgQueue.resizeMesgQueue( nMsgs );
+}
+
+err_t Interface :: resizeTagRegister( size_t nTags )
+{
+    return m_mesgQueue.resizeTagreg( nTags );
 }
 
 void Interface :: abort()

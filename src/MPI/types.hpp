@@ -19,11 +19,13 @@
 #define LPF_CORE_TYPES_HPP
 
 #include "lpf/core.h"
+#include "lpf/tags.h"
 
 namespace lpf {
 
 typedef lpf_err_t err_t;
 typedef lpf_pid_t pid_t;
+typedef lpf_tag_t tag_t;
 typedef lpf_args_t args_t;
 typedef lpf_spmd_t spmd_t;
 typedef lpf_memslot_t memslot_t;

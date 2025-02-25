@@ -248,6 +248,23 @@ err_t MessageQueue :: resizeMemreg( size_t nRegs )
     return LPF_SUCCESS;
 }
 
+err_t MessageQueue :: resizeTagreg( size_t nRegs )
+{
+#ifdef LPF_CORE_MPI_USES_zero
+    try {
+        m_ibverbs.resizeTagreg( nRegs );
+    } catch (const std::bad_alloc &) {
+        return LPF_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        return LPF_ERR_FATAL;
+    }
+    return LPF_SUCCESS;
+#else
+    (void) nRegs;
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
+}
+
 memslot_t MessageQueue :: addLocalReg( void * mem, std::size_t size)
 {
     memslot_t slot = m_memreg.addLocal( mem, size );
@@ -264,12 +281,31 @@ memslot_t MessageQueue :: addGlobalReg( void * mem, std::size_t size )
     return slot;
 }
 
+tag_t MessageQueue :: addTag()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+    return m_ibverbs.regTag();
+#else
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
+}
+
 void MessageQueue :: removeReg( memslot_t slot )
 {
     if (m_memreg.getSize( slot ) > 0)
         m_msgsort.delRegister(slot);
 
     m_memreg.remove( slot );
+}
+
+void MessageQueue :: removeTag( tag_t tag )
+{
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.deregTag( tag );
+#else
+    (void) tag;
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
 }
 
 void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,

@@ -64,6 +64,7 @@ Zero :: Zero( Communication & comm )
     , m_maxSrs(0)
     , m_postCount(0)
     , m_recvCount(0)
+    , m_tag_capacity(0)
     , m_device()
     , m_pd()
     , m_cqLocal()
@@ -563,36 +564,59 @@ void Zero :: resizeMesgq( size_t size )
 {
 
     m_cqSize = std::min<size_t>(size,m_maxSrs/4);
-	size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
-	if (m_cqLocal) {
-		ibv_resize_cq(m_cqLocal.get(), m_cqSize);
-	}
-	if(remote_size >= m_postCount){
-		if (m_cqRemote) {
-			ibv_resize_cq(m_cqRemote.get(),  remote_size);
-		}
-	}
-	stageQPs(m_cqSize);
+    size_t remote_size = std::min<size_t>(m_cqSize*m_nprocs,m_maxSrs/4);
+    if (m_cqLocal) {
+        ibv_resize_cq(m_cqLocal.get(), m_cqSize);
+    }
+    if(remote_size >= m_postCount){
+        if (m_cqRemote) {
+            ibv_resize_cq(m_cqRemote.get(),  remote_size);
+        }
+    }
+    stageQPs(m_cqSize);
     reconnectQPs();
-	if(remote_size >= m_postCount){
-		if (m_srq) {
-			struct ibv_recv_wr wr;
-			struct ibv_sge sg;
-			struct ibv_recv_wr *bad_wr;
-			sg.addr = (uint64_t) NULL;
-			sg.length = 0;
-			sg.lkey = 0;
-			wr.next = NULL;
-			wr.sg_list = &sg;
-			wr.num_sge = 0;
-			wr.wr_id = m_pid;
-			for(int i = m_postCount; i < (int)remote_size; ++i){
-				ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
-				m_postCount++;
-			}
-		}
-	}
+    if(remote_size >= m_postCount){
+        if (m_srq) {
+            struct ibv_recv_wr wr;
+            struct ibv_sge sg;
+            struct ibv_recv_wr *bad_wr;
+            sg.addr = (uint64_t) NULL;
+            sg.length = 0;
+            sg.lkey = 0;
+            wr.next = NULL;
+            wr.sg_list = &sg;
+            wr.num_sge = 0;
+            wr.wr_id = m_pid;
+            for(int i = m_postCount; i < (int)remote_size; ++i){
+                ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
+                m_postCount++;
+            }
+        }
+    }
     LOG(4, "Message queue has been reallocated to size " << size );
+}
+
+void Zero :: resizeTagreg( size_t size )
+{
+    if( m_tag_capacity >= size ) {
+        LOG(4, "Tag queue: smaller capacity required, request ignored" );
+        return;
+    }
+
+    ASSERT( size > m_tag_capacity );
+
+    // reserve new capacity
+    m_free_tags.reserve( size );
+
+    // if ok, push new tag IDs to free tags
+    for( size_t k = m_tag_capacity; k < size; ++k ) {
+        m_free_tags.push_back( static_cast<TagID>(k) );
+    }
+
+    // correct tag capacity
+    m_tag_capacity = size;
+
+    LOG(4, "Tag queue: new capacity in effect ( " << size << " )");
 }
 
 Zero :: SlotID Zero :: regLocal( void * addr, size_t size )
@@ -666,6 +690,16 @@ Zero :: SlotID Zero :: regGlobal( void * addr, size_t size )
     return id;
 }
 
+Zero :: TagID Zero :: regTag() {
+    if( m_free_tags.size() == 0 ) {
+        throw Exception("No free tags available");
+    }
+    const TagID ret = m_free_tags.back();
+    m_free_tags.pop_back();
+    LOG(4, "Tag " << ret << " has been allocated");
+    return ret;
+}
+
 void Zero :: dereg( SlotID id )
 {
     slotActive[id] = false;
@@ -678,6 +712,12 @@ void Zero :: dereg( SlotID id )
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
 
+void Zero :: deregTag( TagID id )
+{
+    ASSERT( m_free_tags.size() < m_tag_capacity );
+    m_free_tags.push_back( id );
+    LOG(4, "Tag " << id << " has been released");
+}
 
 void Zero :: put( SlotID srcSlot, size_t srcOffset,
               int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)

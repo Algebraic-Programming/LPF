@@ -85,16 +85,21 @@ public:
     struct Exception;
 
     typedef size_t SlotID;
+    typedef uint32_t TagID;
 
     explicit Zero( Communication & );
     ~Zero();
 
     void resizeMemreg( size_t size );
     void resizeMesgq( size_t size );
+    void resizeTagreg( size_t size );
 
     SlotID regLocal( void * addr, size_t size );
     SlotID regGlobal( void * addr, size_t size );
+    TagID regTag();
+
     void dereg( SlotID id );
+    void deregTag( TagID id );
 
     size_t getMaxMsgSize() const {
         return m_maxMsgSize;
@@ -113,6 +118,7 @@ public:
     void doRemoteProgress();
 
     void countingSyncPerSlot(SlotID tag, size_t sent, size_t recvd);
+
     /**
      * @syncPerSlot only guarantees that all already scheduled sends (via put),
      * or receives (via get) associated with a slot are completed. It does
@@ -138,9 +144,10 @@ protected:
     void stageQPs(size_t maxMsgs );
     void reconnectQPs();
 
-    std::vector<ibv_wc_opcode> wait_completion(int& error);
     void doProgress();
     void tryIncrement(Op op, Phase phase, SlotID slot);
+
+    std::vector<ibv_wc_opcode> wait_completion(int& error);
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
@@ -158,12 +165,13 @@ protected:
     size_t m_maxSrs; // maximum number of sends requests per QP
     size_t m_postCount;
     size_t m_recvCount;
+    size_t m_tag_capacity;
 
     shared_ptr< struct ibv_context > m_device;      // device handle
     shared_ptr< struct ibv_pd >      m_pd;          // protection domain
     shared_ptr< struct ibv_cq >      m_cq;          // complation queue
-    shared_ptr< struct ibv_cq >	     m_cqLocal;     // completion queue
-    shared_ptr< struct ibv_cq >	     m_cqRemote;    // completion queue
+    shared_ptr< struct ibv_cq >      m_cqLocal;     // completion queue
+    shared_ptr< struct ibv_cq >      m_cqRemote;    // completion queue
     shared_ptr< struct ibv_srq >     m_srq;         // shared receive queue
     shared_ptr< struct ibv_mr >      m_dummyMemReg; // registration of dummy
                                                     // buffer
@@ -182,6 +190,7 @@ protected:
 
     struct ibv_device_attr m_deviceAttr;
 
+    std::vector<TagID>  m_free_tags;
     std::vector<size_t> m_recvInitMsgCount;
     std::vector<size_t> m_getInitMsgCount;
     std::vector<size_t> m_sendInitMsgCount;

@@ -51,13 +51,14 @@ public:
 
     err_t resizeMemreg( size_t nRegs );
     err_t resizeMesgQueue( size_t nMsgs );
-
+    err_t resizeTagreg( size_t nTags );
 
     memslot_t addLocalReg( void * mem, std::size_t size );
-
     memslot_t addGlobalReg( void * mem, std::size_t size );
+    tag_t addTag();
 
-    void      removeReg( memslot_t slot );
+    void removeReg( memslot_t slot );
+    void removeTag( tag_t tag );
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             memslot_t dstSlot, size_t dstOffset, size_t size );
