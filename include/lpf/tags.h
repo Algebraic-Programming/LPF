@@ -169,6 +169,46 @@ lpf_err_t lpf_tag_destroy(
 );
 
 /**
+ * Creates a new message attribute that is compatible with the LPF tags
+ * extension.
+ *
+ * If an implementation supports additional extensions that employ message tag
+ * attributes, then attributes initialised by this extension result in a valid
+ * message attribute for use with those other extensions also.
+ *
+ * \note This does \em not imply that using message attributes from multiple
+ *       extensions simultaneously always yields sensible behaviour; this
+ *       depends on the specification of the extensions.
+ *
+ * This extension is compatible with zero-cost synchronisation extensions.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr Where a new message attribute will be allocated.
+ *
+ * After a successful function call, applying the returned \a attr without
+ * modification shall induce the same behaviour as applying #LPF_MSG_DEFAULT.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed.
+ *
+ * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
+ *                                 available to create a new message attribute.
+ *
+ * \par BSP costs
+ * None
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_tag_create_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t * attr
+);
+
+/**
  * Retrieves a tag from a message attribute.
  *
  * @param[in,out] ctx  The LPF context.
@@ -178,7 +218,7 @@ lpf_err_t lpf_tag_destroy(
  * The given \a attr must have been initialized.
  *
  * \note An implementation must at least support attribute initialization via
- *       #lpf_tags_create_msg_attr.
+ *       #lpf_tag_create_mattr.
  *
  * If \a attr was not attached a tag, then #LPF_INVALID_TAG will be returned at
  * \a tag.
@@ -208,7 +248,21 @@ lpf_err_t lpf_tag_get_mattr(
  * @param[in]     tag  The tag to attach to \a attr.
  * @param[in,out] attr Where to attach the \a tag to.
  *
- * \TODO Extend documentation
+ * The given \a attr must have been initialized.
+ *
+ * \note An implementation must at least support attribute initialization via
+ *       #lpf_tag_create_mattr.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_tag_set_mattr(

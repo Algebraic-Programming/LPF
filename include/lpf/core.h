@@ -688,8 +688,10 @@
 
 #ifdef __cplusplus
 #include <cstddef>
+#include <cstdint>
 #else
 #include <stddef.h>
+#include <stdint.h>
 #endif
 
 #endif // DOXYGEN
@@ -1066,7 +1068,7 @@ typedef size_t lpf_memslot_t;
 #ifdef DOXYGEN
 typedef ... lpf_msg_attr_t;
 #else
-typedef int lpf_msg_attr_t;
+typedef uint32_t lpf_msg_attr_t;
 #endif
 
 /**

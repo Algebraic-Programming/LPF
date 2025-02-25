@@ -50,11 +50,13 @@ const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
 const lpf_err_t LPF_ERR_FATAL = 2;
 
+const lpf_tag_t LPF_INVALID_TAG = std::numeric_limits< uint32_t >::max();
+
 const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = LPF_INVALID_TAG;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -69,8 +71,6 @@ extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 1;
 const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ; 
 
 const lpf_machine_t LPF_INVALID_MACHINE = { 0, 0, NULL, NULL };
-
-const lpf_tag_t LPF_INVALID_TAG = std::numeric_limits< uint32_t >::max();
 
 namespace {
     lpf::Interface * realContext( lpf_t ctx )
@@ -151,6 +151,40 @@ lpf_err_t lpf_mpi_finalize( lpf_init_t context ) {
     delete static_cast< lpf::mpi::Comm *>(context);
 
     return status;
+}
+
+lpf_err_t lpf_tag_create_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t * attr
+)
+{
+    (void) ctx;
+    *attr = LPF_MSG_DEFAULT;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_tag_get_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t attr,
+    lpf_tag_t * tag
+)
+{
+    (void) ctx;
+    ASSERT( tag != NULL );
+    *tag = attr;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_tag_set_mattr(
+    lpf_t ctx,
+    lpf_tag_t tag,
+    lpf_msg_attr_t * attr
+)
+{
+    (void) ctx;
+    ASSERT( attr != NULL );
+    *attr = tag;
+    return LPF_SUCCESS;
 }
 
 lpf_err_t lpf_hook(
