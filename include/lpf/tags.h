@@ -45,13 +45,11 @@ extern "C" {
 /**
  * The specification version of the tags.
  *
- * \note It is likely that the first released version of tags will not be the
- *       first version, because the various recent extensions (non-coherent
- *       RDMA, zero-cost synchronization, and tags) are all intricately linked.
- *       To keep the main LPF branch understandable, features will be
- *       iteratively introduced.
+ * All implementations shall define this macro. The format is YYYNN, where YYYY
+ * is the year the specification was released, and NN the number of
+ * specifications released before this one in the same year.
  */
-#define LPF_TAGS_VERSION 202500L
+#define _LPF_TAGS_VERSION 202500L
 
 /**
  * The type of an LPF tag.
