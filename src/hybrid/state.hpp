@@ -367,14 +367,14 @@ public:
         return LPF_SUCCESS;
     }
 
-    lpf_err_t countingSyncPerSlot(lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) 
+    lpf_err_t countingSyncPerSlot(lpf_sync_attr_t attr, size_t expected_sent, size_t expected_rcvd)
     { 
-        return m_nodeState.mpi().counting_sync_per_slot(slot, expected_sent, expected_rcvd);
+        return m_nodeState.mpi().counting_sync_per_slot(attr, expected_sent, expected_rcvd);
     }
 
-    lpf_err_t syncPerSlot(lpf_memslot_t slot) 
+    lpf_err_t syncPerSlot(lpf_sync_attr_t attr)
     { 
-        return m_nodeState.mpi().sync_per_slot(slot);
+        return m_nodeState.mpi().sync_per_slot(attr);
     }
 
     ThreadState( NodeState * nodeState, Thread thread )

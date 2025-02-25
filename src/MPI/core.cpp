@@ -54,7 +54,7 @@ const lpf_tag_t LPF_INVALID_TAG = std::numeric_limits< uint32_t >::max();
 
 const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
-const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
+const lpf_sync_attr_t LPF_SYNC_DEFAULT = NULL;
 
 const lpf_msg_attr_t LPF_MSG_DEFAULT = LPF_INVALID_TAG;
 
@@ -163,6 +163,27 @@ lpf_err_t lpf_tag_create_mattr(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_tag_create_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t * attr
+)
+{
+    lpf_err_t ret = LPF_SUCCESS;
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        try {
+            ret = i->createNewSyncAttr(attr);
+	} catch (const std::bad_alloc &) {
+            LOG(2, "lpf_tag_create_sattr: out of memory (bad_alloc)");
+            return LPF_ERR_OUT_OF_MEMORY;
+	} catch (const std::exception &e) {
+            LOG(1, "lpf_tag_create_sattr fatal error: " << e.what());
+            return LPF_ERR_FATAL;
+	}
+    }
+    return ret;
+}
+
 lpf_err_t lpf_tag_get_mattr(
     lpf_t ctx,
     lpf_msg_attr_t attr,
@@ -259,7 +280,7 @@ lpf_err_t lpf_tag_create(
         } catch (const std::exception & e) {
             LOG(1, "lpf_tag_create fatal error: " << e.what());
             return LPF_ERR_FATAL;
-	}
+        }
     }
     return LPF_SUCCESS;
 }
@@ -284,9 +305,9 @@ lpf_err_t lpf_tag_destroy(
     if (!i->isAborted()) {
         try {
             i->destroyTag(tag);
-	} catch (const std::exception & e) {
+        } catch (const std::exception & e) {
             LOG(1, "lpf_tag_destroy fatal error: " << e.what());
-	    return LPF_ERR_FATAL;
+            return LPF_ERR_FATAL;
         }
     }
     return LPF_SUCCESS;

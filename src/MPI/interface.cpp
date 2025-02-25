@@ -151,6 +151,16 @@ err_t Interface :: syncPerSlot(memslot_t slot)
     }
 }
 
+err_t Interface :: createNewSyncAttr(sync_attr_t * attr)
+{
+    if ( 0 == m_aborted )
+    {
+        m_mesgQueue.createNewSyncAttr(attr);
+        return LPF_SUCCESS;
+    }
+    return LPF_ERR_FATAL;
+}
+
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
         size_t size )

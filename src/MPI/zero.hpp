@@ -58,6 +58,8 @@ using std::shared_ptr;
 using std::tr1::shared_ptr;
 #endif
 
+typedef uint32_t TagID;
+
 class MemoryRegistration {
     public:
         char *   _addr;
@@ -81,8 +83,16 @@ class MemoryRegistration {
 
 class _LPFLIB_LOCAL Zero
 {
+
 public:
+
     struct Exception;
+
+    struct SyncAttr {
+        TagID tag;
+        size_t expected_sent;
+        size_t expected_recv;
+    };
 
     typedef size_t SlotID;
     typedef uint32_t TagID;
@@ -136,6 +146,8 @@ public:
     void get_sent_msg_count(size_t * sent_msgs);
     void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
+
+    void createNewSyncAttr(struct SyncAttr * * attr);
 
 protected:
     Zero & operator=(const Zero & ); // assignment prohibited

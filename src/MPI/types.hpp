@@ -30,6 +30,7 @@ typedef lpf_args_t args_t;
 typedef lpf_spmd_t spmd_t;
 typedef lpf_memslot_t memslot_t;
 typedef lpf_machine_t machine_t;
+typedef lpf_sync_attr_t sync_attr_t;
 
 }
 

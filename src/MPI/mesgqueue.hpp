@@ -86,6 +86,8 @@ public:
 
     int syncPerSlot(memslot_t slot);
 
+    void createNewSyncAttr(sync_attr_t * attr);
+
 private:
     enum Msgs { BufPut ,
         BufGet, BufGetReply,
@@ -130,6 +132,11 @@ private:
 
 
     typedef mpi::VirtualAllToAll Queue;
+#if defined LPF_CORE_MPI_USES_ibverbs
+    typedef mpi::IBVerbs Backend;
+#elif defined LPF_CORE_MPI_USES_zero
+    typedef mpi::Zero Backend;
+#endif
     static Queue * newQueue( pid_t pid, pid_t nprocs );
 
     const pid_t m_pid, m_nprocs;
@@ -156,11 +163,8 @@ private:
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    mpi::IBVerbs m_ibverbs;
-#endif
-#if defined LPF_CORE_MPI_USES_zero
-    mpi::Zero m_ibverbs;
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+    Backend m_ibverbs;
 #endif
     MemoryTable m_memreg;
     std::vector< char > m_tinyMsgBuf;

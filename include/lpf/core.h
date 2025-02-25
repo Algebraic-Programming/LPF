@@ -944,7 +944,7 @@ typedef void * lpf_init_t;
 #ifdef DOXYGEN
 typedef ... lpf_sync_attr_t;
 #else
-typedef int lpf_sync_attr_t;
+typedef void * lpf_sync_attr_t;
 #endif
 
 /**

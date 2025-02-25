@@ -37,7 +37,7 @@ extern "C" {
  * end a specific communication phase only, as identified by a tag.
  *
  * This mechanism is implemented by allowing tags to be tied to LPF message
- * attributes as well as to LPF synchronisation attributes.
+ * attributes as well as to LPF synchronization attributes.
  *
  * @{
  */
@@ -47,7 +47,7 @@ extern "C" {
  *
  * \note It is likely that the first released version of tags will not be the
  *       first version, because the various recent extensions (non-coherent
- *       RDMA, zero-cost synchronisation, and tags) are all intricately linked.
+ *       RDMA, zero-cost synchronization, and tags) are all intricately linked.
  *       To keep the main LPF branch understandable, features will be
  *       iteratively introduced.
  */
@@ -172,15 +172,15 @@ lpf_err_t lpf_tag_destroy(
  * Creates a new message attribute that is compatible with the LPF tags
  * extension.
  *
- * If an implementation supports additional extensions that employ message tag
- * attributes, then attributes initialised by this extension result in a valid
- * message attribute for use with those other extensions also.
+ * If an implementation supports additional extensions that employ message
+ * attributes, then attributes initialised by this extension must result in a
+ * valid message attribute for use with those other extensions also.
  *
  * \note This does \em not imply that using message attributes from multiple
  *       extensions simultaneously always yields sensible behaviour; this
  *       depends on the specification of the extensions.
  *
- * This extension is compatible with zero-cost synchronisation extensions.
+ * This extension is compatible with zero-cost synchronization extensions.
  *
  * @param[in,out] ctx  The LPF context.
  * @param[out]    attr Where a new message attribute will be allocated.
@@ -206,6 +206,47 @@ extern _LPFLIB_API
 lpf_err_t lpf_tag_create_mattr(
     lpf_t ctx,
     lpf_msg_attr_t * attr
+);
+
+/**
+ * Creates a new synchronization attribute that is compatible with the LPF tags
+ * extension.
+ *
+ * If an implementation supports additional extensions that employ
+ * synchronization attributes, then attributes initialised by this extension
+ * must result in a valid synchronization attribute for use with those other
+ * extensions also.
+ *
+ * \note This does \em not imply that using synchronization attributes from
+ *       multiple extensions simultaneously always yields sensible behaviour;
+ *       this depends on the specification of the extensions.
+ *
+ * This extension is compatible with zero-cost synchronization extensions.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr Where a new message attribute will be allocated.
+ *
+ * After a successful function call, applying the returned \a attr without
+ * modification shall induce the same behaviour as applying #LPF_MSG_DEFAULT.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed.
+ *
+ * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
+ *                                 available to create a new message attribute.
+ *
+ * \par BSP costs
+ * None
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_tag_create_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t * attr
 );
 
 /**
@@ -272,10 +313,10 @@ lpf_err_t lpf_tag_set_mattr(
 );
 
 /**
- * Gets a tag from a given synchronisation attribute.
+ * Gets a tag from a given synchronization attribute.
  *
  * @param[in,out] ctx  The LPF context.
- * @param[in]     attr The synchronisation attribute.
+ * @param[in]     attr The synchronization attribute.
  * @param[out]    tag  Where to store the tag that was attached to \a attr.
  *
  * \TODO Extend documentation
@@ -288,7 +329,7 @@ lpf_err_t lpf_tag_get_sattr(
 );
 
 /**
- * Attaches a tag to a given synchronisation attribute.
+ * Attaches a tag to a given synchronization attribute.
  *
  * @param[in,out] ctx  The LPF context.
  * @param[in]     tag  The tag to attach to \a attr.

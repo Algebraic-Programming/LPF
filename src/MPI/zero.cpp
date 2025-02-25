@@ -20,10 +20,12 @@
 #include "communication.hpp"
 #include "config.hpp"
 
-#include <stdexcept>
+#include <limits>
+#include <cstdint>
 #include <cstring>
 #include <unistd.h>
 #include <algorithm>
+#include <stdexcept>
 
 #define POLL_BATCH 64
 #define MAX_POLLING 128
@@ -865,6 +867,13 @@ void Zero :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
 void Zero :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
 {
     *sent_msgs = sentMsgCount[slot];
+}
+
+void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
+    *attr = new struct SyncAttr;
+    (*attr)->tag = std::numeric_limits<uint32_t>::max();
+    (*attr)->expected_sent = 0;
+    (*attr)->expected_recv = 0;
 }
 
 std::vector<ibv_wc_opcode> Zero :: wait_completion(int& error) {

@@ -1071,6 +1071,16 @@ int MessageQueue :: syncPerSlot(memslot_t slot)
     return 0;
 }
 
+void MessageQueue :: createNewSyncAttr(sync_attr_t * attr)
+{
+    ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.createNewSyncAttr(
+        reinterpret_cast< Backend::SyncAttr * * >(attr));
+#else
+    *attr = LPF_SYNC_DEFAULT;
+#endif
+}
 
 void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot)
 {

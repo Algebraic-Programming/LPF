@@ -81,6 +81,8 @@ public:
                                                                                            
     err_t syncPerSlot(memslot_t slot);
 
+    err_t createNewSyncAttr(sync_attr_t * attr);
+
     typedef size_t SlotID;
 
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
