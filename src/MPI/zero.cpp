@@ -876,6 +876,16 @@ void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
     (*attr)->expected_recv = 0;
 }
 
+TagID Zero :: getTag(const struct SyncAttr &attr)
+{
+    return attr.tag;
+}
+
+void Zero :: setTag(const TagID tag, struct SyncAttr &attr)
+{
+    attr.tag = tag;
+}
+
 std::vector<ibv_wc_opcode> Zero :: wait_completion(int& error) {
 
     error = 0;

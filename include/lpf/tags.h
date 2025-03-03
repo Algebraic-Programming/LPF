@@ -339,7 +339,7 @@ extern _LPFLIB_API
 lpf_err_t lpf_tag_set_sattr(
     lpf_t ctx,
     lpf_tag_t tag,
-    lpf_sync_attr_t * attr
+    lpf_sync_attr_t attr
 );
 
 /**

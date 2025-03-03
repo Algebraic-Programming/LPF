@@ -196,6 +196,34 @@ lpf_err_t lpf_tag_get_mattr(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_tag_get_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t attr,
+    lpf_tag_t * tag
+)
+{
+    ASSERT( tag != NULL );
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        *tag = i->getTagFromSyncAttr(attr);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_tag_set_sattr(
+    lpf_t ctx,
+    lpf_tag_t tag,
+    lpf_sync_attr_t attr
+)
+{
+    ASSERT( attr != NULL );
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->setTagInSyncAttr(tag,attr);
+    }
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_tag_set_mattr(
     lpf_t ctx,
     lpf_tag_t tag,

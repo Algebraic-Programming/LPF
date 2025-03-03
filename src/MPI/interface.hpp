@@ -83,6 +83,10 @@ public:
 
     err_t createNewSyncAttr(sync_attr_t * attr);
 
+    tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept;
+
+    void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept;
+
     typedef size_t SlotID;
 
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);

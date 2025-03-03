@@ -88,6 +88,10 @@ public:
 
     void createNewSyncAttr(sync_attr_t * attr);
 
+    tag_t getTagFromSyncAttr(sync_attr_t attr);
+
+    void setTagInSyncAttr(tag_t tag, sync_attr_t attr);
+
 private:
     enum Msgs { BufPut ,
         BufGet, BufGetReply,

@@ -148,6 +148,8 @@ public:
     void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
 
     void createNewSyncAttr(struct SyncAttr * * attr);
+    TagID getTag(const struct SyncAttr &attr);
+    void setTag(const TagID tag, struct SyncAttr &attr);
 
 protected:
     Zero & operator=(const Zero & ); // assignment prohibited
