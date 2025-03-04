@@ -1082,28 +1082,6 @@ void MessageQueue :: createNewSyncAttr(sync_attr_t * attr)
 #endif
 }
 
-tag_t MessageQueue :: getTagFromSyncAttr(sync_attr_t attr)
-{
-    ASSERT(attr != NULL);
-#ifdef LPF_CORE_MPI_USES_zero
-    return m_ibverbs.getTag(
-        *static_cast< Backend::SyncAttr * >(attr));
-#else
-    return LPF_INVALID_TAG;
-#endif
-}
-
-void MessageQueue :: setTagInSyncAttr(tag_t tag, sync_attr_t attr)
-{
-    ASSERT(attr != NULL);
-#ifdef LPF_CORE_MPI_USES_zero
-    return m_ibverbs.setTag(tag,
-        *static_cast< Backend::SyncAttr * >(attr));
-#else
-    (void)tag;
-#endif
-}
-
 void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot)
 {
 

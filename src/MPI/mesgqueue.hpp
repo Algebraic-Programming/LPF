@@ -88,9 +88,27 @@ public:
 
     void createNewSyncAttr(sync_attr_t * attr);
 
-    tag_t getTagFromSyncAttr(sync_attr_t attr);
+    inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.getTag(
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        return LPF_INVALID_TAG;
+#endif
+    }
 
-    void setTagInSyncAttr(tag_t tag, sync_attr_t attr);
+    inline void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.setTag(tag,
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)tag;
+#endif
+    }
 
 private:
     enum Msgs { BufPut ,

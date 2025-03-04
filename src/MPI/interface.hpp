@@ -83,9 +83,22 @@ public:
 
     err_t createNewSyncAttr(sync_attr_t * attr);
 
-    tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept;
+    inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            return m_mesgQueue.getTagFromSyncAttr(attr);
+        }
+        return LPF_INVALID_TAG;
+    }
 
-    void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept;
+    inline void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.setTagInSyncAttr(tag,attr);
+	}
+    }
 
     typedef size_t SlotID;
 

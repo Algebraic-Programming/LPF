@@ -161,23 +161,6 @@ err_t Interface :: createNewSyncAttr(sync_attr_t * attr)
     return LPF_ERR_FATAL;
 }
 
-tag_t Interface :: getTagFromSyncAttr(sync_attr_t attr) noexcept
-{
-    if ( 0 == m_aborted )
-    {
-        return m_mesgQueue.getTagFromSyncAttr(attr);
-    }
-    return LPF_INVALID_TAG;
-}
-
-void Interface :: setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept
-{
-    if ( 0 == m_aborted )
-    {
-        m_mesgQueue.setTagInSyncAttr(tag,attr);
-    }
-}
-
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
         size_t size )
