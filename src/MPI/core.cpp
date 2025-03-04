@@ -184,6 +184,22 @@ lpf_err_t lpf_tag_create_sattr(
     return ret;
 }
 
+lpf_err_t lpf_zero_create_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t * attr
+)
+{
+    return lpf_tag_create_mattr(ctx,attr);
+}
+
+lpf_err_t lpf_zero_create_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t * attr
+)
+{
+    return lpf_tag_create_sattr(ctx,attr);
+}
+
 lpf_err_t lpf_tag_get_mattr(
     lpf_t ctx,
     lpf_msg_attr_t attr,

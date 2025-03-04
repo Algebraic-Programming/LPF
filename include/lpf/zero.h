@@ -59,6 +59,91 @@ extern "C" {
 #define LPF_ZERO_COST_SYNC 202500L
 
 /**
+ * Creates a new message attribute that is compatible with the LPF zero-cost
+ * synchronisation extension.
+ *
+ * If an implementation supports additional extensions that employ message
+ * attributes, then attributes initialised by this extension must result in a
+ * valid message attribute for use with those other extensions also.
+ *
+ * \note This does \em not imply that using message attributes from multiple
+ *       extensions simultaneously always yields sensible behaviour; this
+ *       depends on the specification of the extensions.
+ *
+ * This extension is compatible with the tags extension.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr Where a new message attribute will be allocated.
+ *
+ * After a successful function call, applying the returned \a attr without
+ * modification shall induce the same behaviour as applying #LPF_MSG_DEFAULT.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed. After
+ *                       the call to this function, the attribute pointed to by
+ *                       \a attr shall be a valid message attribute.
+ *
+ * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
+ *                                 available to create a new message attribute.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_zero_create_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t * attr
+);
+
+/**
+ * Creates a new synchronization attribute that is compatible with the LPF
+ * zero-cost synchronization extension.
+ *
+ * If an implementation supports additional extensions that employ
+ * synchronization attributes, then attributes initialised by this extension
+ * must result in a valid synchronization attribute for use with those other
+ * extensions also.
+ *
+ * \note This does \em not imply that using synchronization attributes from
+ *       multiple extensions simultaneously always yields sensible behaviour;
+ *       this depends on the specification of the extensions.
+ *
+ * This extension is compatible with the tags extension.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr Where a new message attribute will be allocated.
+ *
+ * After a successful function call, applying the returned \a attr without
+ * modification shall induce the same behaviour as applying #LPF_MSG_DEFAULT.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed. After
+ *                       the call, the attribute pointed to by \a attr shall be
+ *                       a valid synchronisation attribute.
+ *
+ * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
+ *                                 available to create a new message attribute.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_zero_create_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t * attr
+);
+
+/**
  * Attaches zero-cost synchronisation attributes to the given LPF
  * synchronisation attribute.
  *
