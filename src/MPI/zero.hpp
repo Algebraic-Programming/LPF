@@ -91,7 +91,7 @@ public:
     struct SyncAttr {
         TagID tag;
         size_t expected_sent;
-        size_t expected_recv;
+        size_t expected_rcvd;
     };
 
     typedef size_t SlotID;
@@ -162,6 +162,20 @@ public:
     inline void setTag(const TagID tag, struct SyncAttr &attr) noexcept
     {
         attr.tag = tag;
+    }
+
+    inline void setZCAttr(size_t sent, size_t rcvd, struct SyncAttr &attr)
+        noexcept
+    {
+        attr.expected_sent = sent;
+        attr.expected_rcvd = rcvd;
+    }
+
+    inline void getZCAttr(const struct SyncAttr &attr,
+        size_t &sent, size_t &rcvd) noexcept
+    {
+        sent = attr.expected_sent;
+        rcvd = attr.expected_rcvd;
     }
 
 protected:

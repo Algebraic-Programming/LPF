@@ -97,6 +97,7 @@ public:
         (void)attr;
 #endif
     }
+
     inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
     {
         ASSERT(attr != NULL);
@@ -116,6 +117,33 @@ public:
             *static_cast< Backend::SyncAttr * >(attr));
 #else
         (void)tag;
+#endif
+    }
+
+    inline void setZCAttr(size_t sent, size_t rcvd, sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.setZCAttr(sent,rcvd,
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)sent;
+        (void)rcvd;
+        (void)attr;
+#endif
+    }
+
+    inline void getZCAttr(sync_attr_t attr, size_t &sent, size_t &rcvd) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.getZCAttr(
+            *static_cast< Backend::SyncAttr * >(attr),
+            sent, rcvd);
+#else
+        (void)attr;
+        (void)sent;
+        (void)rcvd;
 #endif
     }
 

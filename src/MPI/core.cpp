@@ -290,6 +290,36 @@ lpf_err_t lpf_tag_set_mattr(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_zero_set_expected(
+    lpf_t ctx,
+    size_t expected_sent, size_t expected_rcvd,
+    lpf_sync_attr_t attr
+)
+{
+    ASSERT( attr != NULL );
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->setZCAttr(expected_sent,expected_rcvd,attr);
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_zero_get_expected(
+    lpf_t ctx,
+    lpf_sync_attr_t attr,
+    size_t * expected_sent, size_t * expected_rcvd
+)
+{
+    ASSERT( attr != NULL );
+    ASSERT( expected_sent != NULL );
+    ASSERT( expected_rcvd != NULL );
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getZCAttr(attr,*expected_sent,*expected_rcvd);
+    }
+    return LPF_SUCCESS;
+}
+
 lpf_err_t lpf_hook(
     lpf_init_t _init,
     lpf_spmd_t spmd,

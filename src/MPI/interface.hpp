@@ -108,6 +108,22 @@ public:
         }
     }
 
+    inline void setZCAttr(size_t sent, size_t rcvd, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.setZCAttr(sent,rcvd,attr);
+        }
+    }
+
+    inline void getZCAttr(sync_attr_t attr, size_t &sent, size_t &rcvd) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getZCAttr(attr,sent,rcvd);
+        }
+    }
+
     typedef size_t SlotID;
 
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);

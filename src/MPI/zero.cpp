@@ -873,7 +873,7 @@ void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
     *attr = new struct SyncAttr;
     (*attr)->tag = std::numeric_limits<uint32_t>::max();
     (*attr)->expected_sent = 0;
-    (*attr)->expected_recv = 0;
+    (*attr)->expected_rcvd = 0;
 }
 
 std::vector<ibv_wc_opcode> Zero :: wait_completion(int& error) {

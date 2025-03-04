@@ -210,7 +210,6 @@ lpf_err_t lpf_zero_destroy_sattr(
     lpf_sync_attr_t attr
 );
 
-
 /**
  * Attaches zero-cost synchronisation attributes to the given LPF
  * synchronisation attribute.
@@ -230,14 +229,61 @@ lpf_err_t lpf_zero_destroy_sattr(
  * processes correctly corresponds to the global communication pattern that that
  * #lpf_sync requires wait completion for.
  *
- * @returns #LPF_SUCCESS If the attachment of the zero-cost synchronisation
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS If the attachment of the zero-cost synchronisation
  *                       attributes is successful.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_zero_expect(
+lpf_err_t lpf_zero_set_expected(
     lpf_t ctx,
     size_t expected_sent, size_t expected_rcvd,
-    lpf_sync_attr_t * attr
+    lpf_sync_attr_t attr
+);
+
+/**
+ * Retrieves the attached zero-cost information from the given synchronisation
+ * attribute.
+ *
+ * @param[in,out] ctx           The LPF context
+ * @param[in]     attr          The synchronisation attribute to retrieve the
+ *                              zero-cost attributes from
+ * @param[out]    expected_sent Where to store the expected number of sent
+ *                              messages.
+ * @param[out]    expected_rcvd Where to store the expected number of received
+ *                              messages.
+ *
+ * The given \a attr must have been created via #lpf_zero_create_sattr or must
+ * be created by another extension that is compatible with this zero-cost
+ * synchronizatoin extension.
+ *
+ * If \a attr did not have a preceding call to #lpf_zero_set_expected, then the
+ * default values (0) are returned. An expected zero for both received and sent
+ * number of messages indicates a regular (non zero-cost) synchronization.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_zero_get_expected(
+    lpf_t ctx,
+    lpf_sync_attr_t attr,
+    size_t * expected_sent, size_t * expected_rcvd
 );
 
 /**
@@ -249,18 +295,10 @@ lpf_err_t lpf_zero_expect(
  *       interfaces around zero-cost synchronisation mechanisms.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_zero_get_rcvd( lpf_t ctx, lpf_sync_attr_t attr, size_t * rcvd );
-
-/**
- * Retrieves the current locally-sent number of messages.
- *
- * \TODO extend documentation
- *
- * \note Rationale: this function is useful for implementing task-aware
- *       interfaces around zero-cost synchronisation mechanisms.
- */
-extern _LPFLIB_API
-lpf_err_t lpf_zero_get_sent( lpf_t ctx, lpf_sync_attr_t attr, size_t * sent );
+lpf_err_t lpf_zero_get_status(
+    lpf_t ctx, lpf_sync_attr_t attr,
+    size_t * rcvd, size_t * sent
+);
 
 /**
  * @}
