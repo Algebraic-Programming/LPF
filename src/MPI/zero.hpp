@@ -18,8 +18,9 @@
 #ifndef LPF_CORE_MPI_ZERO_HPP
 #define LPF_CORE_MPI_ZERO_HPP
 
-#include <string>
 #include <atomic>
+#include <limits>
+#include <string>
 #include <vector>
 #if __cplusplus >= 201103L
   #include <memory>
@@ -58,8 +59,6 @@ using std::shared_ptr;
 using std::tr1::shared_ptr;
 #endif
 
-typedef uint32_t TagID;
-
 class MemoryRegistration {
     public:
         char *   _addr;
@@ -86,6 +85,11 @@ class _LPFLIB_LOCAL Zero
 
 public:
 
+    typedef size_t SlotID;
+    typedef uint32_t TagID;
+
+    static constexpr TagID INVALID_TAG = std::numeric_limits<TagID>::max();
+
     struct Exception;
 
     struct SyncAttr {
@@ -93,9 +97,6 @@ public:
         size_t expected_sent;
         size_t expected_rcvd;
     };
-
-    typedef size_t SlotID;
-    typedef uint32_t TagID;
 
     explicit Zero( Communication & );
     ~Zero();
@@ -127,25 +128,26 @@ public:
 
     void doRemoteProgress();
 
-    void countingSyncPerSlot(SlotID tag, size_t sent, size_t recvd);
+    void countingSyncPerSlot(const TagID tag, const size_t sent,
+        const size_t recvd);
 
     /**
-     * @syncPerSlot only guarantees that all already scheduled sends (via put),
+     * @syncPerTag only guarantees that all already scheduled sends (via put),
      * or receives (via get) associated with a slot are completed. It does
      * not guarantee that not scheduled operations will be scheduled (e.g.
      * no guarantee that a remote process will wait til data is put into its
      * memory, as it does schedule the operation (one-sided).
      */
-    void syncPerSlot(SlotID slot);
+    void syncPerTag(TagID tag);
 
     // Do the communication and synchronize
     // 'Reconnect' must be a globally replicated value
-    void sync( bool reconnect);
+    void sync(bool reconnect, const struct SyncAttr * attr);
 
-    void get_rcvd_msg_count(size_t * rcvd_msgs);
-    void get_sent_msg_count(size_t * sent_msgs);
-    void get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot);
-    void get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot);
+    void get_rcvd_msg_count(size_t &rcvd_msgs,
+        const struct SyncAttr * attr) noexcept;
+    void get_sent_msg_count(size_t &sent_msgs,
+        const struct SyncAttr * attr) noexcept;
 
     void createNewSyncAttr(struct SyncAttr * * attr);
 
@@ -186,9 +188,10 @@ protected:
     void reconnectQPs();
 
     void doProgress();
-    void tryIncrement(Op op, Phase phase, SlotID slot);
+    void tryIncrement(const Op op, const Phase phase, const TagID slot)
+        noexcept;
 
-    std::vector<ibv_wc_opcode> wait_completion(int& error);
+    std::vector<ibv_wc_opcode> doLocalProgress(int& error);
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
@@ -257,14 +260,13 @@ protected:
     std::vector<size_t> rcvdMsgCount;
     std::vector<size_t> sentMsgCount;
     std::vector<size_t> getMsgCount;
-    std::vector<bool>   slotActive;
+    std::vector<bool>   tagActive;
 
     SparseSet< pid_t > m_activePeers;
 
     CombinedMemoryRegister< MemorySlot > m_memreg;
 
 };
-
 
 
 } }

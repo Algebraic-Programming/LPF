@@ -456,7 +456,7 @@ lpf_err_t lpf_noc_get(
  * @returns #LPF_SUCCESS When the flush has completed.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
+lpf_err_t lpf_noc_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
 
 /**
  * Processes completed incoming RDMA requests that have occurred without calling
@@ -476,11 +476,10 @@ lpf_err_t lpf_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
  * @returns #LPF_SUCCESS When the flush has completed.
  */
 extern _LPFLIB_API
-lpf_err_t lpf_flush_received( lpf_t ctx, lpf_sync_attr_t attr );
+lpf_err_t lpf_noc_flush_received( lpf_t ctx, lpf_sync_attr_t attr );
 
 /**
  * @}
- *
  * @}
  */
 

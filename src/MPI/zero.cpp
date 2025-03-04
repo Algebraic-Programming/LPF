@@ -29,7 +29,6 @@
 
 #define POLL_BATCH 64
 #define MAX_POLLING 128
-#define ARRAY_SIZE 1000
 
 
 namespace lpf { namespace mpi {
@@ -90,16 +89,6 @@ Zero :: Zero( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_memreg()
 {
-
-    // arrays instead of hashmap for counters
-    m_recvInitMsgCount.resize(ARRAY_SIZE, 0);
-    m_getInitMsgCount.resize(ARRAY_SIZE, 0);
-    m_sendInitMsgCount.resize(ARRAY_SIZE, 0);
-    rcvdMsgCount.resize(ARRAY_SIZE, 0);
-    getMsgCount.resize(ARRAY_SIZE, 0);
-    sentMsgCount.resize(ARRAY_SIZE, 0);
-    slotActive.resize(ARRAY_SIZE, 0);
-
 
     m_peerList.reserve( m_nprocs );
 
@@ -262,45 +251,47 @@ Zero :: ~Zero()
 { }
 
 
-inline void Zero :: tryIncrement(Op op, Phase phase, SlotID slot) {
+inline void Zero :: tryIncrement(const Op op, const Phase phase,
+    const TagID tag) noexcept
+{
 
     switch (phase) {
         case Phase::INIT:
-            rcvdMsgCount[slot] = 0;
-            getMsgCount[slot] = 0;
-            m_recvInitMsgCount[slot] = 0;
-            m_getInitMsgCount[slot] = 0;
-            sentMsgCount[slot] = 0;
-            m_sendInitMsgCount[slot] = 0;
-            slotActive[slot] = true;
+            rcvdMsgCount[tag] = 0;
+            getMsgCount[tag] = 0;
+            m_recvInitMsgCount[tag] = 0;
+            m_getInitMsgCount[tag] = 0;
+            sentMsgCount[tag] = 0;
+            m_sendInitMsgCount[tag] = 0;
+            tagActive[tag] = true;
             break;
         case Phase::PRE:
             if (op == Op::SEND) {
-                m_numMsgs++;
+                (void)m_numMsgs++;
                 //m_sendTotalInitMsgCount++;
-                m_sendInitMsgCount[slot]++;
+                (void)m_sendInitMsgCount[tag]++;
             }
             if (op == Op::RECV) {
-                m_recvTotalInitMsgCount++;
-                m_recvInitMsgCount[slot]++;
+                (void)m_recvTotalInitMsgCount++;
+                (void)m_recvInitMsgCount[tag]++;
             }
             if  (op == Op::GET) {
-                m_recvTotalInitMsgCount++;
-                m_getInitMsgCount[slot]++;
+                (void)m_recvTotalInitMsgCount++;
+                (void)m_getInitMsgCount[tag]++;
             }
             break;
         case Phase::POST:
             if (op == Op::RECV) {
-                m_recvdMsgs ++;
-                rcvdMsgCount[slot]++;
+                (void)m_recvdMsgs++;
+                (void)rcvdMsgCount[tag]++;
             }
             if (op == Op::GET) {
-                m_recvdMsgs++;
-                getMsgCount[slot]++;
+                (void)m_recvdMsgs++;
+                (void)getMsgCount[tag]++;
             }
             if (op == Op::SEND) {
-                m_sentMsgs++;
-                sentMsgCount[slot]++;
+                (void)m_sentMsgs++;
+                (void)sentMsgCount[tag]++;
             }
             break;
     }
@@ -609,6 +600,13 @@ void Zero :: resizeTagreg( size_t size )
 
     // reserve new capacity
     m_free_tags.reserve( size );
+    m_recvInitMsgCount.resize(size, 0);
+    m_getInitMsgCount.resize(size, 0);
+    m_sendInitMsgCount.resize(size, 0);
+    rcvdMsgCount.resize(size, 0);
+    getMsgCount.resize(size, 0);
+    sentMsgCount.resize(size, 0);
+    tagActive.resize(size, 0);
 
     // if ok, push new tag IDs to free tags
     for( size_t k = m_tag_capacity; k < size; ++k ) {
@@ -704,12 +702,6 @@ Zero :: TagID Zero :: regTag() {
 
 void Zero :: dereg( SlotID id )
 {
-    slotActive[id] = false;
-    m_recvInitMsgCount[id] = 0;
-    m_getInitMsgCount[id] = 0;
-    m_sendInitMsgCount[id] = 0;
-    rcvdMsgCount[id] = 0;
-    sentMsgCount[id] = 0;
     m_memreg.removeReg( id );
     LOG(4, "Memory area of slot " << id << " has been deregistered");
 }
@@ -718,6 +710,12 @@ void Zero :: deregTag( TagID id )
 {
     ASSERT( m_free_tags.size() < m_tag_capacity );
     m_free_tags.push_back( id );
+    tagActive[id] = false;
+    m_recvInitMsgCount[id] = 0;
+    m_getInitMsgCount[id] = 0;
+    m_sendInitMsgCount[id] = 0;
+    rcvdMsgCount[id] = 0;
+    sentMsgCount[id] = 0;
     LOG(4, "Tag " << id << " has been released");
 }
 
@@ -851,22 +849,24 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
 }
 
-void Zero :: get_rcvd_msg_count(size_t * rcvd_msgs) {
-    *rcvd_msgs = m_recvdMsgs;
-}
-
-void Zero :: get_sent_msg_count(size_t * sent_msgs) {
-    *sent_msgs = m_sentMsgs;
-}
-
-void Zero :: get_rcvd_msg_count_per_slot(size_t * rcvd_msgs, SlotID slot)
+void Zero :: get_rcvd_msg_count(size_t &rcvd_msgs, const struct SyncAttr * attr)
+     noexcept
 {
-    *rcvd_msgs = rcvdMsgCount[slot] + getMsgCount[slot];
+    if( attr == nullptr || attr->tag == INVALID_TAG ) {
+        rcvd_msgs = m_recvdMsgs;
+    } else {
+        rcvd_msgs = rcvdMsgCount[attr->tag] + getMsgCount[attr->tag];
+    }
 }
 
-void Zero :: get_sent_msg_count_per_slot(size_t * sent_msgs, SlotID slot)
+void Zero :: get_sent_msg_count(size_t &sent_msgs, const struct SyncAttr * attr)
+    noexcept
 {
-    *sent_msgs = sentMsgCount[slot];
+    if( attr == nullptr || attr->tag == INVALID_TAG ) {
+        sent_msgs = m_sentMsgs;
+    } else {
+        sent_msgs = sentMsgCount[attr->tag];
+    }
 }
 
 void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
@@ -876,7 +876,7 @@ void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
     (*attr)->expected_rcvd = 0;
 }
 
-std::vector<ibv_wc_opcode> Zero :: wait_completion(int& error) {
+std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
 
     error = 0;
     LOG(1, "Polling for messages" );
@@ -942,13 +942,13 @@ void Zero :: flushSent()
     bool sendsComplete;
     do {
         sendsComplete = true;
-        for (size_t i = 0; i<ARRAY_SIZE; i++) {
-            if (slotActive[i]) {
+        for (size_t i = 0; i<tagActive.size(); i++) {
+            if (tagActive[i]) {
                 if (m_sendInitMsgCount[i] > sentMsgCount[i] || m_getInitMsgCount[i] > getMsgCount[i]) {
                     sendsComplete = false;
-                    wait_completion(isError);
+                    doLocalProgress(isError);
                     if (isError) {
-                        LOG(1, "Error in wait_completion. Most likely issue is that receiver is not calling ibv_post_srq!\n");
+                        LOG(1, "Error in doLocalProgress. Most likely issue is that receiver is not calling ibv_post_srq!\n");
                         std::abort();
                     }
                 }
@@ -958,84 +958,91 @@ void Zero :: flushSent()
 
 }
 
-void Zero :: countingSyncPerSlot(SlotID slot, size_t expectedSent, size_t expectedRecvd) {
-
-	bool sentOK = false;
-	bool recvdOK = false;
-	if (expectedSent == 0) sentOK = true;
-	if (expectedRecvd == 0) recvdOK = true;
+void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
+    const size_t expectedRecvd)
+{
+    bool sentOK = false;
+    bool recvdOK = false;
+    if (expectedSent == 0) { sentOK = true; }
+    if (expectedRecvd == 0) { recvdOK = true; }
     int error;
-    if (slotActive[slot]) {
+    if (tagActive[tag]) {
         do {
-            wait_completion(error);
+            doLocalProgress(error);
             if (error) {
-                LOG(1, "Error in wait_completion");
-                std::abort();
+                LOG(1, "Error in doLocalProgress");
+		throw std::runtime_error("Error in doLocalProgress");
             }
             // this call triggers doRemoteProgress
             doRemoteProgress();
 
-			/*
-			 * 1) Are we expecting nothing here (sentOK/recvdOK = true)
+            /*
+             * 1) Are we expecting nothing here (sentOK/recvdOK = true)
              * 2) do the sent and received messages  match our expectations?
-			 */
-			sentOK = (sentOK || sentMsgCount[slot] >= expectedSent);
-			// We can receive messages passively (from remote puts) and actively (from our gets)
-			recvdOK = (recvdOK || (rcvdMsgCount[slot] + getMsgCount[slot]) >= expectedRecvd);
-		    LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << slot << "] = " << rcvdMsgCount[slot]
-					<< " expectedRecvd = " << expectedRecvd
-					<< " sentMsgCount[" << slot << "] = " << sentMsgCount[slot]
-					<< " expectedSent = " << expectedSent
-					<< " m_recvInitMsgCount[" << slot << "] = " << m_recvInitMsgCount[slot]
-					<< " m_sendInitMsgCount[" << slot << "] = " << m_sendInitMsgCount[slot]);
-
+             */
+            sentOK = (sentOK || sentMsgCount[tag] >= expectedSent);
+            // We can receive messages passively (from remote puts) and actively (from our gets)
+            recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
+            LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
+                << " expectedRecvd = " << expectedRecvd
+                << " sentMsgCount[" << tag << "] = " << sentMsgCount[tag]
+                << " expectedSent = " << expectedSent
+                << " m_recvInitMsgCount[" << tag << "] = " << m_recvInitMsgCount[tag]
+                << " m_sendInitMsgCount[" << tag << "] = " << m_sendInitMsgCount[tag]);
         } while (!(sentOK && recvdOK));
     }
 }
 
-void Zero :: syncPerSlot(SlotID slot) {
+void Zero :: syncPerTag(TagID tag) {
     int error;
-
+    // this barrier ensures m_recvInitMsgCount is accurate (TBC)
+    m_comm.barrier();
     do {
-        wait_completion(error);
+        doLocalProgress(error);
         if (error) {
-            LOG(1, "Error in wait_completion");
-            std::abort();
+            LOG(1, "Error in doLocalProgress");
+            throw std::runtime_error("Error in doLocalProgress");
         }
         doRemoteProgress();
     }
-    while ((rcvdMsgCount.at(slot) < m_recvInitMsgCount.at(slot)) || (sentMsgCount.at(slot) < m_sendInitMsgCount.at(slot)));
-
-    /**
-     * A subsequent barrier is a controversial decision:
-     * - if we use it, the sync guarantees that
-     *   receiver has received all that it is supposed to
-     *   receive. However, it loses all performance advantages
-     *   of waiting "only on certain tags"
-     * - if we do not barrier, we only make sure the slot
-     *   completes all sends and receives that HAVE ALREADY
-     *   BEEN ISSUED. However, a receiver of an RMA put
-     *   cannot know if it is supposed to receive more messages.
-     *   It can only know if it is receiving via an RMA get.
-     *   Therefore, now this operation is commented
-    */
-    //m_comm.barrier();
-
+    while ((rcvdMsgCount.at(tag) < m_recvInitMsgCount.at(tag)) ||
+        (sentMsgCount.at(tag) < m_sendInitMsgCount.at(tag)));
+    // this barrier ensures local buffers remain locked until remote uses are
+    // guaranteed complete. TODO FIXME: and acknowledgement mechanism would
+    // make this barrier unnecessary.
+    m_comm.barrier();
 }
 
-void Zero :: sync(bool resized)
+void Zero :: sync(bool resized,const struct SyncAttr * attr)
 {
-    (void) resized;
+    const bool defaultSync = attr == nullptr || (attr->tag == INVALID_TAG &&
+        attr->expected_sent == 0 && attr->expected_rcvd == 0);
+    if (defaultSync)
+    {
+        (void) resized;
 
-    // flush send queues
-    flushSent();
-    // flush receive queues
-    flushReceived();
+        // flush send queues
+        flushSent();
+        // flush receive queues
+        flushReceived();
 
-    LOG(4, "Process " << m_pid << " will call barrier at end of sync\n");
-    m_comm.barrier();
+        LOG(4, "Process " << m_pid << " will call barrier at end of sync\n");
+        m_comm.barrier();
 
+	// done
+	return;
+    }
 
+    ASSERT(attr != NULL);
+    const bool tagSync = attr->expected_sent == 0 && attr->expected_rcvd == 0
+        && attr->tag != INVALID_TAG;
+    if (tagSync)
+    {
+        syncPerTag(attr->tag);
+	return;
+    }
+
+    countingSyncPerSlot(attr->tag,attr->expected_sent,attr->expected_rcvd);
 }
 
 

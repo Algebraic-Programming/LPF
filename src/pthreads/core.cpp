@@ -335,13 +335,6 @@ lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
     return realCtx(ctx)->sync();
 }
 
-lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
-{
-    (void) attr; // ignore attr parameter since this implementation only
-                 // implements core functionality
-    return realCtx(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
-}
-
 namespace {
     double messageGap( lpf_pid_t p, 
             size_t min_msg_size, 
@@ -400,30 +393,5 @@ lpf_err_t lpf_abort(lpf_t ctx) {
     // segmentation faults for pthread backend and abnormal
     // programs. std::quick_exit does not call destructors
     std::quick_exit(6);
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_get_rcvd_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
-    *msgs = 0;
-    lpf::ThreadLocalData * t = realCtx(ctx);
-    if (t->isAborted())
-        return LPF_SUCCESS;
-    return LPF_SUCCESS;
-}
-
-
-lpf_err_t lpf_get_rcvd_msg_count(lpf_t ctx, size_t * msgs) {
-    *msgs = 0;
-    lpf::ThreadLocalData * t = realCtx(ctx);
-    if (t->isAborted())
-        return LPF_SUCCESS;
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
-    *msgs = 0;
-    lpf::ThreadLocalData * t = realCtx(ctx);
-    if (t->isAborted())
-        return LPF_SUCCESS;
     return LPF_SUCCESS;
 }

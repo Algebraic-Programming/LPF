@@ -404,15 +404,17 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
 #endif
 }
 
-int MessageQueue :: sync( bool abort )
+int MessageQueue :: sync(bool abort, sync_attr_t attr)
 {
 #ifdef LPF_CORE_MPI_USES_zero
     // if not, deal with normal sync
-    (void) abort;
+    (void)abort;
     m_memreg.sync();
-    m_ibverbs.sync(m_resized);
+    m_ibverbs.sync(m_resized,
+        static_cast< Backend::SyncAttr * >(attr));
     m_resized = false;
 #else
+    (void)attr;
 
     LOG(4, "mpi :: MessageQueue :: sync( abort " << (abort?"true":"false")
             << " )");
@@ -1035,40 +1037,6 @@ int MessageQueue :: sync( bool abort )
     LOG(4, "End of synchronisation");
 #endif
     return 0;
-
-}
-
-int MessageQueue :: countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd)
-{
-
-    ASSERT(slot != LPF_INVALID_MEMSLOT);
-    (void) expected_sent;
-    (void) expected_rcvd;
-#ifdef LPF_CORE_MPI_USES_zero
-
-    // if not, deal with normal sync
-    m_memreg.sync();
-    m_ibverbs.countingSyncPerSlot(m_memreg.getVerbID(slot), expected_sent, expected_rcvd);
-    m_resized = false;
-
-
-#endif
-    return 0;
-}
-
-int MessageQueue :: syncPerSlot(memslot_t slot)
-{
-
-    ASSERT(slot != LPF_INVALID_MEMSLOT);
-#ifdef LPF_CORE_MPI_USES_zero
-
-    // if not, deal with normal sync
-    m_memreg.sync();
-    m_ibverbs.syncPerSlot(m_memreg.getVerbID(slot));
-    m_resized = false;
-
-#endif
-    return 0;
 }
 
 void MessageQueue :: createNewSyncAttr(sync_attr_t * attr)
@@ -1079,44 +1047,6 @@ void MessageQueue :: createNewSyncAttr(sync_attr_t * attr)
         reinterpret_cast< Backend::SyncAttr * * >(attr));
 #else
     *attr = LPF_SYNC_DEFAULT;
-#endif
-}
-
-void MessageQueue :: getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot)
-{
-
-    ASSERT(msgs != nullptr);
-    ASSERT(slot != LPF_INVALID_MEMSLOT);
-#ifdef LPF_CORE_MPI_USES_zero
-    *msgs = 0;
-    m_ibverbs.get_rcvd_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
-#endif
-}
-
-void MessageQueue :: getRcvdMsgCount(size_t * msgs)
-{
-    ASSERT(msgs != nullptr);
-#ifdef LPF_CORE_MPI_USES_zero
-    *msgs = 0;
-    m_ibverbs.get_rcvd_msg_count(msgs);
-#endif
-}
-
-void MessageQueue :: getSentMsgCount(size_t * msgs)
-{
-    ASSERT(msgs != nullptr);
-#ifdef LPF_CORE_MPI_USES_zero
-    *msgs = 0;
-    m_ibverbs.get_sent_msg_count(msgs);
-#endif
-}
-void MessageQueue :: getSentMsgCountPerSlot(size_t * msgs, memslot_t slot)
-{
-    ASSERT(msgs != nullptr);
-    ASSERT(slot != LPF_INVALID_MEMSLOT);
-#ifdef LPF_CORE_MPI_USES_zero
-    *msgs = 0;
-    m_ibverbs.get_sent_msg_count_per_slot(msgs, m_memreg.getVerbID(slot));
 #endif
 }
 

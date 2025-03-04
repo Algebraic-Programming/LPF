@@ -441,10 +441,6 @@ err_t ThreadLocalData ::  sync( bool expectExit )
     return LPF_SUCCESS;
 }
 
-err_t ThreadLocalData :: countingSyncPerSlot(bool expectExit,  lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd) {
-    return LPF_SUCCESS;
-}
-
 namespace {
     int getNumberOfProcs()
     {

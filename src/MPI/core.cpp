@@ -82,6 +82,7 @@ namespace {
     }
 }
 
+// MPI extension
 
 lpf_err_t lpf_mpi_initialize_with_mpicomm( MPI_Comm comm, lpf_init_t * init)
 {
@@ -153,6 +154,8 @@ lpf_err_t lpf_mpi_finalize( lpf_init_t context ) {
     return status;
 }
 
+// tags extension
+
 lpf_err_t lpf_tag_create_mattr(
     lpf_t ctx,
     lpf_msg_attr_t * attr
@@ -204,38 +207,6 @@ lpf_err_t lpf_tag_destroy_sattr(
         i->destroySyncAttr(attr);
     }
     return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_zero_create_mattr(
-    lpf_t ctx,
-    lpf_msg_attr_t * attr
-)
-{
-    return lpf_tag_create_mattr(ctx,attr);
-}
-
-lpf_err_t lpf_zero_destroy_mattr(
-    lpf_t ctx,
-    lpf_msg_attr_t attr
-)
-{
-    return lpf_tag_destroy_mattr(ctx,attr);
-}
-
-lpf_err_t lpf_zero_create_sattr(
-    lpf_t ctx,
-    lpf_sync_attr_t * attr
-)
-{
-    return lpf_tag_create_sattr(ctx,attr);
-}
-
-lpf_err_t lpf_zero_destroy_sattr(
-    lpf_t ctx,
-    lpf_sync_attr_t attr
-)
-{
-    return lpf_tag_destroy_sattr(ctx,attr);
 }
 
 lpf_err_t lpf_tag_get_mattr(
@@ -290,6 +261,40 @@ lpf_err_t lpf_tag_set_mattr(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_zero_create_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t * attr
+)
+{
+    return lpf_tag_create_sattr(ctx,attr);
+}
+
+lpf_err_t lpf_zero_destroy_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t attr
+)
+{
+    return lpf_tag_destroy_sattr(ctx,attr);
+}
+
+// zero-cost extension
+
+lpf_err_t lpf_zero_create_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t * attr
+)
+{
+    return lpf_tag_create_mattr(ctx,attr);
+}
+
+lpf_err_t lpf_zero_destroy_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t attr
+)
+{
+    return lpf_tag_destroy_mattr(ctx,attr);
+}
+
 lpf_err_t lpf_zero_set_expected(
     lpf_t ctx,
     size_t expected_sent, size_t expected_rcvd,
@@ -319,6 +324,41 @@ lpf_err_t lpf_zero_get_expected(
     }
     return LPF_SUCCESS;
 }
+
+lpf_err_t lpf_zero_get_status(
+    lpf_t ctx, lpf_sync_attr_t attr,
+    size_t * rcvd, size_t * sent
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->getRcvdMsgCount(rcvd,attr);
+	i->getSentMsgCount(sent,attr);
+    }
+    return LPF_SUCCESS;
+}
+
+// non-coherent extension
+
+lpf_err_t lpf_noc_flush_sent( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flushSent();
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_noc_flush_received( lpf_t ctx)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        i->flushReceived();
+    }
+    return LPF_SUCCESS;
+}
+
+// core functionality
 
 lpf_err_t lpf_hook(
     lpf_init_t _init,
@@ -443,7 +483,6 @@ lpf_err_t lpf_put( lpf_t ctx,
     return LPF_SUCCESS;
 }
 
-
 lpf_err_t lpf_get(
     lpf_t ctx, 
     lpf_pid_t pid, 
@@ -465,78 +504,7 @@ lpf_err_t lpf_get(
 
 lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
 {
-    (void) attr; // ignore attr parameter since this implementation only
-                 // implements core functionality
-    return realContext(ctx)->sync();
-}
-
-
-lpf_err_t lpf_counting_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot, size_t expected_sent, size_t expected_rcvd)
-{
-    (void) attr; // ignore attr parameter since this implementation only
-                 // implements core functionality
-    return realContext(ctx)->countingSyncPerSlot(slot, expected_sent, expected_rcvd);
-}
-
-lpf_err_t lpf_sync_per_slot( lpf_t ctx, lpf_sync_attr_t attr, lpf_memslot_t slot)
-{
-    (void) attr; // ignore attr parameter since this implementation only
-                 // implements core functionality
-    return realContext(ctx)->syncPerSlot(slot);
-}
-
-lpf_err_t lpf_get_rcvd_msg_count_per_slot( lpf_t ctx, size_t * rcvd_msgs, lpf_memslot_t slot)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->getRcvdMsgCountPerSlot(rcvd_msgs, slot);
-    }
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t * rcvd_msgs)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->getRcvdMsgCount(rcvd_msgs);
-    }
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_get_sent_msg_count( lpf_t ctx, size_t * sent_msgs)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->getSentMsgCount(sent_msgs);
-    }
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t * sent_msgs, lpf_memslot_t slot)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->getSentMsgCountPerSlot(sent_msgs, slot);
-    }
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_flush_sent( lpf_t ctx)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->flushSent();
-    }
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_flush_received( lpf_t ctx)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        i->flushReceived();
-    }
-    return LPF_SUCCESS;
+    return realContext(ctx)->sync(attr);
 }
 
 lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )

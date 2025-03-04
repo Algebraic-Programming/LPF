@@ -68,15 +68,29 @@ public:
 
 
     // returns how many processes have entered in an aborted state
-    int sync( bool abort );
+    int sync(bool abort, sync_attr_t attr);
 
-    void getRcvdMsgCountPerSlot(size_t * msgs, memslot_t slot);
+    inline void getRcvdMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.get_rcvd_msg_count(*msgs,
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
 
-    void getRcvdMsgCount(size_t * msgs);
-
-    void getSentMsgCountPerSlot(size_t * msgs, memslot_t slot);
-
-    void getSentMsgCount(size_t * msgs);
+    inline void getSentMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.get_sent_msg_count(*msgs,
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
 
     void flushSent();
 

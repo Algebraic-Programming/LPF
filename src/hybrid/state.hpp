@@ -367,16 +367,6 @@ public:
         return LPF_SUCCESS;
     }
 
-    lpf_err_t countingSyncPerSlot(lpf_sync_attr_t attr, size_t expected_sent, size_t expected_rcvd)
-    { 
-        return m_nodeState.mpi().counting_sync_per_slot(attr, expected_sent, expected_rcvd);
-    }
-
-    lpf_err_t syncPerSlot(lpf_sync_attr_t attr)
-    { 
-        return m_nodeState.mpi().sync_per_slot(attr);
-    }
-
     ThreadState( NodeState * nodeState, Thread thread )
         : m_error(false)
         , m_threadId( thread.pid() )
@@ -414,25 +404,6 @@ public:
     Thread thread() const { return m_thread; }
 
     bool error() const { return m_error; }
-
-    lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs, lpf_memslot_t slot) {
-
-        return m_nodeState.mpi().get_rcvd_msg_count_per_slot(rcvd_msgs, slot);
-    }
-
-    lpf_pid_t getSentMsgCount(size_t * sent_msgs, lpf_memslot_t slot) {
-
-        return m_nodeState.mpi().get_sent_msg_count_per_slot(sent_msgs, slot);
-    }
-
-    lpf_pid_t getRcvdMsgCount(size_t * rcvd_msgs) {
-
-        return m_nodeState.mpi().get_rcvd_msg_count(rcvd_msgs);
-    }
-
-    lpf_pid_t flush() {
-        return (m_nodeState.mpi().flush_sent() && m_nodeState.mpi().flush_received());
-    }
 
 private:
 

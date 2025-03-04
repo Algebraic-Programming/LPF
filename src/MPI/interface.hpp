@@ -71,15 +71,11 @@ public:
 
     pid_t isAborted() const ;
  
-    err_t sync(); // nothrow
+    err_t sync( sync_attr_t attr ); // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 
     static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
-
-    err_t countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
-                                                                                           
-    err_t syncPerSlot(memslot_t slot);
 
     err_t createNewSyncAttr(sync_attr_t * attr);
 
@@ -126,13 +122,21 @@ public:
 
     typedef size_t SlotID;
 
-    void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
+    inline void getRcvdMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getRcvdMsgCount(msgs, attr);
+        }
+    }
 
-    void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
-
-    void getSentMsgCount(size_t * msgs);
-
-    void getRcvdMsgCount(size_t * msgs);
+    inline void getSentMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getSentMsgCount(msgs, attr);
+        }
+    }
 
     void flushSent();
 
