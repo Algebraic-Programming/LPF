@@ -88,6 +88,15 @@ public:
 
     void createNewSyncAttr(sync_attr_t * attr);
 
+    inline void destroySyncAttr(sync_attr_t attr)
+    {
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.destroySyncAttr(
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
     inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
     {
         ASSERT(attr != NULL);

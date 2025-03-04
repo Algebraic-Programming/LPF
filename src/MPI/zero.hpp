@@ -149,6 +149,11 @@ public:
 
     void createNewSyncAttr(struct SyncAttr * * attr);
 
+    inline void destroySyncAttr(struct SyncAttr * attr)
+    {
+        delete attr;
+    }
+
     inline TagID getTag(const struct SyncAttr &attr) noexcept
     {
         return attr.tag;

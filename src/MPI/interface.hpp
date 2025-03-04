@@ -83,6 +83,14 @@ public:
 
     err_t createNewSyncAttr(sync_attr_t * attr);
 
+    inline void destroySyncAttr(sync_attr_t attr)
+    {
+        if ( 0 == m_aborted )
+        {
+            return m_mesgQueue.destroySyncAttr(attr);
+        }
+    }
+
     inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
     {
         if ( 0 == m_aborted )
@@ -97,7 +105,7 @@ public:
         if ( 0 == m_aborted )
         {
             m_mesgQueue.setTagInSyncAttr(tag,attr);
-	}
+        }
     }
 
     typedef size_t SlotID;

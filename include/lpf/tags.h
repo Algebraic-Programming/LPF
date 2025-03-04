@@ -252,6 +252,73 @@ lpf_err_t lpf_tag_create_sattr(
 );
 
 /**
+ * Destroys a valid message attribute.
+ *
+ * The given \a attr must \em not equal #LPF_MSG_DEFAULT (the default message
+ * attribute may not be destroyed). The given \a attr must be created by this
+ * extension \em or by an extension that is compatible with the tags extension.
+ *
+ * This function may be called on message attributes created by the zero-cost
+ * synchronisation extension.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr The message attribute to be destroyed.
+ *
+ * After a successful function call, the given \a attr shall become invalid and
+ * must not be used in subsequent calls to any LPF primitive.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_tag_destroy_mattr(
+    lpf_t ctx,
+    lpf_msg_attr_t attr
+);
+
+/**
+ * Destroys a valid synchronization attribute.
+ *
+ * The given \a attr must \em not equal #LPF_SYNC_DEFAULT (the default
+ * synchronization attribute may not be destroyed). The given \a attr must be
+ * created by this extension \em or by an extension that is compatible with the
+ * tags extension.
+ *
+ * This function may be called on synchronisation attributes created by the
+ * zero-cost synchronisation extension.
+ *
+ * @param[in,out] ctx  The LPF context.
+ * @param[out]    attr The message attribute to be destroyed.
+ *
+ * After a successful function call, the given \a attr shall become invalid and
+ * must not be used in subsequent calls to any LPF primitive.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_tag_destroy_sattr(
+    lpf_t ctx,
+    lpf_sync_attr_t attr
+);
+
+/**
  * Retrieves a tag from a message attribute.
  *
  * @param[in,out] ctx  The LPF context.
