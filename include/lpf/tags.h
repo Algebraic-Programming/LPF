@@ -110,7 +110,7 @@ extern _LPFLIB_VAR const lpf_tag_t LPF_INVALID_TAG;
  *                                 when this call did not occur at all.
  *
  * \par BSP costs
- * None
+ * None.
  *
  * \par Runtime costs
  * \f$ \mathcal{O}( \mathit{max\_tags} ) \f$.
@@ -189,13 +189,15 @@ lpf_err_t lpf_tag_destroy(
  * \par Thread safety
  * This function is safe to be called from different LPF processes only.
  *
- * \returns #LPF_SUCCESS When a new \a attr was successfully constructed.
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed. After
+ *                       the call to this function, the attribute pointed to by
+ *                       \a attr shall be a valid message attribute.
  *
  * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
  *                                 available to create a new message attribute.
  *
  * \par BSP costs
- * None
+ * None.
  *
  * \par Runtime costs
  * \f$ \Theta( 1 ) \f$.
@@ -230,13 +232,15 @@ lpf_err_t lpf_tag_create_mattr(
  * \par Thread safety
  * This function is safe to be called from different LPF processes only.
  *
- * \returns #LPF_SUCCESS When a new \a attr was successfully constructed.
+ * \returns #LPF_SUCCESS When a new \a attr was successfully constructed. After
+ *                       the call, the attribute pointed to by \a attr shall be
+ *                       a valid synchronisation attribute.
  *
  * \returns #LPF_ERR_OUT_OF_MEMORY When not enough system resources were
  *                                 available to create a new message attribute.
  *
  * \par BSP costs
- * None
+ * None.
  *
  * \par Runtime costs
  * \f$ \Theta( 1 ) \f$.
@@ -254,7 +258,7 @@ lpf_err_t lpf_tag_create_sattr(
  * @param[in]     attr The message attribute.
  * @param[out]    tag  Where to store the tag that was attached to \a attr.
  *
- * The given \a attr must have been initialized.
+ * The given \a attr must be valid.
  *
  * \note An implementation must at least support attribute initialization via
  *       #lpf_tag_create_mattr.
@@ -268,7 +272,7 @@ lpf_err_t lpf_tag_create_sattr(
  * \returns #LPF_SUCCESS A call to this function always succeeds.
  *
  * \par BSP costs
- * None
+ * None.
  *
  * \par Runtime costs
  * \f$ \Theta( 1 ) \f$.
@@ -287,7 +291,7 @@ lpf_err_t lpf_tag_get_mattr(
  * @param[in]     tag  The tag to attach to \a attr.
  * @param[in,out] attr Where to attach the \a tag to.
  *
- * The given \a attr must have been initialized.
+ * The given \a attr must be valid.
  *
  * \note An implementation must at least support attribute initialization via
  *       #lpf_tag_create_mattr.
@@ -298,7 +302,7 @@ lpf_err_t lpf_tag_get_mattr(
  * \returns #LPF_SUCCESS A call to this function always succeeds.
  *
  * \par BSP costs
- * None
+ * None.
  *
  * \par Runtime costs
  * \f$ \Theta( 1 ) \f$.
@@ -311,13 +315,30 @@ lpf_err_t lpf_tag_set_mattr(
 );
 
 /**
- * Gets a tag from a given synchronization attribute.
+ * Retrieves a tag from a synchronization attribute.
  *
  * @param[in,out] ctx  The LPF context.
  * @param[in]     attr The synchronization attribute.
  * @param[out]    tag  Where to store the tag that was attached to \a attr.
  *
- * \TODO Extend documentation
+ * The given \a attr must be valid.
+ *
+ * \note An implementation must at least support attribute initialization via
+ *       #lpf_tag_create_sattr.
+ *
+ * If \a attr was not attached a tag, then #LPF_INVALID_TAG will be returned at
+ * \a tag.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runime costs
+ * \f$ \Theta( 1 ) \f$.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_tag_get_sattr(
@@ -333,7 +354,21 @@ lpf_err_t lpf_tag_get_sattr(
  * @param[in]     tag  The tag to attach to \a attr.
  * @param[in,out] attr Where to attach the \a tag to.
  *
- * \TODO Extend documentation
+ * The given \a attr must be valid.
+ *
+ * \note An implementation must at least support attribute initialization via
+ *       #lpf_tag_create_sattr.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_tag_set_sattr(
