@@ -44,15 +44,45 @@ extern "C" {
  *
  * This extension specifies facilities for (de-)registering memory slots,
  * registering RDMA requests, and fencing RDMA requests. These extensions are,
- * as far as possible, fully compatible with the core LPF definitions. These
- * include LPF contexts (#lpf_t), processor count types (#lpf_pid_t), memory
- * slot types (#lpf_memslot_t), and message attributes (#lpf_msg_attr_t).
+ * as far as possible, fully compatible with the core LPF API specifications.
+ * Reused core API concepts include LPF contexts (#lpf_t), processor count types
+ * (#lpf_pid_t), memory slot types (#lpf_memslot_t), message attributes
+ * (#lpf_msg_attr_t), the #lpf_sync primitive, and, by extension,
+ * synchronization attributes (#lpf_sync_attr_t).
  *
- * In this extension, LPF does not maintain consistency amongst processes that
- * (de-)register memory slots while RDMA communication may occur. Maintaining
- * the required consistency instead becomes the purview of the user. This
- * extension specificies exactly what consistency properties the user must
- * guarantee.
+ * In this extension,
+ *  1. LPF does not maintain consistency amongst processes that (de-)register
+ *     memory slots while RDMA communication may occur. Maintaining the
+ *     required consistency instead becomes the purview of the user. This
+ *     extension specificies exactly what consistency properties the user must
+ *     guarantee; and
+ *  2. provides facilities with which RDMA communication may be fenced on a
+ *     finer granularity than when using #lpf_sync; this applies to the use of
+ *     #lpf_put, #lpf_get, #lpf_noc_put, and #lpf_noc_get. The use of these
+ *     facilities shall not change the semantics of an #lpf_sync that could
+ *     follow as well (however, the use of #lpf_sync may not be needed in order
+ *     to complete RDMA requests).
+ *
+ * These two mechanisms for achieving different types of non-coherency may be
+ * employed orthogonally. For the first extension, the following primitives are
+ * provided:
+ *  - #lpf_noc_resize_memory_register,
+ *  - #lpf_noc_register,
+ *  - #lpf_noc_deregister,
+ *  - #lpf_noc_put, and
+ *  - #lpf_noc_get.
+ * While these primitives re-use the standard #lpf_memslot_t, implementations
+ * may handle so-called non-coherent memory slots differently from normal memory
+ * slots. One key requirement that non-coherent memory slots should support, is
+ * that they should be byte-copiable and also safe to communicate across
+ * processes.
+ *
+ * \note At this point in time, this first extension set is not implemented by
+ *       any engine.
+ *
+ * For the second extension, the following primitives are provided:
+ *  - #lpf_noc_flush_sent, and
+ *  - #lpf_noc_flush_received.
  *
  * \warning If LPF is considered a tool for the so-called <em>hero
  *          programmer</em>, then please note that this variant is even harder
@@ -62,6 +92,12 @@ extern "C" {
  *       such a debug layer is even possible (precisely because LPF in this
  *       extension does not maintain consistency, there is no way a debug layer
  *       could enforce it).
+ *
+ * \par Engines that implement the first non-coherent extension set
+ * None.
+ *
+ * \par Engines that implement the second non-coherent extension set
+ * - the \em zero engine.
  *
  * @{
  */
@@ -135,9 +171,7 @@ extern "C" {
  *            the effect is the same as when this call did not occur at all.
  *
  * \par BSP costs
- * None
- *
- * See also \ref BSPCOSTS.
+ * None.
  *
  * \par Runtime costs
  * \f$ \Theta( \mathit{max\_regs} ) \f$.
@@ -281,9 +315,8 @@ lpf_err_t lpf_noc_deregister(
  * Copies contents of local memory into the memory of remote processes.
  *
  * This operation is guaranteed to be completed after a call to the next
- * lpf_sync() exits.
- *
- * Until that time it occupies one entry in the operations queue.
+ * lpf_sync() exits. Until that time it occupies one entry in the operations
+ * queue.
  *
  * Concurrent reads or writes from or to the same memory area are
  * allowed in the same way they are for the core primitive #lpf_put.
@@ -361,17 +394,16 @@ lpf_err_t lpf_noc_put(
 /**
  * Copies contents from remote memory to local memory.
  *
- * This operation completes after one call to lpf_sync().
- *
- * Until that time it occupies one entry in the operations queue.
+ * This operation completes after one call to lpf_sync(). Until that time it
+ * occupies one entry in the operations queue.
  *
  * Concurrent reads or writes from or to the same memory area are allowed in the
  * same way it is for #lpf_get.
  *
  * This primitive differs from #lpf_get in that the \a src_slot may be the
  * result of a successful call to #lpf_noc_register, while \a dst_slot \em must
- * be the results of such a successful call. In both cases, the slot need
- * \em not have been registered before the last call to #lpf_sync.
+ * be the result of such a successful call. In both cases, the slot need \em not
+ * have been registered before the last call to #lpf_sync.
  *
  * \par Thread safety
  * This function is safe to be called from different LPF processes only. Any
@@ -442,10 +474,10 @@ lpf_err_t lpf_noc_get(
  * Processes completed outgoing RDMA requests that have occurred without calling
  * #lpf_sync.
  *
- * \note Two example such mechanisms could be #lpf_noc_get and/or #lpf_noc_put.
- *
  * Some fabrics require user-space to regularly flush internal queues at a rate
- * that does matches (or exceeds) that of outgoing RDMA request completions.
+ * that does matches (or exceeds) that of outgoing RDMA request completions. It
+ * is implementation-specified how many times or at what frequency flushes must
+ * be performed.
  *
  * @param[in] ctx  The LPF context.
  * @param[in] attr The synchronisation attribute.
@@ -453,7 +485,25 @@ lpf_err_t lpf_noc_get(
  * \note Rationale: \a attr is requested as given different attributes,
  *       different internal queues may be processed.
  *
- * @returns #LPF_SUCCESS When the flush has completed.
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only. Any
+ * further thread safety may be guaranteed by the implementation, but is not
+ * specified. Similar conditions hold for all LPF primitives that take an
+ * argument of type #lpf_t; see #lpf_t for more information.
+ *
+ * \returns #LPF_SUCCESS This function never fails.
+ *
+ * \par BSP costs
+ * None; by using this primitive, the overall BSP cost remains unaffected.
+ *
+ * \par Runtime costs
+ * \f$ \mathcal{O}( n ) \f$, where \f$ n \f$ is the maximum number of
+ * simultaneously outstanding RDMA requests (see #lpf_resize_message_queue).
+ * When calling this function several times within the same superstep, the
+ * aggregate runtime cost remains \f$ \mathcal{O}(n) \f$.
+ *
+ * \note The above is not big-Theta, as some implementations do not require
+ *       user-space flushes.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_noc_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
@@ -462,10 +512,10 @@ lpf_err_t lpf_noc_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
  * Processes completed incoming RDMA requests that have occurred without calling
  * #lpf_sync.
  *
- * \note Two example such mechanisms could be #lpf_noc_get and/or #lpf_noc_put.
- *
  * Some fabrics require user-space to regularly flush internal queues at a rate
- * that does matches (or exceeds) that of outgoing RDMA request completions.
+ * that does matches (or exceeds) that of outgoing RDMA request completions. It
+ * is implementation-specified how many times or at what frequency flushes must
+ * be performed.
  *
  * @param[in] ctx  The LPF context.
  * @param[in] attr The synchronisation attribute.
@@ -473,7 +523,25 @@ lpf_err_t lpf_noc_flush_sent( lpf_t ctx, lpf_sync_attr_t attr );
  * \note Rationale: \a attr is requested as given different attributes,
  *       different internal queues may be processed.
  *
- * @returns #LPF_SUCCESS When the flush has completed.
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only. Any
+ * further thread safety may be guaranteed by the implementation, but is not
+ * specified. Similar conditions hold for all LPF primitives that take an
+ * argument of type #lpf_t; see #lpf_t for more information.
+ *
+ * \returns #LPF_SUCCESS This function never fails.
+ *
+ * \par BSP costs
+ * None; by using this primitive, the overall BSP cost remains unaffected.
+ *
+ * \par Runtime costs
+ * \f$ \mathcal{O}( n ) \f$, where \f$ n \f$ is the maximum number of
+ * simultaneously outstanding RDMA requests (see #lpf_resize_message_queue).
+ * When calling this function several times within the same superstep, the
+ * aggregate runtime cost remains \f$ \mathcal{O}(n) \f$.
+ *
+ * \note The above is not big-Theta, as some implementations do not require
+ *       user-space flushes.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_noc_flush_received( lpf_t ctx, lpf_sync_attr_t attr );
