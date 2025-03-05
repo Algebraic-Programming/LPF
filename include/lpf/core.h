@@ -707,7 +707,7 @@ extern "C" {
  * released, and NN the number of the specifications released before this one in
  * the same year.
  */
-#define _LPF_VERSION 202400L
+#define _LPF_VERSION 202000L
 
 /**
  * An implementation that has defined this macro may never define the
