@@ -186,4 +186,3 @@ lpf_err_t lpf_abort( lpf_t lpf )
     (void) lpf;
     return LPF_SUCCESS;
 }
-
