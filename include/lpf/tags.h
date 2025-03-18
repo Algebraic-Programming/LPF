@@ -131,22 +131,35 @@ lpf_err_t lpf_resize_tag_register(
  * number of registrations is given by lpf_resize_tag_register. On entering
  * this call, the user shall ensure at least one tag register remains free.
  *
- * @param[in,out] ctx  The LPF context.
- * @param[out]    tag  The resulting tag.
+ * @param[in,out] ctx    The LPF context.
+ * @param[in]     active Whether the calling process will be active within the
+ *                       newly-created tag.
+ * @param[out]    tag    Location where to store the newly created tag. One tag
+ * i                     registration slot is consumed.
+ *
+ * Only processes active within a tag may use that tag during RDMA requests
+ * (put, get, and sync). Use of this tag by any other process invites undefined
+ * behaviour.
+ *
+ * \note Implementations may modify the memory area pointed to by \a tag even if
+ *       \a active is <tt>false</tt>. Such modified values should remain unused
+ *       by RDMA requests, however. (Their only possible valid use is when
+ *       supplied to a matching call to lpf_tags_destroy().
  *
  * @returns #LPF_SUCCESS If the creation of the tag is successful.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_tag_create(
     lpf_t ctx,
+    bool active,
     lpf_tag_t * tag
 );
 
 /**
  * Destroys a tag created by #lpf_tags_create.
  *
- * This is a collective function, meaning that all processes call this primitive
- * on the same tag in the same superstep and in the same order.
+ * This is a collective function, meaning that all processes must call this
+ * primitive on the same tag in the same superstep and in the same order.
  *
  * @param[in,out] ctx The LPF context.
  * @param[in]     tag The tag to be destroyed.
@@ -154,6 +167,11 @@ lpf_err_t lpf_tag_create(
  * The given \a tag must have been the result of a previous succesful call to
  * #lpf_tags_create that was not already followed by a successful call to
  * #lpf_tags_destroy.
+ *
+ * \note Even processes who marked themselves as inactive during tag creation
+ *       must actively participate in their destruction. Implementations may
+ *       optimise this process by translating destruction to a no-op on those
+ *       processes.
  *
  * After a successful call to this function, the number of registered tags
  * decreases by one.

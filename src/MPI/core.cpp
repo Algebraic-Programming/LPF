@@ -422,9 +422,11 @@ lpf_err_t lpf_register_local(
 
 lpf_err_t lpf_tag_create(
     lpf_t ctx,
+    bool active,
     lpf_tag_t * tag
 )
 {
+    (void)active;
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted()) {
         try {
