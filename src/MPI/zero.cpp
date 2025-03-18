@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include "zero.hpp"
 #include "log.hpp"
-#include "communication.hpp"
+#include "zero.hpp"
 #include "config.hpp"
+#include "communication.hpp"
 
 #include <limits>
 #include <cstdint>
@@ -32,7 +32,6 @@
 
 
 namespace lpf { namespace mpi {
-
 
 struct Zero::Exception : std::runtime_error {
     Exception(const char * what) : std::runtime_error( what ) {}
@@ -51,7 +50,6 @@ namespace {
         return IBV_MTU_4096;
     }
 }
-
 
 Zero :: Zero( Communication & comm )
     : m_pid( comm.pid() )
@@ -89,11 +87,11 @@ Zero :: Zero( Communication & comm )
     , m_activePeers(0, m_nprocs)
     , m_memreg()
 {
-
     m_peerList.reserve( m_nprocs );
 
     int numDevices = -1;
-    struct ibv_device * * const try_get_device_list = ibv_get_device_list( &numDevices );
+    struct ibv_device * * const try_get_device_list =
+        ibv_get_device_list( &numDevices );
 
     if (!try_get_device_list) {
         LOG(1, "Cannot get list of Infiniband devices" );
@@ -112,7 +110,6 @@ Zero :: Zero( Communication & comm )
                 " available, which is not enough" );
         throw Exception( "No Infiniband devices available" );
     }
-
 
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
@@ -201,25 +198,28 @@ Zero :: Zero( Communication & comm )
 
     m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ), ibv_destroy_cq);
     m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ), ibv_destroy_cq);
+
     /**
      * New notification functionality for HiCR
      */
     struct ibv_srq_init_attr srq_init_attr;
-	srq_init_attr.srq_context = NULL;
-	srq_init_attr.attr.max_wr =  m_deviceAttr.max_srq_wr;
-	srq_init_attr.attr.max_sge = m_deviceAttr.max_srq_sge;
-	srq_init_attr.attr.srq_limit = 0;
-	m_srq.reset(ibv_create_srq(m_pd.get(), &srq_init_attr ),
-			ibv_destroy_srq);
+    srq_init_attr.srq_context = NULL;
+    srq_init_attr.attr.max_wr =  m_deviceAttr.max_srq_wr;
+    srq_init_attr.attr.max_sge = m_deviceAttr.max_srq_sge;
+    srq_init_attr.attr.srq_limit = 0;
+    m_srq.reset(ibv_create_srq(m_pd.get(), &srq_init_attr ),
+            ibv_destroy_srq);
 
-
-    m_cqLocal.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0), ibv_destroy_cq);
+    m_cqLocal.reset(ibv_create_cq( m_device.get(), m_cqSize, NULL, NULL, 0),
+        ibv_destroy_cq);
     if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
         throw Exception("Could not allocate completion queue");
     }
-    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_cqSize * m_nprocs, NULL, NULL, 0), ibv_destroy_cq);
+    m_cqRemote.reset(
+        ibv_create_cq( m_device.get(), m_cqSize * m_nprocs, NULL, NULL, 0),
+	ibv_destroy_cq);
     if (!m_cqLocal) {
         LOG(1, "Could not allocate completion queue with '"
                 << m_nprocs << " entries" );
@@ -249,7 +249,6 @@ Zero :: Zero( Communication & comm )
 
 Zero :: ~Zero()
 { }
-
 
 inline void Zero :: tryIncrement(const Op op, const Phase phase,
     const TagID tag) noexcept
@@ -326,27 +325,29 @@ void Zero :: stageQPs( size_t maxMsgs )
             throw std::bad_alloc();
         }
 
-        LOG(3, "Created new Queue pair for " << m_pid << " -> " << i << " with qp_num = " << ibv_new_qp_p->qp_num);
+        LOG(3, "Created new Queue pair for " << m_pid << " -> " << i
+            << " with qp_num = " << ibv_new_qp_p->qp_num);
     }
 }
 
 void Zero :: doRemoteProgress() {
-	struct ibv_wc wcs[POLL_BATCH];
-	struct ibv_recv_wr wr;
-	struct ibv_sge sg;
-	struct ibv_recv_wr *bad_wr;
-	sg.addr = (uint64_t) NULL;
-	sg.length = 0;
-	sg.lkey = 0;
-	wr.next = NULL;
-	wr.sg_list = &sg;
-	wr.num_sge = 0;
-	wr.wr_id = 66;
-	int pollResult, totalResults = 0;
-	do {
-		pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
+    struct ibv_wc wcs[POLL_BATCH];
+    struct ibv_recv_wr wr;
+    struct ibv_sge sg;
+    struct ibv_recv_wr *bad_wr;
+    sg.addr = (uint64_t) NULL;
+    sg.length = 0;
+    sg.lkey = 0;
+    wr.next = NULL;
+    wr.sg_list = &sg;
+    wr.num_sge = 0;
+    wr.wr_id = 66;
+    int pollResult, totalResults = 0;
+    do {
+        pollResult = ibv_poll_cq(m_cqRemote.get(), POLL_BATCH, wcs);
         if (pollResult > 0) {
-            LOG(3, "Process " << m_pid << " signals: I received " << pollResult << " remote messages in doRemoteProgress");
+            LOG(3, "Process " << m_pid << " signals: I received " << pollResult
+                << " remote messages in doRemoteProgress");
         }
         else if (pollResult < 0)
         {
@@ -354,14 +355,15 @@ void Zero :: doRemoteProgress() {
             throw Exception("Poll CQ failure");
         }
 
-		for(int i = 0; i < pollResult; i++) {
+        for(int i = 0; i < pollResult; i++) {
             if (wcs[i].status != IBV_WC_SUCCESS) {
                 LOG( 2, "Got bad completion status from IB message."
                         " status = 0x" << std::hex << wcs[i].status
                         << ", vendor syndrome = 0x" << std::hex
                         << wcs[i].vendor_err );
             }
-            else {
+            else
+            {
                 LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].src_qp = "<< wcs[i].src_qp);
                 LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].slid = "<< wcs[i].slid);
                 LOG(3, "Process " << m_pid << " Recv wcs[" << i << "].wr_id = "<< wcs[i].wr_id);
@@ -388,8 +390,8 @@ void Zero :: doRemoteProgress() {
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
             }
         }
-		if(pollResult > 0) totalResults += pollResult;
-	} while (pollResult == POLL_BATCH && totalResults < MAX_POLLING);
+        if(pollResult > 0) totalResults += pollResult;
+    } while (pollResult == POLL_BATCH && totalResults < MAX_POLLING);
 }
 
 void Zero :: reconnectQPs()
@@ -515,23 +517,22 @@ void Zero :: reconnectQPs()
 
         } // for each peer
     }
-            catch(...) {
-                m_comm.allreduceOr( true );
-                throw;
-            }
+    catch(...) {
+        m_comm.allreduceOr( true );
+        throw;
+    }
 
-            if (m_comm.allreduceOr( false ))
-                throw Exception("Another peer failed to set-up Infiniband queue pairs");
+    if (m_comm.allreduceOr( false ))
+        throw Exception("Another peer failed to set-up Infiniband queue pairs");
 
-            LOG(3, "All staged queue pairs have been connected" );
+    LOG(3, "All staged queue pairs have been connected" );
 
-            m_connectedQps.swap( m_stagedQps );
+    m_connectedQps.swap( m_stagedQps );
 
-            LOG(3, "All old queue pairs have been removed");
+    LOG(3, "All old queue pairs have been removed");
 
-            m_comm.barrier();
-        }
-
+    m_comm.barrier();
+}
 
 void Zero :: resizeMemreg( size_t size )
 {
@@ -730,9 +731,9 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
     int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
     if (size == 0) numMsgs = 1;
 
-    struct ibv_sge	   sges[numMsgs];
+    struct ibv_sge     sges[numMsgs];
     struct ibv_send_wr srs[numMsgs];
-    struct ibv_sge	   *sge;
+    struct ibv_sge     *sge;
     struct ibv_send_wr *sr;
     for (int i=0; i < numMsgs; i++) {
         sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
@@ -786,65 +787,65 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
 }
 
 void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
-              SlotID dstSlot, size_t dstOffset, size_t size )
+                  SlotID dstSlot, size_t dstOffset, size_t size )
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
-	const MemorySlot & dst = m_memreg.lookup( dstSlot );
+    const MemorySlot & dst = m_memreg.lookup( dstSlot );
 
-	ASSERT( dst.mr );
+    ASSERT( dst.mr );
 
-	int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
+    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
 
-	struct ibv_sge	   sges[numMsgs+1];
-	struct ibv_send_wr srs[numMsgs+1];
-	struct ibv_sge	   *sge;
-	struct ibv_send_wr *sr;
+    struct ibv_sge     sges[numMsgs+1];
+    struct ibv_send_wr srs[numMsgs+1];
+    struct ibv_sge     *sge;
+    struct ibv_send_wr *sr;
 
 
-	for(int i = 0; i< numMsgs; i++){
-		sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
-		sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
+    for(int i = 0; i< numMsgs; i++){
+        sge = &sges[i]; std::memset(sge, 0, sizeof(ibv_sge));
+        sr = &srs[i]; std::memset(sr, 0, sizeof(ibv_send_wr));
 
-		const char * localAddr
-			= static_cast<const char *>(dst.glob[m_pid]._addr) + dstOffset;
-		const char * remoteAddr
-			= static_cast<const char *>(src.glob[srcPid]._addr) + srcOffset;
+        const char * localAddr
+            = static_cast<const char *>(dst.glob[m_pid]._addr) + dstOffset;
+        const char * remoteAddr
+            = static_cast<const char *>(src.glob[srcPid]._addr) + srcOffset;
 
-		sge->addr = reinterpret_cast<uintptr_t>( localAddr );
-		sge->length = std::min<size_t>(size, m_maxMsgSize );
-		sge->lkey = dst.mr->lkey;
+        sge->addr = reinterpret_cast<uintptr_t>( localAddr );
+        sge->length = std::min<size_t>(size, m_maxMsgSize );
+        sge->lkey = dst.mr->lkey;
         sges[i] = *sge;
         LOG(4, "PID " << m_pid << ": Enqueued get message of " << sge->length << " bytes from " << srcPid << " on slot" << srcSlot );
 
         bool lastMsg = (i == numMsgs-1);
         sr->next = lastMsg ? NULL : &srs[ i+1];
-		sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
+        sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
 
-		sr->sg_list = &sges[i];
-		sr->num_sge = 1;
-		sr->opcode = IBV_WR_RDMA_READ;
-		sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-		sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
+        sr->sg_list = &sges[i];
+        sr->num_sge = 1;
+        sr->opcode = IBV_WR_RDMA_READ;
+        sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
+        sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
         // (not srcSlot, as this slot is remote)
         sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
         sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
         srs[i] = *sr;
-		size -= sge->length;
-		srcOffset += sge->length;
-		dstOffset += sge->length;
-	}
+        size -= sge->length;
+        srcOffset += sge->length;
+        dstOffset += sge->length;
+    }
 
-	struct ibv_send_wr *bad_wr = NULL;
-	if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
-	{
+    struct ibv_send_wr *bad_wr = NULL;
+    if (int err = ibv_post_send(m_connectedQps[srcPid].get(), &srs[0], &bad_wr ))
+    {
 
-		LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
+        LOG(1, "Error while posting RDMA requests: " << std::strerror(err) );
         if (err == ENOMEM) {
             LOG(1, "Specific error code: ENOMEM (send queue is full or no resources)");
         }
-		throw Exception("Error while posting RDMA requests");
-	}
+        throw Exception("Error while posting RDMA requests");
+    }
     tryIncrement(Op::GET, Phase::PRE, dstSlot);
 
 }
@@ -912,13 +913,15 @@ std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
                 // This is a get call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_READ) {
                     tryIncrement(Op::GET, Phase::POST, slot);
-					LOG(4, "Rank " << m_pid << " with GET, increments getMsgCount to " << getMsgCount[slot] << " for LPF slot " << slot);
+                    LOG(4, "Rank " << m_pid << " with GET, increments getMsgCount to "
+                        << getMsgCount[slot] << " for LPF slot " << slot);
                 }
                 // This is a put call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_WRITE) {
                     tryIncrement(Op::SEND, Phase::POST, slot);
-					LOG(4, "Rank " << m_pid << " with SEND, increments getMsgCount to " << sentMsgCount[slot] << " for LPF slot " << slot);
-				}
+                    LOG(4, "Rank " << m_pid << " with SEND, increments getMsgCount to "
+                        << sentMsgCount[slot] << " for LPF slot " << slot);
+                }
 
             }
         }
@@ -971,7 +974,7 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
             doLocalProgress(error);
             if (error) {
                 LOG(1, "Error in doLocalProgress");
-		throw std::runtime_error("Error in doLocalProgress");
+                throw std::runtime_error("Error in doLocalProgress");
             }
             // this call triggers doRemoteProgress
             doRemoteProgress();
@@ -1008,7 +1011,7 @@ void Zero :: syncPerTag(TagID tag) {
     while ((rcvdMsgCount.at(tag) < m_recvInitMsgCount.at(tag)) ||
         (sentMsgCount.at(tag) < m_sendInitMsgCount.at(tag)));
     // this barrier ensures local buffers remain locked until remote uses are
-    // guaranteed complete. TODO FIXME: and acknowledgement mechanism would
+    // guaranteed complete. TODO FIXME: an acknowledgement mechanism would
     // make this barrier unnecessary.
     m_comm.barrier();
 }
@@ -1029,8 +1032,8 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
         LOG(4, "Process " << m_pid << " will call barrier at end of sync\n");
         m_comm.barrier();
 
-	// done
-	return;
+        // done
+        return;
     }
 
     ASSERT(attr != NULL);
@@ -1039,7 +1042,7 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
     if (tagSync)
     {
         syncPerTag(attr->tag);
-	return;
+        return;
     }
 
     countingSyncPerSlot(attr->tag,attr->expected_sent,attr->expected_rcvd);
