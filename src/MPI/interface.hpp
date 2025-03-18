@@ -27,7 +27,6 @@
 
 namespace lpf
 {
-
 class _LPFLIB_LOCAL Process;
 
 class _LPFLIB_LOCAL Interface  
