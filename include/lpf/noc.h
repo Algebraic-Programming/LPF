@@ -184,7 +184,8 @@ lpf_err_t lpf_noc_resize_memory_register( lpf_t ctx, size_t max_regs );
  * communication.
  *
  * The registration process is necessary to enable Remote Direct Memory Access
- * (RDMA) primitives, such as lpf_get() and lpf_put().
+ * (RDMA) primitives, such as lpf_get(), lpf_noc_get(), lpf_put(), and
+ * lpf_noc_put().
  *
  * This is \em not a collective function. For #lpf_get and #lpf_put, the memory
  * slot returned by this function is equivalent to a memory slot returned by
@@ -215,7 +216,7 @@ lpf_err_t lpf_noc_resize_memory_register( lpf_t ctx, size_t max_regs );
  *
  * Only the process that created the returned memory slot can destroy it; other
  * LPF processes than the one which created it that attempt to destroy the
- * returned memory slot, invoke undefined behaviour.
+ * returned memory slot invoke undefined behaviour.
  *
  * Other than the above specified differences, the arguments to this function
  * are the same as for #lpf_register_local:
@@ -282,7 +283,7 @@ lpf_err_t lpf_noc_register(
  * lpf_noc_resize_memory_register().
  *
  * Deregistration takes effect immediately. A call to this function is not
- * collective, and the other of deregistration does not need to match the order
+ * collective, and the order of deregistration does not need to match the order
  * of registration. Any local or remote communication using the given \a memslot
  * in the current superstep invokes undefined behaviour.
  *
