@@ -196,9 +196,6 @@ Zero :: Zero( Communication & comm )
     }
     LOG(3, "Opened protection domain");
 
-    m_cqLocal.reset(ibv_create_cq( m_device.get(), 1, NULL, NULL, 0 ), ibv_destroy_cq);
-    m_cqRemote.reset(ibv_create_cq( m_device.get(), m_nprocs, NULL, NULL, 0 ), ibv_destroy_cq);
-
     /**
      * New notification functionality for HiCR
      */
@@ -267,7 +264,6 @@ inline void Zero :: tryIncrement(const Op op, const Phase phase,
         case Phase::PRE:
             if (op == Op::SEND) {
                 (void)m_numMsgs++;
-                //m_sendTotalInitMsgCount++;
                 (void)m_sendInitMsgCount[tag]++;
             }
             if (op == Op::RECV) {
