@@ -261,6 +261,61 @@ lpf_err_t lpf_tag_set_mattr(
     return LPF_SUCCESS;
 }
 
+lpf_err_t lpf_resize_tag_register(
+    lpf_t ctx,
+    size_t max_tags
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (i->isAborted())
+        return LPF_SUCCESS;
+
+    try {
+        return i->resizeTagRegister(max_tags);
+    } catch (const std::exception & e) {
+        LOG(1, "lpf_resize_tag_register fatal error: " << e.what());
+	return LPF_ERR_FATAL;
+    }
+}
+
+lpf_err_t lpf_tag_create(
+    lpf_t ctx,
+    bool active,
+    lpf_tag_t * tag
+)
+{
+    (void)active;
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        try {
+            *tag = i->registerTag();
+        } catch (const std::exception & e) {
+            LOG(1, "lpf_tag_create fatal error: " << e.what());
+            return LPF_ERR_FATAL;
+        }
+    }
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_tag_destroy(
+    lpf_t ctx,
+    lpf_tag_t tag
+)
+{
+    lpf::Interface * i = realContext(ctx);
+    if (!i->isAborted()) {
+        try {
+            i->destroyTag(tag);
+        } catch (const std::exception & e) {
+            LOG(1, "lpf_tag_destroy fatal error: " << e.what());
+            return LPF_ERR_FATAL;
+        }
+    }
+    return LPF_SUCCESS;
+}
+
+// zero-cost extension
+
 lpf_err_t lpf_zero_create_sattr(
     lpf_t ctx,
     lpf_sync_attr_t * attr
@@ -276,8 +331,6 @@ lpf_err_t lpf_zero_destroy_sattr(
 {
     return lpf_tag_destroy_sattr(ctx,attr);
 }
-
-// zero-cost extension
 
 lpf_err_t lpf_zero_create_mattr(
     lpf_t ctx,
@@ -420,25 +473,6 @@ lpf_err_t lpf_register_local(
     return LPF_SUCCESS;
 }
 
-lpf_err_t lpf_tag_create(
-    lpf_t ctx,
-    bool active,
-    lpf_tag_t * tag
-)
-{
-    (void)active;
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        try {
-            *tag = i->registerTag();
-        } catch (const std::exception & e) {
-            LOG(1, "lpf_tag_create fatal error: " << e.what());
-            return LPF_ERR_FATAL;
-        }
-    }
-    return LPF_SUCCESS;
-}
-
 lpf_err_t lpf_deregister(
     lpf_t ctx,
     lpf_memslot_t memslot
@@ -447,23 +481,6 @@ lpf_err_t lpf_deregister(
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())
         i->deregister(memslot);
-    return LPF_SUCCESS;
-}
-
-lpf_err_t lpf_tag_destroy(
-    lpf_t ctx,
-    lpf_tag_t tag
-)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (!i->isAborted()) {
-        try {
-            i->destroyTag(tag);
-        } catch (const std::exception & e) {
-            LOG(1, "lpf_tag_destroy fatal error: " << e.what());
-            return LPF_ERR_FATAL;
-        }
-    }
     return LPF_SUCCESS;
 }
 
@@ -535,23 +552,6 @@ lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
         return LPF_SUCCESS;
 
     return i->resizeMesgQueue(max_msgs);
-}
-
-lpf_err_t lpf_resize_tag_register(
-    lpf_t ctx,
-    size_t max_tags
-)
-{
-    lpf::Interface * i = realContext(ctx);
-    if (i->isAborted())
-        return LPF_SUCCESS;
-
-    try {
-        return i->resizeTagRegister(max_tags);
-    } catch (const std::exception & e) {
-        LOG(1, "lpf_resize_tag_register fatal error: " << e.what());
-	return LPF_ERR_FATAL;
-    }
 }
 
 lpf_err_t lpf_abort( lpf_t ctx ) {
