@@ -30,28 +30,15 @@
 
 #include <infiniband/verbs.h>
 
-
 #include "linkage.hpp"
 #include "sparseset.hpp"
 #include "memreg.hpp"
 
-typedef enum Op {
-    SEND,
-    RECV,
-    GET
-} Op;
-
-typedef enum Phase {
-    INIT,
-    PRE,
-    POST
-} Phase;
-
 namespace lpf {
 
-    class Communication;
+class Communication;
 
-    namespace mpi {
+namespace mpi {
 
 #if __cplusplus >= 201103L
 using std::shared_ptr;
@@ -181,6 +168,19 @@ public:
     }
 
 protected:
+
+    typedef enum Op {
+        SEND,
+        RECV,
+        GET
+    } Op;
+
+    typedef enum Phase {
+        INIT,
+        PRE,
+        POST
+    } Phase;
+
     Zero & operator=(const Zero & ); // assignment prohibited
     Zero( const Zero & ); // copying prohibited
 
