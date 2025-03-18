@@ -144,7 +144,7 @@ lpf_err_t lpf_resize_tag_register(
  * \note Implementations may modify the memory area pointed to by \a tag even if
  *       \a active is <tt>false</tt>. Such modified values should remain unused
  *       by RDMA requests, however. (Their only possible valid use is when
- *       supplied to a matching call to lpf_tags_destroy().
+ *       supplied to a matching call to lpf_tags_destroy()).
  *
  * @returns #LPF_SUCCESS If the creation of the tag is successful.
  */
