@@ -250,7 +250,6 @@ Zero :: ~Zero()
 inline void Zero :: tryIncrement(const Op op, const Phase phase,
     const TagID tag) noexcept
 {
-
     switch (phase) {
         case Phase::INIT:
             rcvdMsgCount[tag] = 0;
@@ -445,7 +444,8 @@ void Zero :: reconnectQPs()
             attr.qp_state = IBV_QPS_INIT;
             attr.port_num = m_ibPort;
             attr.pkey_index = 0;
-            attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC;
+            attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
+                IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC;
             flags = IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
             if ( ibv_modify_qp(m_stagedQps[i].get(), &attr, flags) ) {
                 LOG(1, "Cannot bring state of QP " << i << " to INIT");
@@ -487,7 +487,8 @@ void Zero :: reconnectQPs()
                 attr.ah_attr.grh.sgid_index = m_gidIdx;
                 attr.ah_attr.grh.traffic_class = 0;
             }
-            flags = IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER;
+            flags = IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
+                IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER;
 
             if (ibv_modify_qp(m_stagedQps[i].get(), &attr, flags)) {
                 LOG(1, "Cannot bring state of QP " << i << " to RTR" );
@@ -625,7 +626,8 @@ Zero :: SlotID Zero :: regLocal( void * addr, size_t size )
         LOG(4, "Registering locally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
             m_pd.get(), addr, size,
-            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
+            IBV_ACCESS_REMOTE_ATOMIC
         );
         if( ibv_mr_new_p == NULL )
             slot.mr.reset();
@@ -637,14 +639,16 @@ Zero :: SlotID Zero :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0,
+        size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
     tryIncrement(Op::SEND, Phase::INIT, id);
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;
-    LOG(4, "Memory area " << addr << " of size " << size << " has been locally registered. Slot = " << id );
+    LOG(4, "Memory area " << addr << " of size " << size
+        << " has been locally registered. Slot = " << id );
     return id;
 }
 
@@ -657,7 +661,8 @@ Zero :: SlotID Zero :: regGlobal( void * addr, size_t size )
         LOG(4, "Registering globally memory area at " << addr << " of size  " << size );
         struct ibv_mr * const ibv_mr_new_p = ibv_reg_mr(
             m_pd.get(), addr, size,
-            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC
+            IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
+            IBV_ACCESS_REMOTE_ATOMIC
         );
         if( ibv_mr_new_p == NULL )
             slot.mr.reset();
@@ -679,11 +684,13 @@ Zero :: SlotID Zero :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0,
+            size?slot.mr->rkey:0, m_pid);
     LOG(4, "All-gathering memory register data" );
 
     m_comm.allgather( local, ref.glob.data() );
-    LOG(4, "Memory area " << addr << " of size " << size << " has been globally registered. Slot = " << id );
+    LOG(4, "Memory area " << addr << " of size " << size
+            << " has been globally registered. Slot = " << id );
     return id;
 }
 
@@ -724,7 +731,8 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
 
     ASSERT( src.mr );
 
-    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
+    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0);
+        //+1 if last msg size < m_maxMsgSize
     if (size == 0) numMsgs = 1;
 
     struct ibv_sge     sges[numMsgs];
@@ -768,8 +776,8 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         srcOffset += sge->length;
         dstOffset += sge->length;
 
-        LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length << " bytes to " << dstPid << " on slot" << dstSlot );
-
+        LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length
+            << " bytes to " << dstPid << " on slot" << dstSlot );
     }
     struct ibv_send_wr *bad_wr = NULL;
     // srs[0] should be sufficient because the rest of srs are on a chain
@@ -790,7 +798,8 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 
     ASSERT( dst.mr );
 
-    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0); //+1 if last msg size < m_maxMsgSize
+    int numMsgs = size/m_maxMsgSize + (size % m_maxMsgSize > 0);
+        //+1 if last msg size < m_maxMsgSize
 
     struct ibv_sge     sges[numMsgs+1];
     struct ibv_send_wr srs[numMsgs+1];
@@ -811,7 +820,8 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sge->length = std::min<size_t>(size, m_maxMsgSize );
         sge->lkey = dst.mr->lkey;
         sges[i] = *sge;
-        LOG(4, "PID " << m_pid << ": Enqueued get message of " << sge->length << " bytes from " << srcPid << " on slot" << srcSlot );
+        LOG(4, "PID " << m_pid << ": Enqueued get message of " << sge->length
+            << " bytes from " << srcPid << " on slot" << srcSlot );
 
         bool lastMsg = (i == numMsgs-1);
         sr->next = lastMsg ? NULL : &srs[ i+1];
@@ -824,7 +834,7 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
         // (not srcSlot, as this slot is remote)
-        sr->wr_id = dstSlot; // <= DO NOT CHANGE THIS !!!
+        sr->wr_id = dstSlot; // <= This enables virtual tag matching
         sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
         srs[i] = *sr;
         size -= sge->length;
@@ -947,7 +957,8 @@ void Zero :: flushSent()
                     sendsComplete = false;
                     doLocalProgress(isError);
                     if (isError) {
-                        LOG(1, "Error in doLocalProgress. Most likely issue is that receiver is not calling ibv_post_srq!\n");
+                        LOG(1, "Error in doLocalProgress. Most likely issue is "
+                            << "that receiver is not calling ibv_post_srq!\n");
                         std::abort();
                     }
                 }
