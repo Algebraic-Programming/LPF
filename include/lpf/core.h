@@ -707,7 +707,7 @@ extern "C" {
  * released, and NN the number of the specifications released before this one in
  * the same year.
  */
-#define _LPF_VERSION 202000L
+#define _LPF_VERSION 202500L
 
 /**
  * An implementation that has defined this macro may never define the
@@ -1040,7 +1040,19 @@ typedef struct lpf_machine {
  * memory areas must be registered for direct remote memory access (DRMA).
  *
  * \par Communication
- * Object of this type must not be communicated.
+ * Objects of this type must not be communicated; if they are, objects copied
+ * to a remote process in principle do \em not represent valid memory slots.
+ *
+ * \par Trivially Copyable
+ * Objects of this type are trivially copyable in the same sense of the C++11
+ * TriviallyCopyable type category.
+ *
+ * \note Rationale: extensions could rely on the trivially copyability of memory
+ *       slots. Therefore, while the core specification stipulates memory slots
+ *       should not be copied across nodes with the expectation that a valid
+ *       memory slot on process A when copied to process B yields a valid memory
+ *       slot on process B, it must account for the possibility (provided by
+ *       extensions) that such a copy could be meaningful.
  */
 #ifdef DOXYGEN
 typedef ... lpf_memslot_t;
