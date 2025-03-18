@@ -29,11 +29,11 @@ extern "C" {
  *
  * This extension provides so-called <em>zero-cost synchronisation</em>
  * mechanisms on top of LPF. This term was coined by Alpert and Philbin back in
- * 1997 [1]. It is rooted in the idea that if BSP-type programs annotate how
- * many bytes are expected to be sent and received as part of a given
- * communication phase. If network interfaces can keep track of processed
- * incoming resp. outgoing bytes, then processes need only query its local
- * network interface to determine whether a superstep has completed; thus
+ * 1997 [1]. It is rooted in the idea that BSP programs annotate how many bytes
+ * are expected to be sent and received as part of a given communication phase.
+ * If, simultaneously, network interfaces can keep track of processed incoming,
+ * respectively, outgoing bytes, then processes need only query its local
+ * network interface to determine whether a superstep has completed-- thus
  * avoiding the need for either collectives or barriers.
  *
  * This extension provides a variant of zero-cost synchronisation that is based
@@ -49,12 +49,6 @@ extern "C" {
 
 /**
  * The specification version of zero-cost synchronisation.
- *
- * \note It is likely that the first released version will not be the first
- *       version, because the various recent extensions (non-coherent RDMA,
- *       zero-cost synchronisation, and tags) are all intricately linked. To
- *       keep the main LPF branch understandable, features will be
- *       iteratively introduced.
  */
 #define LPF_ZERO_COST_SYNC 202500L
 
@@ -221,6 +215,10 @@ lpf_err_t lpf_zero_destroy_sattr(
  *                          process.
  * @param[in,out] attr      Where to attach the zero-cost sync attributes.
  *
+ * The given \a attr must have been created via #lpf_zero_create_sattr or must
+ * be created by another extension that is compatible with this zero-cost
+ * synchronization extension.
+ *
  * If the resulting \a attr is used within a subsequent call to #lpf_sync,
  * the spec demands that the #lpf_sync call is collective. The zero-cost
  * synchronisation extension furthermore requires that each of those collective
@@ -252,9 +250,9 @@ lpf_err_t lpf_zero_set_expected(
  * Retrieves the attached zero-cost information from the given synchronisation
  * attribute.
  *
- * @param[in,out] ctx           The LPF context
+ * @param[in,out] ctx           The LPF context.
  * @param[in]     attr          The synchronisation attribute to retrieve the
- *                              zero-cost attributes from
+ *                              zero-cost attributes from.
  * @param[out]    expected_sent Where to store the expected number of sent
  *                              messages.
  * @param[out]    expected_rcvd Where to store the expected number of received
@@ -262,7 +260,7 @@ lpf_err_t lpf_zero_set_expected(
  *
  * The given \a attr must have been created via #lpf_zero_create_sattr or must
  * be created by another extension that is compatible with this zero-cost
- * synchronizatoin extension.
+ * synchronization extension.
  *
  * If \a attr did not have a preceding call to #lpf_zero_set_expected, then the
  * default values (0) are returned. An expected zero for both received and sent
@@ -289,10 +287,33 @@ lpf_err_t lpf_zero_get_expected(
 /**
  * Retrieves the current locally-received number of messages.
  *
- * \TODO extend documentation
+ * @param[in,out] ctx           The LPF context.
+ * @param[in]     attr          The synchronisation attribute to retrieve the
+ *                              status of.
+ * @param[out]    rcvd          Where to store the number of received messages.
+ * @param[out]    sent          Where to store the number of sent messages.
+ *
+ * The given \a attr must have been created via #lpf_zero_create_sattr or must
+ * be created by another extension that is compatible with this zero-cost
+ * synchronization extension.
  *
  * \note Rationale: this function is useful for implementing task-aware
  *       interfaces around zero-cost synchronisation mechanisms.
+ *
+ * \par Thread safety
+ * This function is safe to be called from different LPF processes only.
+ *
+ * \returns #LPF_SUCCESS A call to this function always succeeds.
+ *
+ * \par BSP costs
+ * None.
+ *
+ * \par Runtime costs
+ * \f$ \Theta( 1 ) \f$.
+ *
+ * \note A call to this function may imply querying the network interface,
+ *       and hence the constant-time factor of a call to this function may be
+ *       non-trivial; use of this function is recommended to be sparingly.
  */
 extern _LPFLIB_API
 lpf_err_t lpf_zero_get_status(
