@@ -1,6 +1,6 @@
 build-slurm:
   tags:
-  - slurm
+  - frontend
   script:
   - source /spack/install/share/spack/setup-env.sh
   - spack env activate hicr-x86-login
