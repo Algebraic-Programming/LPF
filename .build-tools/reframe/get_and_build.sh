@@ -5,5 +5,5 @@ git clone --branch ${CI_COMMIT_REF_NAME} https://oath2:glpat-xvYANSkTDdET28F9jBx
 pushd /storage/users/gitlab-runner/lpf_repo
 mkdir build
 pushd build
-../bootstrap.sh --functests; make -j32
+../bootstrap.sh --functests=i-agree-with-googletest-license
 make -j32

@@ -179,7 +179,7 @@ if (MPI_FOUND)
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
 
-        add_gtest_mpi( zero_test "zero" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp
+        add_gtest( zero_test "zero" ON FALSE ${CMAKE_CURRENT_SOURCE_DIR}/ibverbs.t.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/ibverbsZero.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/mpilib.cpp)
     endif()
