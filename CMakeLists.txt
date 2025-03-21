@@ -494,7 +494,7 @@ if (LPF_ENABLE_TESTS)
             TEST_PREFIX ${ENGINE}_
             EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
             DISCOVERY_MODE POST_BUILD
-            DISCOVERY_TIMEOUT 15
+            DISCOVERY_TIMEOUT 60
         )
 
     endfunction(add_gtest)
