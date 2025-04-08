@@ -252,6 +252,13 @@ inline void Zero :: tryIncrement(const Op op, const Phase phase,
 {
     switch (phase) {
         case Phase::INIT:
+            // dynamically increase the capacity
+            // of registered tag arrays
+            // Somewhat arbitrarily I choose here to
+            // increase by factor 8 each time
+            if (m_tag_capacity <= tag) {
+                resizeTagreg((tag + 1) * 8);
+            }
             rcvdMsgCount[tag] = 0;
             getMsgCount[tag] = 0;
             m_recvInitMsgCount[tag] = 0;
