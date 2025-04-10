@@ -16,6 +16,7 @@
  */
 
 #include <lpf/core.h>
+#include <lpf/zero.h>
 #include <lpf/mpi.h>
 #include <lpf/abort.h>
 

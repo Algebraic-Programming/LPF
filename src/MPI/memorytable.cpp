@@ -147,12 +147,13 @@ bool MemoryTable :: needsSync() const
 {
 #ifdef LPF_CORE_MPI_USES_mpirma
     return ! m_added.empty() || !m_removed.empty();
-#endif
-#ifdef LPF_CORE_MPI_USES_mpimsg
+#elif LPF_CORE_MPI_USES_mpimsg
     return false;
-#endif
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#elif defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     return !m_added.empty();
+#else // This case should NOT occur?
+    fprintf(stderr, "An unknown engine in MPI/memorytable.cpp\n");
+    std::abort();
 #endif
 }
 
