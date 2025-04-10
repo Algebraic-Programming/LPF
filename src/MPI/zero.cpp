@@ -16,7 +16,7 @@
  */
 
 #include "log.hpp"
-#include "zero.h"
+#include "zero.hpp"
 #include "config.hpp"
 #include "communication.hpp"
 
