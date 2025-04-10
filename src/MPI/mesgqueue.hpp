@@ -37,7 +37,7 @@
 #include "ibverbs.hpp"
 #endif
 #ifdef LPF_CORE_MPI_USES_zero
-#include "zero.hpp"
+#include "zero.h"
 #endif
 
 

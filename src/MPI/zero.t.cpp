@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "zero.hpp"
+#include "zero.h"
 #include "assert.hpp"
 #include "mpilib.hpp"
 

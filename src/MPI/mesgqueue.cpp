@@ -17,7 +17,7 @@
 
 #include "mesgqueue.hpp"
 #ifdef LPF_CORE_MPI_USES_zero
-#include "zero.hpp"
+#include "zero.h"
 #else
 #include "ibverbs.hpp"
 #endif
