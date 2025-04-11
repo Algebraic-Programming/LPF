@@ -257,6 +257,7 @@ inline void Zero :: tryIncrement(const Op op, const Phase phase,
             // Somewhat arbitrarily I choose here to
             // increase by factor 8 each time
             if (m_tag_capacity <= tag) {
+                LOG(3, "Dynamically reallocated tags: " << tag << " -> " << (tag + 1) *  8);
                 resizeTagreg((tag + 1) * 8);
             }
             rcvdMsgCount[tag] = 0;
