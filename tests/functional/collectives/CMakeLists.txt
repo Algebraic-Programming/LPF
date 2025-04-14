@@ -17,21 +17,21 @@
 
 
 set(c99_tests_sources
-func_lpf_allcombine.cpp
-func_lpf_allgather.cpp
-func_lpf_allgather_overlapped.cpp
-func_lpf_allreduce.cpp
-func_lpf_alltoall.cpp
-func_lpf_broadcast.cpp
-func_lpf_broadcast_prime_size_object.cpp
-func_lpf_broadcast_small_prime_size_object.cpp
-func_lpf_collectives_init.cpp
-func_lpf_collectives_init_overflow.cpp
-func_lpf_combine.cpp
-func_lpf_gather.cpp
-func_lpf_reduce.cpp
-func_lpf_scatter.cpp
-func_lpf_zero_cost.cpp
+    func_lpf_allcombine.cpp
+    func_lpf_allgather.cpp
+    func_lpf_allgather_overlapped.cpp
+    func_lpf_allreduce.cpp
+    func_lpf_alltoall.cpp
+    func_lpf_broadcast.cpp
+    func_lpf_broadcast_prime_size_object.cpp
+    func_lpf_broadcast_small_prime_size_object.cpp
+    func_lpf_collectives_init.cpp
+    func_lpf_collectives_init_overflow.cpp
+    func_lpf_combine.cpp
+    func_lpf_gather.cpp
+    func_lpf_reduce.cpp
+    func_lpf_scatter.cpp
+    func_lpf_zero_cost.cpp
 )
 
 foreach (LPF_IMPL_ID ${ENGINES})
@@ -50,10 +50,6 @@ foreach (LPF_IMPL_ID ${ENGINES})
         set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
         add_gtest(${exeName} ${LPF_IMPL_ID} ${debug} "${CMAKE_CURRENT_SOURCE_DIR}/${testSource}")
-
-        string(REGEX REPLACE "(.${LPF_IMPL_ID})?.cpp$" "" baseName ${testSource})
-        get_filename_component(baseName ${testSource} NAME_WE  )
-        set(exeName "${baseName}_${LPF_IMPL_ID}_${LPF_IMPL_CONFIG}${mode}")
 
     endforeach(testSource)
 endforeach(LPF_IMPL_ID)

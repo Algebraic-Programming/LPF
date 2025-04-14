@@ -17,6 +17,7 @@
 
 #include <lpf/core.h>
 #include <lpf/pthread.h>
+#include <lpf/abort.h>
 
 #include "threadlocaldata.hpp"
 #include "machineparams.hpp"
@@ -36,6 +37,10 @@
 #endif
 
 #include <pthread.h> // for pthreads
+
+// the value 2 in this implementation indicates support for lpf_abort in a way
+// that may deviate from the stdlib abort()
+const int LPF_HAS_ABORT = 2;
 
 const lpf_err_t LPF_SUCCESS = 0;
 const lpf_err_t LPF_ERR_OUT_OF_MEMORY = 1;
@@ -386,6 +391,7 @@ lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
 }
 
 lpf_err_t lpf_get_rcvd_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
+    (void) slot;
     *msgs = 0;
     lpf::ThreadLocalData * t = realCtx(ctx);
     if (t->isAborted())
@@ -403,6 +409,15 @@ lpf_err_t lpf_get_rcvd_msg_count(lpf_t ctx, size_t * msgs) {
 }
 
 lpf_err_t lpf_get_sent_msg_count_per_slot(lpf_t ctx, size_t * msgs, lpf_memslot_t slot) {
+    *msgs = 0;
+    (void) slot;
+    lpf::ThreadLocalData * t = realCtx(ctx);
+    if (t->isAborted())
+        return LPF_SUCCESS;
+    return LPF_SUCCESS;
+}
+
+lpf_err_t lpf_get_sent_msg_count(lpf_t ctx, size_t * msgs) {
     *msgs = 0;
     lpf::ThreadLocalData * t = realCtx(ctx);
     if (t->isAborted())

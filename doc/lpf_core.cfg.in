@@ -742,8 +742,8 @@ INPUT                  = @PROJECT_SOURCE_DIR@/include/lpf/core.h \
                          @PROJECT_SOURCE_DIR@/include/bsp/bsp.h \
                          @PROJECT_SOURCE_DIR@/include/lpf/hybrid.h \
                          @PROJECT_SOURCE_DIR@/include/lpf/mpirpc-client.h \
-                         @PROJECT_SOURCE_DIR@/include/lpf/rpc-client.h
-
+                         @PROJECT_SOURCE_DIR@/include/lpf/rpc-client.h \
+                         @PROJECT_SOURCE_DIR@/include/lpf/abort.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

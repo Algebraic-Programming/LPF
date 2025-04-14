@@ -17,7 +17,6 @@
 
 #include <lpf/core.h>
 #include <lpf/mpi.h>
-#include "gtest/gtest.h"
 
 #include <mpi.h>
 
@@ -39,20 +38,13 @@ void subset_func(MPI_Comm comm)
 
     lpf_init_t init;
     lpf_err_t rc = lpf_mpi_initialize_with_mpicomm(comm, &init);
-    EXPECT_EQ( LPF_SUCCESS, rc );
 
     rc = lpf_hook(init, test_spmd, LPF_NO_ARGS);
-    EXPECT_EQ( LPF_SUCCESS, rc );
 }
 
-/**
- * \test Test for lpf_hook on mpi implementation when only using a subset
- * \pre P >= 3
- * \return Exit code: 0
- */
-TEST(API, func_lpf_hook_subset )
+int main(int argc, char **argv)
 {
-    MPI_Init(NULL, NULL);
+    MPI_Init(&argc, &argv);
 
     int s;
     MPI_Comm_rank(MPI_COMM_WORLD, &s);

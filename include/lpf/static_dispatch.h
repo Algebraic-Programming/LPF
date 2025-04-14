@@ -45,6 +45,7 @@
 #undef lpf_register_local
 #undef lpf_get_rcvd_msg_count
 #undef lpf_get_rcvd_msg_count_per_slot
+#undef lpf_get_sent_msg_count
 #undef lpf_get_sent_msg_count_per_slot
 #undef lpf_register_global
 #undef lpf_flush_sent
@@ -85,6 +86,7 @@
 #undef LPF_NONE
 #undef LPF_INIT_NONE
 #undef LPF_NO_ARGS
+#undef LPF_HAS_ABORT
 
 #ifdef LPF_FUNC
 
@@ -96,6 +98,7 @@
 #define lpf_register_local  LPF_FUNC(register_local)
 #define lpf_get_rcvd_msg_count LPF_FUNC(get_rcvd_msg_count)
 #define lpf_get_rcvd_msg_count_per_slot LPF_FUNC(get_rcvd_msg_count_per_slot)
+#define lpf_get_sent_msg_count LPF_FUNC(get_sent_msg_count)
 #define lpf_get_sent_msg_count_per_slot LPF_FUNC(get_sent_msg_count_per_slot)
 #define lpf_flush_sent LPF_FUNC(flush_sent)
 #define lpf_flush_received LPF_FUNC(flush_received)
@@ -136,6 +139,7 @@
 #define LPF_NONE              LPF_CONST(NONE)
 #define LPF_INIT_NONE         LPF_CONST(INIT_NONE)
 #define LPF_NO_ARGS           LPF_CONST(NO_ARGS)
+#define LPF_HAS_ABORT         LPF_CONST(HAS_ABORT)
 
 #endif
 

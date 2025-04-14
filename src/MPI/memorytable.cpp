@@ -23,8 +23,10 @@
 namespace lpf {
 
 MemoryTable :: MemoryTable( Communication & comm
-#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+#if defined LPF_CORE_MPI_USES_ibverbs 
         , mpi::IBVerbs & ibverbs
+#elif defined LPF_CORE_MPI_USES_zero
+        , mpi::IBVerbsNoc & ibverbs
 #endif
         )
     : m_memreg()
@@ -43,6 +45,17 @@ MemoryTable :: MemoryTable( Communication & comm
 
 
 MemoryTable :: Slot
+MemoryTable :: addNoc( void * mem, std::size_t size )  // nothrow
+{
+#if defined LPF_CORE_MPI_USES_zero 
+    Memory rec( mem, size, m_ibverbs.regNoc(mem, size));
+    return m_memreg.addNocReg( rec);
+#else
+    return m_memreg.invalidSlot();
+#endif
+}
+
+MemoryTable :: Slot
 MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 {
 #if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
@@ -52,6 +65,15 @@ MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 #endif
     return m_memreg.addLocalReg( rec);
 }
+
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+mpi::IBVerbs::SlotID MemoryTable :: getVerbID(MemoryTable::Slot slot) const
+{
+    Memory sl = m_memreg.lookup(slot);
+    ASSERT(sl.slot != m_memreg.invalidSlot());
+    return m_memreg.lookup( slot ).slot;
+}
+#endif
 
 MemoryTable :: Slot
 MemoryTable :: addGlobal( void * mem, std::size_t size ) // nothrow

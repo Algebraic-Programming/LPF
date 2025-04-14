@@ -45,9 +45,20 @@ namespace {
     }
 }
 
+size_t MemoryRegistration :: serialize(char ** buf) {
+    (void) buf;
+    throw IBVerbs::Exception( "MemoryRegistration::serialize(char ** buf) not implemented for base IBVerbs class");
+}
+
+MemoryRegistration * MemoryRegistration :: deserialize(char * buf)
+{
+    (void) buf;
+    throw IBVerbs::Exception( "MemoryRegistration::deserialize(char * buf) not implemented for base IBVerbs class");
+}
 
 IBVerbs :: IBVerbs( Communication & comm )
-    : m_pid( comm.pid() )
+    : m_comm( comm )
+    , m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
     , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
@@ -72,7 +83,6 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_memreg()
     , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
 {
     m_peerList.reserve( m_nprocs );
 
@@ -96,7 +106,6 @@ IBVerbs :: IBVerbs( Communication & comm )
                 " available, which is not enough" );
         throw Exception( "No Infiniband devices available" );
     }
-
 
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
@@ -463,8 +472,8 @@ void IBVerbs :: resizeMemreg( size_t size )
         throw std::bad_alloc() ;
     }
 
-    MemoryRegistration null = { 0, 0, 0, 0 };
-    MemorySlot dflt; dflt.glob.resize( m_nprocs, null );
+    MemoryRegistration newMR = { nullptr, 0, 0, 0, m_pid};
+    MemorySlot dflt; dflt.glob.resize( m_nprocs, newMR );
 
     m_memreg.reserve( size, dflt );
 }
@@ -507,11 +516,7 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
             throw Exception("Could not register memory area");
         }
     }
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
 
@@ -551,11 +556,7 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
 
-    MemoryRegistration local;
-    local.addr = addr;
-    local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    MemoryRegistration local((char *) addr, size, size?slot.mr->lkey:0, size?slot.mr->rkey:0, m_pid);
 
     LOG(4, "All-gathering memory register data" );
 
@@ -583,13 +584,13 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
         const char * localAddr
-            = static_cast<const char *>(src.glob[m_pid].addr) + srcOffset;
+            = static_cast<const char *>(src.glob[m_pid]._addr) + srcOffset;
         const char * remoteAddr
-            = static_cast<const char *>(dst.glob[dstPid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[dstPid]._addr) + dstOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );
-        sge.lkey = src.mr->lkey;
+            sge.lkey = src.mr->lkey;
         m_sges.push_back( sge );
 
         bool lastMsg = ! m_activePeers.contains( dstPid );
@@ -603,7 +604,7 @@ void IBVerbs :: put( SlotID srcSlot, size_t srcOffset,
         sr.num_sge = 1;
         sr.opcode = IBV_WR_RDMA_WRITE;
         sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = dst.glob[dstPid].rkey;
+        sr.wr.rdma.rkey = dst.glob[dstPid]._rkey;
 
         m_srsHeads[ dstPid ] = m_srs.size();
         m_srs.push_back( sr );
@@ -632,9 +633,9 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         struct ibv_send_wr sr; std::memset(&sr, 0, sizeof(sr));
 
         const char * localAddr
-            = static_cast<const char *>(dst.glob[m_pid].addr) + dstOffset;
+            = static_cast<const char *>(dst.glob[m_pid]._addr) + dstOffset;
         const char * remoteAddr
-            = static_cast<const char *>(src.glob[srcPid].addr) + srcOffset;
+            = static_cast<const char *>(src.glob[srcPid]._addr) + srcOffset;
 
         sge.addr = reinterpret_cast<uintptr_t>( localAddr );
         sge.length = std::min<size_t>(size, m_maxMsgSize );
@@ -652,7 +653,7 @@ void IBVerbs :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr.num_sge = 1;
         sr.opcode = IBV_WR_RDMA_READ;
         sr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
-        sr.wr.rdma.rkey = src.glob[srcPid].rkey;
+        sr.wr.rdma.rkey = src.glob[srcPid]._rkey;
 
         m_srsHeads[ srcPid ] = m_srs.size();
         m_srs.push_back( sr );

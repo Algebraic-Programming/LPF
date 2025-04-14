@@ -126,6 +126,8 @@
  *  - \ref LPF_EXTENSIONS
  *     - \ref LPF_PTHREAD
  *     - \ref LPF_MPI
+ *     - \ref LPF_HYBRID
+ *     - \ref LPF_ABORT
  *  - \ref LPF_HL
  *     - \ref LPF_BSPLIB
  *     - \ref LPF_COLLECTIVES
@@ -988,7 +990,7 @@ typedef struct lpf_machine {
      *                         both bounds are inclusive.
      * \param[in] min_msg_size A byte size value that is larger or equal to 0.
      * \param[in] attr         A #lpf_sync_attr_t value. When in doubt, always
-     *                         use #LPF_SYNC_DEFAULT
+     *                         use #LPF_SYNC_DEFAULT.
      *
      * \returns The guaranteed value for the message gap given an LPF SPMD
      *          section using \a p processes, for a superstep in which a user
@@ -2424,6 +2426,15 @@ lpf_err_t lpf_get_rcvd_msg_count( lpf_t ctx, size_t *rcvd_msgs);
  */
 extern _LPFLIB_API
 lpf_err_t lpf_get_sent_msg_count_per_slot( lpf_t ctx, size_t *sent_msgs, lpf_memslot_t slot);
+
+/**
+ * This function returns in @rcvd_msgs the total received message count.
+ * It is only implemented for the zero backend (on Infiniband)
+ * \param[in] ctx The LPF context
+ * \param[out] sent_msgs Sent message count
+ */
+extern _LPFLIB_API
+lpf_err_t lpf_get_sent_msg_count( lpf_t ctx, size_t *sent_msgs);
 
 /**
  * This function blocks until all the scheduled messages via

@@ -61,6 +61,23 @@ public:
     err_t resizeMesgQueue( size_t nMsgs ) ; // nothrow
 
     void abort() ; // nothrow
+                   //
+    /* start NOC extensions */
+    memslot_t nocRegister( void * mem, size_t size ) ; // nothrow
+    void nocDeregister( memslot_t slot) ; // nothrow
+    err_t nocResizeMemreg( size_t nRegs ) ; // nothrow
+    void nocPut( memslot_t srcSlot, size_t srcOffset, 
+            pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
+            size_t size ) ; // nothrow
+
+    void nocGet( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
+            memslot_t dstSlot, size_t dstOffset,
+            size_t size ) ;// nothrow
+
+    err_t serializeSlot(memslot_t slot, char ** buff, size_t *buff_size);
+
+    err_t deserializeSlot(char * buff, memslot_t slot);
+    /* end NOC extensions */
 
     pid_t isAborted() const ;
  
@@ -81,6 +98,8 @@ public:
     void getRcvdMsgCountPerSlot(size_t * msgs, SlotID slot);
 
     void getSentMsgCountPerSlot(size_t * msgs, SlotID slot);
+
+    void getSentMsgCount(size_t * msgs);
 
     void getRcvdMsgCount(size_t * msgs);
 
@@ -108,6 +127,7 @@ private:
     mpi::Comm m_comm;
     Process & m_subprocess;
     MessageQueue m_mesgQueue;
+
     pid_t m_aborted;
 
     static Interface * s_root;

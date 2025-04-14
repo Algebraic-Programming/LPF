@@ -16,6 +16,7 @@
  */
 
 #include "debug/lpf/core.h"
+#include "lpf/abort.h"
 
 #undef lpf_get
 #undef lpf_put
@@ -29,12 +30,6 @@
 #undef lpf_exec
 #undef lpf_hook
 #undef lpf_rehook
-#undef lpf_abort
-#undef lpf_get_rcvd_msg_count
-#undef lpf_get_rcvd_msg_count_per_slot
-#undef lpf_get_sent_msg_count_per_slot
-#undef lpf_flush
-#undef lpf_abort
 
 #undef lpf_init_t
 #undef lpf_pid_t
@@ -62,6 +57,7 @@
 #undef LPF_NONE
 #undef LPF_INIT_NONE
 #undef LPF_NO_ARGS
+#undef LPF_HAS_ABORT
 
 #if __cplusplus >= 201103L
 #include <unordered_map>
@@ -105,9 +101,21 @@ class _LPFLIB_LOCAL Interface {
     }
 
     static void threadInit() {
+        // in the below we use std::abort as these are critical *internal*
+        // errors, not errors in the use of LPF core functionality.
+        // By contrast, errors that appear due to misuse of the LPF core primitives
+        // should call lpf_abort. This initialiser ensures that the underlying LPF
+        // engine has support for lpf_abort.
+        // The above logic about when to std::abort and when to lpf_abort is applied
+        // consistently in the below implementation. Only (seemingly) exceptions will
+        // be documented henceforth.
         int rc = pthread_key_create( &s_threadKeyCtxStore, &destroyCtxStore );
         if (rc) {
-            LOG( 0, "Internal error while initializing thread static storage");
+            LOG( 0, "Internal error while initializing thread static storage" );
+            std::abort();
+        }
+        if( ! LPF_HAS_ABORT ) {
+            LOG( 0, "Debug layer relies on lpf_abort, but selected engine does not support it" );
             std::abort();
         }
     }
@@ -491,6 +499,13 @@ public:
     static lpf_err_t hook( const char * file, int line,
             lpf_init_t init, lpf_spmd_t spmd, lpf_args_t args )
     {
+        // the lpf_hook could arise from any non-LPF context -- this is in fact
+        // why it exists: hooking from within an LPF context to create a subcontext is
+        // provided by lpf_rehook instead.
+        // Because the callee context is potentially not controlled by the underlying
+        // LPF engine, and because the callee context in the non-trivial case consists
+        // of multiple distributed processes, we cannot rely on lpf_abort. The only
+        // thing we can do is rely on the standard abort.
         if ( spmd == NULL ) {
             LOG( 0, file << ":" << line
                     << ": Invalid argument passed to lpf_hook: NULL spmd argument" );
@@ -700,18 +715,6 @@ public:
         m_new_global_regs.insert( *memslot );
         m_active_regs.insert( *memslot );
 
-        return LPF_SUCCESS;
-    }
-
-    lpf_err_t get_rcvd_msg_count_per_slot(size_t *msgs, lpf_memslot_t slot) {
-        return LPF_SUCCESS;
-    }
-
-    lpf_err_t get_sent_msg_count_per_slot(size_t *msgs, lpf_memslot_t slot) {
-        return LPF_SUCCESS;
-    }
-
-    lpf_err_t get_rcvd_msg_count(size_t *msgs) {
         return LPF_SUCCESS;
     }
 
@@ -1022,7 +1025,6 @@ public:
 
         return LPF_SUCCESS;
     }
-
 
     lpf_err_t abort(const char * file, int line) {
         (void) file;

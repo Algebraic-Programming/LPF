@@ -20,8 +20,10 @@ if (HYBRID_ENGINE_ENABLED)
 set(LPF_IMPL_ID hybrid)
 set(LPF_IMPL_CONFIG ${LPFLIB_CONFIG_NAME})
 
-set(LPFLIB_HYBRID_MPI_ENGINE "ibverbs" CACHE STRING
-        "Choice of MPI engine to use for inter-process communication")
+if( NOT DEFINED LPFLIB_HYBRID_MPI_ENGINE )
+	message( FATAL_ERROR "Hybrid engine is enabled but no inter-node engine was selected" )
+endif()
+
 set(mpi_engine  "${LPFLIB_HYBRID_MPI_ENGINE}" )
 message( STATUS "Hybrid implementation's multi-node layer is '${mpi_engine}'")
 
