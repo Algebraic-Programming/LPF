@@ -45,11 +45,11 @@ public:
 
     void put( memslot_t srcSlot, size_t srcOffset, 
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-            size_t size ) ; // nothrow
+            size_t size, lpf_msg_attr_t attr) ; // nothrow
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
             memslot_t dstSlot, size_t dstOffset,
-            size_t size ) ;// nothrow
+            size_t size, lpf_msg_attr_t attr) ;// nothrow
 
     memslot_t registerGlobal( void * mem, size_t size ) ; // nothrow
 

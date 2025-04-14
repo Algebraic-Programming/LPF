@@ -499,7 +499,7 @@ lpf_err_t lpf_put( lpf_t ctx,
                  // implements core functionality
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())
-        i->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+        i->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size, attr);
     return LPF_SUCCESS;
 }
 
@@ -514,11 +514,9 @@ lpf_err_t lpf_get(
     lpf_msg_attr_t attr
 )
 {
-    (void) attr; // ignore parameter 'msg' since this implementation only 
-                 // implements core functionality
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())
-        i->get( pid, src, src_offset, dst, dst_offset, size );
+        i->get( pid, src, src_offset, dst, dst_offset, size, attr);
     return LPF_SUCCESS;
 }
 

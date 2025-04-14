@@ -309,7 +309,7 @@ void MessageQueue :: removeTag( tag_t tag )
 }
 
 void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
-        memslot_t dstSlot, size_t dstOffset, size_t size )
+        memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
 {
     if( size == 0 ) { return; }
     ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
@@ -329,7 +329,7 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             srcOffset,
             m_memreg.getVerbID( dstSlot ),
             dstOffset,
-            size );
+            size, attr);
 #else
     using mpi::ipc::newMsg;
 
@@ -361,7 +361,7 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
 }
 
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
 {
     if (size == 0 ) { return; }
     ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
@@ -380,7 +380,8 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             dstPid,
             m_memreg.getVerbID( dstSlot),
             dstOffset,
-            size);
+            size,
+            attr);
 #else
     using mpi::ipc::newMsg;
     if (size <= m_tinyMsgSize )

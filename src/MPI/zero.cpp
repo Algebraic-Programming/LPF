@@ -382,12 +382,12 @@ void Zero :: doRemoteProgress() {
 
                 // Note: Ignore compare-and-swap atomics!
                 if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
-                    SlotID slot;
+                    TagID tag;
                     // This receive is from a PUT call
                     if (wcs[i].opcode == IBV_WC_RECV_RDMA_WITH_IMM) {
-                        slot = wcs[i].imm_data;
-                        tryIncrement(Op::RECV, Phase::POST, slot);
-                        LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[slot] << " for LPF slot " << slot);
+                        tag = wcs[i].imm_data;
+                        tryIncrement(Op::RECV, Phase::POST, tag);
+                        LOG(3, "Rank " << m_pid << " increments received message count to " << rcvdMsgCount[tag] << " for LPF slot " << tag);
                     }
                 }
                 ibv_post_srq_recv(m_srq.get(), &wr, &bad_wr);
@@ -651,7 +651,6 @@ Zero :: SlotID Zero :: regLocal( void * addr, size_t size )
         size?slot.mr->rkey:0, m_pid);
 
     SlotID id =  m_memreg.addLocalReg( slot );
-    tryIncrement(Op::SEND, Phase::INIT, id);
 
     m_memreg.update( id ).glob.resize( m_nprocs );
     m_memreg.update( id ).glob[m_pid] = local;
@@ -687,7 +686,6 @@ Zero :: SlotID Zero :: regGlobal( void * addr, size_t size )
         throw Exception("Another process could not register memory area");
 
     SlotID id = m_memreg.addGlobalReg( slot );
-    tryIncrement(Op::SEND/* <- dummy for init */, Phase::INIT, id);
     MemorySlot & ref = m_memreg.update(id);
     // exchange memory registration info globally
     ref.glob.resize(m_nprocs);
@@ -707,6 +705,8 @@ Zero :: TagID Zero :: regTag() {
         throw Exception("No free tags available");
     }
     const TagID ret = m_free_tags.back();
+    // Initialize a new tag
+    tryIncrement(Op::SEND, Phase::INIT, ret);
     m_free_tags.pop_back();
     LOG(4, "Tag " << ret << " has been allocated");
     return ret;
@@ -732,7 +732,7 @@ void Zero :: deregTag( TagID id )
 }
 
 void Zero :: put( SlotID srcSlot, size_t srcOffset,
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size)
+              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
@@ -767,12 +767,12 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
         /* use wr_id to later demultiplex srcSlot */
-        sr->wr_id = srcSlot;
+        sr->wr_id = attr; //srcSlot;
         /*
          * In HiCR, we need to know at receiver end which slot
          * has received the message. But here is a trick:
          */
-        sr->imm_data = dstSlot;
+        sr->imm_data = attr; //dstSlot;
 
         sr->sg_list = &sges[i];
         sr->num_sge = 1;
@@ -795,11 +795,11 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
 
-    tryIncrement(Op::SEND, Phase::PRE, srcSlot);
+    tryIncrement(Op::SEND, Phase::PRE, attr);
 }
 
 void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
-                  SlotID dstSlot, size_t dstOffset, size_t size )
+                  SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
@@ -842,8 +842,9 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
         // (not srcSlot, as this slot is remote)
-        sr->wr_id = dstSlot; // <= This enables virtual tag matching
-        sr->imm_data = srcSlot; // This is irrelevant as we don't send _WITH_IMM
+        //sr->wr_id = dstSlot; // <= This enables virtual tag matching
+        sr->wr_id = attr; // <= This enables virtual tag matching
+        sr->imm_data = 0; //srcSlot; // This is irrelevant as we don't send _WITH_IMM
         srs[i] = *sr;
         size -= sge->length;
         srcOffset += sge->length;
@@ -860,7 +861,7 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
         throw Exception("Error while posting RDMA requests");
     }
-    tryIncrement(Op::GET, Phase::PRE, dstSlot);
+    tryIncrement(Op::GET, Phase::PRE, attr);
 
 }
 
@@ -920,11 +921,11 @@ std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
                 LOG(4, "Process " << m_pid << " Send wcs[" << i << "].imm_data = "<< wcs[i].imm_data);
             }
 
-            SlotID slot = wcs[i].wr_id;
+            TagID slot = wcs[i].wr_id;
             opcodes.push_back(wcs[i].opcode);
             // Ignore compare-and-swap atomics!
             if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
-                // This is a get call completing
+                // This is a GET call completion
                 if (wcs[i].opcode == IBV_WC_RDMA_READ) {
                     tryIncrement(Op::GET, Phase::POST, slot);
                     LOG(4, "Rank " << m_pid << " with GET, increments getMsgCount to "
@@ -1039,6 +1040,7 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
     {
         (void) resized;
 
+        m_comm.barrier();
         // flush send queues
         flushSent();
         // flush receive queues
