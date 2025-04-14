@@ -1040,7 +1040,6 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
     {
         (void) resized;
 
-        m_comm.barrier();
         // flush send queues
         flushSent();
         // flush receive queues
