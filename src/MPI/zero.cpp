@@ -1004,10 +1004,10 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
             recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
             LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
                 << " expectedRecvd = " << expectedRecvd
+                << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
+                << " getMsgCount[" << tag << "] = " << getMsgCount[tag]
                 << " sentMsgCount[" << tag << "] = " << sentMsgCount[tag]
-                << " expectedSent = " << expectedSent
-                << " m_recvInitMsgCount[" << tag << "] = " << m_recvInitMsgCount[tag]
-                << " m_sendInitMsgCount[" << tag << "] = " << m_sendInitMsgCount[tag]);
+                << " expectedSent = " << expectedSent);
         } while (!(sentOK && recvdOK));
     }
 }
