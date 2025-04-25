@@ -892,13 +892,12 @@ void Zero :: createNewSyncAttr(struct SyncAttr * * attr) {
     (*attr)->expected_rcvd = 0;
 }
 
-std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
+void Zero :: doLocalProgress(int& error) {
 
     error = 0;
     LOG(1, "Polling for messages" );
     struct ibv_wc wcs[POLL_BATCH];
     int pollResult = ibv_poll_cq(m_cqLocal.get(), POLL_BATCH, wcs);
-    std::vector<ibv_wc_opcode> opcodes;
     if ( pollResult > 0) {
         LOG(4, "Process " << m_pid << ": Received " << pollResult << " acknowledgements");
 
@@ -922,7 +921,6 @@ std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
             }
 
             TagID slot = wcs[i].wr_id;
-            opcodes.push_back(wcs[i].opcode);
             // Ignore compare-and-swap atomics!
             if (wcs[i].opcode != IBV_WC_COMP_SWAP) {
                 // This is a GET call completion
@@ -946,7 +944,6 @@ std::vector<ibv_wc_opcode> Zero :: doLocalProgress(int& error) {
         LOG( 1, "Failed to poll IB completion queue" );
         throw Exception("Poll CQ failure");
     }
-    return opcodes;
 }
 
 void Zero :: flushReceived() {

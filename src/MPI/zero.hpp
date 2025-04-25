@@ -192,7 +192,7 @@ protected:
     void tryIncrement(const Op op, const Phase phase, const TagID slot)
         noexcept;
 
-    std::vector<ibv_wc_opcode> doLocalProgress(int& error);
+    void doLocalProgress(int& error);
 
     struct MemorySlot {
         shared_ptr< struct ibv_mr > mr;    // verbs structure
