@@ -88,7 +88,11 @@ public:
     void remove( Slot slot );   // nothrow
 
     void * getAddress( Slot slot, size_t offset ) const  // nothrow
-    {   ASSERT( offset <= m_memreg.lookup(slot).size  ); 
+    {   
+        if (offset > m_memreg.lookup(slot).size) {
+            LOG(5, "Offset:" << offset << " m_Memreg.lookup(slot).size = " << m_memreg.lookup(slot).size);
+        }
+        ASSERT( offset <= m_memreg.lookup(slot).size  ); 
         return m_memreg.lookup(slot).addr + offset;
     }
 

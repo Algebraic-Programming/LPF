@@ -250,6 +250,8 @@ Zero :: ~Zero()
 inline void Zero :: tryIncrement(const Op op, const Phase phase,
     const TagID tag) noexcept
 {
+    if (tag == LPF_MSG_DEFAULT) return;
+
     switch (phase) {
         case Phase::INIT:
             // dynamically increase the capacity
@@ -766,13 +768,10 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         // we only need a signal from the last message in the queue
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
-        /* use wr_id to later demultiplex srcSlot */
-        sr->wr_id = attr; //srcSlot;
-        /*
-         * In HiCR, we need to know at receiver end which slot
-         * has received the message. But here is a trick:
-         */
-        sr->imm_data = attr; //dstSlot;
+        // use wr_id to store the comm tag (passed as attr)
+        sr->wr_id = attr;
+        // use wr_id to store the comm tag (passed as attr)
+        sr->imm_data = attr;
 
         sr->sg_list = &sges[i];
         sr->num_sge = 1;
@@ -785,7 +784,7 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         dstOffset += sge->length;
 
         LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length
-            << " bytes to " << dstPid << " on slot" << dstSlot );
+            << " bytes to " << dstPid << " on slot" << dstSlot << " and tag " << attr);
     }
     struct ibv_send_wr *bad_wr = NULL;
     // srs[0] should be sufficient because the rest of srs are on a chain
@@ -910,7 +909,7 @@ void Zero :: doLocalProgress(int& error) {
                         << wcs[i].vendor_err );
                 const char * status_descr;
                 status_descr = ibv_wc_status_str(wcs[i].status);
-                LOG( 2, "The work completion status string: " << status_descr);
+                LOG( 2, "Process " << m_pid << ": The work completion status string: " << status_descr);
                 error = 1;
             }
             else {
@@ -932,7 +931,7 @@ void Zero :: doLocalProgress(int& error) {
                 // This is a put call completing
                 if (wcs[i].opcode == IBV_WC_RDMA_WRITE) {
                     tryIncrement(Op::SEND, Phase::POST, slot);
-                    LOG(4, "Rank " << m_pid << " with SEND, increments getMsgCount to "
+                    LOG(4, "Rank " << m_pid << " with SEND, increments sentMsgCount to "
                         << sentMsgCount[slot] << " for LPF slot " << slot);
                 }
 
@@ -982,30 +981,48 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
     if (expectedSent == 0) { sentOK = true; }
     if (expectedRecvd == 0) { recvdOK = true; }
     int error;
-    if (tagActive[tag]) {
-        do {
-            doLocalProgress(error);
-            if (error) {
-                LOG(1, "Error in doLocalProgress");
-                throw std::runtime_error("Error in doLocalProgress");
-            }
-            // this call triggers doRemoteProgress
-            doRemoteProgress();
 
-            /*
-             * 1) Are we expecting nothing here (sentOK/recvdOK = true)
-             * 2) do the sent and received messages  match our expectations?
-             */
-            sentOK = (sentOK || sentMsgCount[tag] >= expectedSent);
-            // We can receive messages passively (from remote puts) and actively (from our gets)
-            recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
-            LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
-                << " expectedRecvd = " << expectedRecvd
-                << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
-                << " getMsgCount[" << tag << "] = " << getMsgCount[tag]
-                << " sentMsgCount[" << tag << "] = " << sentMsgCount[tag]
-                << " expectedSent = " << expectedSent);
-        } while (!(sentOK && recvdOK));
+    // This is semantically equivalent to a non-blocking test call,
+    // triggering progress on the network card without expecting anything
+    // from a particular tag
+    if (tag == INVALID_TAG && sentOK && recvdOK) {
+        doLocalProgress(error);
+        if (error) {
+            LOG(1, "Error in doLocalProgress");
+            throw std::runtime_error("Error in doLocalProgress");
+        }
+        // this call triggers doRemoteProgress
+        doRemoteProgress();
+    }
+
+    // This is a blocking call on a particular tag with some expected
+    // sent / received messages
+    else {
+        if (tagActive[tag]) {
+            do {
+                doLocalProgress(error);
+                if (error) {
+                    LOG(1, "Error in doLocalProgress");
+                    throw std::runtime_error("Error in doLocalProgress");
+                }
+                // this call triggers doRemoteProgress
+                doRemoteProgress();
+
+                /*
+                 * 1) Are we expecting nothing here (sentOK/recvdOK = true)
+                 * 2) do the sent and received messages  match our expectations?
+                 */
+                sentOK = (sentOK || sentMsgCount[tag] >= expectedSent);
+                // We can receive messages passively (from remote puts) and actively (from our gets)
+                recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
+                LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
+                        << " expectedRecvd = " << expectedRecvd
+                        << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
+                        << " getMsgCount[" << tag << "] = " << getMsgCount[tag]
+                        << " sentMsgCount[" << tag << "] = " << sentMsgCount[tag]
+                        << " expectedSent = " << expectedSent);
+            } while (!(sentOK && recvdOK));
+        }
     }
 }
 
@@ -1031,10 +1048,10 @@ void Zero :: syncPerTag(TagID tag) {
 
 void Zero :: sync(bool resized,const struct SyncAttr * attr)
 {
-    const bool defaultSync = attr == nullptr || (attr->tag == INVALID_TAG &&
-        attr->expected_sent == 0 && attr->expected_rcvd == 0);
+    const bool defaultSync = (attr == nullptr) ;
     if (defaultSync)
     {
+        LOG(4, "Process " << m_pid << " going for default sync (uses barrier)");
         (void) resized;
 
         // flush send queues
@@ -1042,7 +1059,6 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
         // flush receive queues
         flushReceived();
 
-        LOG(4, "Process " << m_pid << " will call barrier at end of sync\n");
         m_comm.barrier();
 
         // done
@@ -1050,14 +1066,17 @@ void Zero :: sync(bool resized,const struct SyncAttr * attr)
     }
 
     ASSERT(attr != NULL);
+
     const bool tagSync = attr->expected_sent == 0 && attr->expected_rcvd == 0
         && attr->tag != INVALID_TAG;
     if (tagSync)
     {
+        LOG(4, "Process " << m_pid << " going for syncPerTag (uses barrier)");
         syncPerTag(attr->tag);
         return;
     }
 
+    LOG(4, "Process " << m_pid << " going for countingSync (no barrier!)");
     countingSyncPerSlot(attr->tag,attr->expected_sent,attr->expected_rcvd);
 }
 
