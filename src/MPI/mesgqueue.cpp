@@ -331,6 +331,7 @@ void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
             dstOffset,
             size, attr);
 #else
+    (void) attr; // this engine does not use message attributes
     using mpi::ipc::newMsg;
 
     if (size <= m_tinyMsgSize )
@@ -383,6 +384,7 @@ void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
             size,
             attr);
 #else
+    (void) attr; // this engine does not use message attributes
     using mpi::ipc::newMsg;
     if (size <= m_tinyMsgSize )
     {

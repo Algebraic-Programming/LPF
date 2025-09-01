@@ -396,7 +396,7 @@ extern _LPFLIB_API
 lpf_err_t lpf_tag_set_mattr(
     lpf_t ctx,
     lpf_tag_t tag,
-    lpf_msg_attr_t * attr
+    lpf_msg_attr_t attr
 );
 
 /**

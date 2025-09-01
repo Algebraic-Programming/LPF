@@ -28,7 +28,7 @@
 #include <cstdint>
 #include <climits>
 
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
   #include <memory>
 #else
   #include <tr1/memory>
@@ -49,7 +49,7 @@ _LPFLIB_VAR const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 _LPFLIB_VAR const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
-_LPFLIB_VAR const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
+_LPFLIB_VAR const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
 
 _LPFLIB_VAR const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -59,7 +59,7 @@ _LPFLIB_VAR const lpf_t LPF_NONE = NULL;
 
 _LPFLIB_VAR const lpf_init_t LPF_INIT_NONE = NULL;
 
-_LPFLIB_VAR const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ; 
+_LPFLIB_VAR const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ;
 
 _LPFLIB_VAR const lpf_machine_t LPF_INVALID_MACHINE = { 0, 0, NULL, NULL };
 
@@ -68,7 +68,7 @@ namespace {
     using lpf::hybrid::LPF_CORE_IMPL_CONFIG::MachineParams;
 
     struct Init {
-    
+
         lpf::hybrid::Thread m_thread;
         lpf::hybrid::MPI    m_mpi;
         lpf_pid_t m_threadId, m_nThreads;
@@ -84,18 +84,18 @@ namespace {
 
 
     lpf::hybrid::ThreadState * realContext( lpf_t ctx )
-    { 
+    {
         lpf_t c;
         if (ctx == LPF_ROOT)
-            c = &lpf::hybrid::ThreadState::root(); 
+            c = &lpf::hybrid::ThreadState::root();
         else
             c = ctx;
         return static_cast< lpf::hybrid::ThreadState *>(c);
     }
 }
 
-_LPFLIB_API lpf_err_t lpf_hybrid_intialize( USE_THREAD(_t) thread, USE_MPI(_t) mpi, 
-        lpf_pid_t threadId, lpf_pid_t nThreads, 
+_LPFLIB_API lpf_err_t lpf_hybrid_intialize( USE_THREAD(_t) thread, USE_MPI(_t) mpi,
+        lpf_pid_t threadId, lpf_pid_t nThreads,
         lpf_pid_t nodeId, lpf_pid_t nNodes, lpf_init_t * init )
 {
     using namespace lpf::hybrid;
@@ -138,12 +138,12 @@ _LPFLIB_API lpf_err_t lpf_hook( lpf_init_t init, lpf_spmd_t spmd, lpf_args_t arg
     using namespace lpf::hybrid;
     Init * params = static_cast<Init *>(init);
 
-#if __cplusplus >= 201103L    
+#if __cplusplus >= 201103L
     std::shared_ptr<NodeState> nodeState;
 #else
     std::tr1::shared_ptr<NodeState> nodeState;
 #endif
-        
+
     NodeState * nodeStatePtr = NULL;
     if (params->m_threadId == 0)
     {
@@ -172,15 +172,15 @@ _LPFLIB_API lpf_err_t lpf_hook( lpf_init_t init, lpf_spmd_t spmd, lpf_args_t arg
     }
     catch(std::bad_alloc & e )
     {
-        LOG(1, "Not enough memory to run SPMD function on thread " 
-                << params->m_threadId << " of node " 
+        LOG(1, "Not enough memory to run SPMD function on thread "
+                << params->m_threadId << " of node "
                 << nodeStatePtr->nodeId() );
         failure = true;
     }
     catch(...)
     {
-        LOG(1, "SPMD function of thread " 
-                << params->m_threadId << " of node " 
+        LOG(1, "SPMD function of thread "
+                << params->m_threadId << " of node "
                 << nodeStatePtr->nodeId() << " threw an unexpected exception");
         failure = true;
     }
@@ -188,7 +188,7 @@ _LPFLIB_API lpf_err_t lpf_hook( lpf_init_t init, lpf_spmd_t spmd, lpf_args_t arg
     trc = reduceOr( params->m_thread, 0, failure);
     if ( trc != Thread::SUCCESS ) return LPF_ERR_FATAL;
 
-    if ( params->m_threadId == 0) 
+    if ( params->m_threadId == 0)
     {
         MPI::err_t nrc = MPI::SUCCESS;
         nrc = reduceOr( params->m_mpi, 0, failure);
@@ -198,7 +198,7 @@ _LPFLIB_API lpf_err_t lpf_hook( lpf_init_t init, lpf_spmd_t spmd, lpf_args_t arg
     }
     trc = broadcast( params->m_thread, 0, failure );
     if ( trc != Thread::SUCCESS ) return LPF_ERR_FATAL;
-    
+
     return failure?LPF_ERR_FATAL:LPF_SUCCESS;
 }
 
@@ -281,16 +281,15 @@ _LPFLIB_API lpf_err_t lpf_deregister(
 }
 
 _LPFLIB_API lpf_err_t lpf_put( lpf_t ctx,
-                       lpf_memslot_t src_slot, 
-                       size_t src_offset,
-                       lpf_pid_t dst_pid, 
-                       lpf_memslot_t dst_slot, 
-                       size_t dst_offset, 
-                       size_t size, 
-                       lpf_msg_attr_t attr
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
 )
 {
-    (void) attr;
     using namespace lpf::hybrid;
     if (ctx == LPF_SINGLE_PROCESS) {
         char * null = NULL;
@@ -301,24 +300,25 @@ _LPFLIB_API lpf_err_t lpf_put( lpf_t ctx,
     }
 
     ThreadState * t = realContext(ctx);
-    if (!t->error())
-        t->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
+    if (!t->error()) {
+        t->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size,
+            attr );
+    }
     return LPF_SUCCESS;
 }
 
 
 _LPFLIB_API lpf_err_t lpf_get(
-    lpf_t ctx, 
-    lpf_pid_t src_pid, 
-    lpf_memslot_t src_slot, 
-    size_t src_offset, 
-    lpf_memslot_t dst_slot, 
+    lpf_t ctx,
+    lpf_pid_t src_pid,
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_memslot_t dst_slot,
     lpf_memslot_t dst_offset,
     size_t size,
     lpf_msg_attr_t attr
 )
 {
-    (void) attr;
     using namespace lpf::hybrid;
     if (ctx == LPF_SINGLE_PROCESS) {
         char * null = NULL;
@@ -329,8 +329,10 @@ _LPFLIB_API lpf_err_t lpf_get(
     }
 
     ThreadState * t = realContext(ctx);
-    if (!t->error())
-        t->get( src_pid, src_slot, src_offset, dst_slot, dst_offset, size );
+    if (!t->error()) {
+        t->get( src_pid, src_slot, src_offset, dst_slot, dst_offset, size,
+            attr );
+    }
     return LPF_SUCCESS;
 }
 
@@ -338,7 +340,7 @@ _LPFLIB_API lpf_err_t lpf_sync( lpf_t ctx, lpf_sync_attr_t attr )
 {
     (void) attr;
     using namespace lpf::hybrid;
-    if (ctx == LPF_SINGLE_PROCESS) 
+    if (ctx == LPF_SINGLE_PROCESS)
         return LPF_SUCCESS;
     return realContext(ctx)->sync();
 }
@@ -363,7 +365,7 @@ _LPFLIB_API lpf_err_t lpf_probe( lpf_t ctx, lpf_machine_t * params )
 _LPFLIB_API lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
 {
     using namespace lpf::hybrid;
-    if (ctx == LPF_SINGLE_PROCESS) 
+    if (ctx == LPF_SINGLE_PROCESS)
        return LPF_SUCCESS;
 
     ThreadState * t = realContext(ctx);
@@ -376,7 +378,7 @@ _LPFLIB_API lpf_err_t lpf_resize_message_queue( lpf_t ctx, size_t max_msgs )
 _LPFLIB_API lpf_err_t lpf_resize_memory_register( lpf_t ctx, size_t max_regs )
 {
     using namespace lpf::hybrid;
-    if (ctx == LPF_SINGLE_PROCESS) 
+    if (ctx == LPF_SINGLE_PROCESS)
        return LPF_SUCCESS;
 
     ThreadState * t = realContext(ctx);

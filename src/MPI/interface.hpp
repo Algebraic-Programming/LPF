@@ -39,9 +39,9 @@ public:
     }
 
     _LPFLIB_API
-    static void initRoot(int *argc, char ***argv);
+    static void initRoot(int *argc, char ***argv) ;
 
-    Interface( mpi::Comm machine, Process & subprocess );
+    Interface( mpi::Comm machine, Process & subprocess ) ;
 
     void put( memslot_t srcSlot, size_t srcOffset, 
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
@@ -49,7 +49,7 @@ public:
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
             memslot_t dstSlot, size_t dstOffset,
-            size_t size, lpf_msg_attr_t attr) ;// nothrow
+            size_t size, lpf_msg_attr_t attr) ; // nothrow
 
     memslot_t registerGlobal( void * mem, size_t size ) ; // nothrow
 
@@ -70,13 +70,13 @@ public:
 
     pid_t isAborted() const ;
  
-    err_t sync( sync_attr_t attr ); // nothrow
+    err_t sync( sync_attr_t attr ) ; // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 
-    static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
+    static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args ) ;
 
-    err_t createNewSyncAttr(sync_attr_t * attr);
+    err_t createNewSyncAttr(sync_attr_t * attr) ;
 
     inline void destroySyncAttr(sync_attr_t attr)
     {

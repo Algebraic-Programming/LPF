@@ -93,7 +93,7 @@ catch ( const std::bad_alloc & e)
 
 void Interface :: put( memslot_t srcSlot, size_t srcOffset, 
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-        size_t size, lpf_msg_attr_t  attr) 
+        size_t size, lpf_msg_attr_t attr )
 {
     m_mesgQueue.put( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
@@ -120,7 +120,7 @@ err_t Interface :: createNewSyncAttr(sync_attr_t * attr)
 
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
-        size_t size, lpf_msg_attr_t attr)
+        size_t size, lpf_msg_attr_t attr )
 {
     m_mesgQueue.get( srcPid, srcSlot, srcOffset,
             dstSlot, dstOffset,

@@ -105,10 +105,10 @@ public:
     }
 
     void put( SlotID srcSlot, size_t srcOffset,
-              int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr);
+        int dstPid, SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr );
 
     void get( int srcPid, SlotID srcSlot, size_t srcOffset,
-              SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr);
+        SlotID dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr );
 
     void flushSent();
 

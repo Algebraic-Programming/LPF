@@ -250,7 +250,10 @@ Zero :: ~Zero()
 inline void Zero :: tryIncrement(const Op op, const Phase phase,
     const TagID tag) noexcept
 {
-    if (tag == LPF_MSG_DEFAULT) return;
+    if (tag == INVALID_TAG) {
+        LOG(2, "Zero::tryIncrement called on invalid tag");
+        return;
+    }
 
     switch (phase) {
         case Phase::INIT:
@@ -738,6 +741,9 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
+    const uint32_t tag = attr == NULL
+	    ? INVALID_TAG
+	    : * static_cast< uint32_t * >(attr);
 
     ASSERT( src.mr );
 
@@ -769,9 +775,9 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
         // use wr_id to store the comm tag (passed as attr)
-        sr->wr_id = attr;
+        sr->wr_id = tag;
         // use wr_id to store the comm tag (passed as attr)
-        sr->imm_data = attr;
+        sr->imm_data = tag;
 
         sr->sg_list = &sges[i];
         sr->num_sge = 1;
@@ -794,7 +800,7 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
 
-    tryIncrement(Op::SEND, Phase::PRE, attr);
+    tryIncrement(Op::SEND, Phase::PRE, tag);
 }
 
 void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -802,6 +808,9 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
+    const uint32_t tag = attr == NULL
+	    ? INVALID_TAG
+	    : * static_cast< uint32_t * >(attr);
 
     ASSERT( dst.mr );
 
@@ -840,10 +849,8 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
         sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
-        // (not srcSlot, as this slot is remote)
-        //sr->wr_id = dstSlot; // <= This enables virtual tag matching
-        sr->wr_id = attr; // <= This enables virtual tag matching
-        sr->imm_data = 0; //srcSlot; // This is irrelevant as we don't send _WITH_IMM
+        sr->wr_id = tag; // <= This enables virtual tag matching
+        sr->imm_data = 0; // This is irrelevant as we don't send _WITH_IMM
         srs[i] = *sr;
         size -= sge->length;
         srcOffset += sge->length;
@@ -860,7 +867,7 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
         throw Exception("Error while posting RDMA requests");
     }
-    tryIncrement(Op::GET, Phase::PRE, attr);
+    tryIncrement(Op::GET, Phase::PRE, tag);
 
 }
 

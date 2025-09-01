@@ -57,7 +57,7 @@ const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = NULL;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = nullptr;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -218,7 +218,7 @@ lpf_err_t lpf_tag_get_mattr(
 {
     (void) ctx;
     ASSERT( tag != NULL );
-    *tag = attr;
+    *tag = *static_cast< uint32_t * >(attr);
     return LPF_SUCCESS;
 }
 

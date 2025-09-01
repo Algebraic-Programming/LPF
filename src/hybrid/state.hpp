@@ -289,8 +289,12 @@ public:
 
     void put( lpf_memslot_t src_slot, size_t src_offset, 
             pid_t dst_pid, lpf_memslot_t dst_slot, size_t dst_offset, 
-            size_t size)
+            size_t size, lpf_msg_attr_t attr )
     { 
+        (void) attr; // current implementation ignores attributes -- note that
+	             // handling e.g. zero-cost in the hybrid setting is not exactly
+		     // trivial, and that simply applying zero-cost on the top level
+		     // only will not lead to correct behaviour
         typedef NodeMemReg::Memory Memory;
         if (size <= 0) return;
 
@@ -314,8 +318,12 @@ public:
 
     void get( pid_t src_pid, lpf_memslot_t src_slot, size_t src_offset, 
             lpf_memslot_t dst_slot, size_t dst_offset,
-            size_t size )
+            size_t size, lpf_msg_attr_t attr )
     { 
+        (void) attr; // current implementation ignores attributes -- note that
+	             // handling e.g. zero-cost in the hybrid setting is not exactly
+		     // trivial, and that simply applying zero-cost on the top level
+		     // only will not lead to correct behaviour
         typedef NodeMemReg::Memory Memory;
         if (size <= 0) return;
 
