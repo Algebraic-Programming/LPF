@@ -42,8 +42,8 @@
 // that may deviate from the stdlib abort()
 const int LPF_HAS_ABORT = 2;
 
-// Error codes. 
-// Note: Some code (e.g. in process::broadcastSymbol) depends on the 
+// Error codes.
+// Note: Some code (e.g. in process::broadcastSymbol) depends on the
 // fact that numbers are assigned in order of severity, where 0 means
 // no error and 3 means unrecoverable error. That way the severest error
 // status can be replicated through Communication::allreduceMax
@@ -57,7 +57,7 @@ const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = NULL;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = LPF_INVALID_TAG;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = nullptr;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -69,13 +69,13 @@ const lpf_init_t LPF_INIT_NONE = NULL;
 
 extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 1;
 
-const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ; 
+const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ;
 
 const lpf_machine_t LPF_INVALID_MACHINE = { 0, 0, NULL, NULL };
 
 namespace {
     lpf::Interface * realContext( lpf_t ctx )
-    { 
+    {
         if  ( LPF_ROOT == ctx )
             return lpf::Interface::root();
         else
@@ -96,9 +96,9 @@ lpf_err_t lpf_mpi_initialize_with_mpicomm( MPI_Comm comm, lpf_init_t * init)
     return status;
 }
 
-lpf_err_t lpf_mpi_initialize_over_tcp( 
+lpf_err_t lpf_mpi_initialize_over_tcp(
         const char * server, const char * port, int timeout,
-        lpf_pid_t pid, lpf_pid_t nprocs, 
+        lpf_pid_t pid, lpf_pid_t nprocs,
         lpf_init_t * init )
 {
     try {
@@ -107,7 +107,7 @@ lpf_err_t lpf_mpi_initialize_over_tcp(
 
         // Create an MPI communicator
         MPI_Comm comm = lpf::mpi::dynamicHook(
-                server, port, pid, nprocs, 
+                server, port, pid, nprocs,
                 lpf::Time::fromSeconds( timeout / 1000.0) );
 
         // wrap it
@@ -147,7 +147,7 @@ lpf_err_t lpf_mpi_initialize_over_tcp(
 }
 
 lpf_err_t lpf_mpi_finalize( lpf_init_t context ) {
- 
+
     lpf_err_t status = LPF_SUCCESS;
 
     delete static_cast< lpf::mpi::Comm *>(context);
@@ -253,12 +253,12 @@ lpf_err_t lpf_tag_set_sattr(
 lpf_err_t lpf_tag_set_mattr(
     lpf_t ctx,
     lpf_tag_t tag,
-    lpf_msg_attr_t * attr
+    lpf_msg_attr_t attr
 )
 {
     (void) ctx;
     ASSERT( attr != NULL );
-    *attr = tag;
+    *static_cast< uint32_t * >(attr) = tag;
     return LPF_SUCCESS;
 }
 
@@ -436,7 +436,7 @@ lpf_err_t lpf_rehook(
 
 lpf_err_t lpf_exec(
     lpf_t ctx,
-    lpf_pid_t P, 
+    lpf_pid_t P,
     lpf_spmd_t spmd,
     lpf_args_t args
 )
@@ -486,16 +486,16 @@ lpf_err_t lpf_deregister(
 }
 
 lpf_err_t lpf_put( lpf_t ctx,
-                       lpf_memslot_t src_slot, 
-                       size_t src_offset,
-                       lpf_pid_t dst_pid, 
-                       lpf_memslot_t dst_slot, 
-                       size_t dst_offset, 
-                       size_t size, 
-                       lpf_msg_attr_t attr
+    lpf_memslot_t src_slot,
+    size_t src_offset,
+    lpf_pid_t dst_pid,
+    lpf_memslot_t dst_slot,
+    size_t dst_offset,
+    size_t size,
+    lpf_msg_attr_t attr
 )
 {
-    (void) attr; // ignore parameter 'msg' since this implementation only 
+    (void) attr; // ignore parameter 'msg' since this implementation only
                  // implements core functionality
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())
@@ -504,11 +504,11 @@ lpf_err_t lpf_put( lpf_t ctx,
 }
 
 lpf_err_t lpf_get(
-    lpf_t ctx, 
-    lpf_pid_t pid, 
-    lpf_memslot_t src, 
-    size_t src_offset, 
-    lpf_memslot_t dst, 
+    lpf_t ctx,
+    lpf_pid_t pid,
+    lpf_memslot_t src,
+    size_t src_offset,
+    lpf_memslot_t dst,
     lpf_memslot_t dst_offset,
     size_t size,
     lpf_msg_attr_t attr
