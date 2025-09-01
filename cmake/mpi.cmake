@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-find_package(MPI)
+find_package(MPI REQUIRED)
 
 # Find the 'mpirun' frontend
 string( REGEX REPLACE "exec$" "run" mpirun "${MPIEXEC}" )

@@ -16,6 +16,11 @@
  */
 
 #include "mesgqueue.hpp"
+#ifdef LPF_CORE_MPI_USES_zero
+#include "zero.hpp"
+#else
+#include "ibverbs.hpp"
+#endif
 #include "mpilib.hpp"
 #include "log.hpp"
 #include "assert.hpp"
@@ -97,14 +102,14 @@ MessageQueue :: MessageQueue( Communication & comm )
     , m_edgeRecv()
     , m_edgeSend()
     , m_edgeBuffer()
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     , m_edgeBufferSlot( m_memreg.invalidSlot() )
 #endif
     , m_bodySends()
     , m_bodyRecvs()
     , m_comm( dynamic_cast<mpi::Comm &>(comm) )
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    , m_ibverbs( m_comm )
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+    , m_ibverbs(m_comm)
     , m_memreg( m_comm, m_ibverbs )
 #else
     , m_memreg( m_comm )
@@ -179,7 +184,7 @@ err_t MessageQueue :: resizeMesgQueue( size_t nMsgs )
 #ifdef LPF_CORE_MPI_USES_mpimsg
         m_comm.reserveMsgs( 6* nMsgs ); //another factor three stems from sending edges separately .
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
         m_ibverbs.resizeMesgq( 6*nMsgs);
 #endif
 
@@ -243,6 +248,23 @@ err_t MessageQueue :: resizeMemreg( size_t nRegs )
     return LPF_SUCCESS;
 }
 
+err_t MessageQueue :: resizeTagreg( size_t nRegs )
+{
+#ifdef LPF_CORE_MPI_USES_zero
+    try {
+        m_ibverbs.resizeTagreg( nRegs );
+    } catch (const std::bad_alloc &) {
+        return LPF_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        return LPF_ERR_FATAL;
+    }
+    return LPF_SUCCESS;
+#else
+    (void) nRegs;
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
+}
+
 memslot_t MessageQueue :: addLocalReg( void * mem, std::size_t size)
 {
     memslot_t slot = m_memreg.addLocal( mem, size );
@@ -259,6 +281,15 @@ memslot_t MessageQueue :: addGlobalReg( void * mem, std::size_t size )
     return slot;
 }
 
+tag_t MessageQueue :: addTag()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+    return m_ibverbs.regTag();
+#else
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
+}
+
 void MessageQueue :: removeReg( memslot_t slot )
 {
     if (m_memreg.getSize( slot ) > 0)
@@ -267,91 +298,127 @@ void MessageQueue :: removeReg( memslot_t slot )
     m_memreg.remove( slot );
 }
 
-void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
-        memslot_t dstSlot, size_t dstOffset, size_t size )
+void MessageQueue :: removeTag( tag_t tag )
 {
-    if (size > 0)
-    {
-        ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
-        void * address = m_memreg.getAddress( dstSlot, dstOffset );
-        if ( srcPid == static_cast<pid_t>(m_pid) )
-        {
-            std::memcpy( address, m_memreg.getAddress( srcSlot, srcOffset), size);
-        }
-        else
-        {
-            using mpi::ipc::newMsg;
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.deregTag( tag );
+#else
+    (void) tag;
+    throw std::runtime_error("Selected engine does not support tags");
+#endif
+}
 
-            if (size <= m_tinyMsgSize )
-            {
-                // send immediately the request to the source
-                newMsg( BufGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( DstPid ,  m_pid )
-                    .write( SrcSlot, srcSlot)
-                    .write( DstSlot, dstSlot)
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    .send( *m_firstQueue, srcPid );
-            }
-            else
-            {
-                // send the request to the destination process (this process)
-                // for write conflict resolution
-                newMsg( HpGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( SrcPid, srcPid )
-                    .write( DstPid, m_pid )
-                    .write( SrcSlot, srcSlot )
-                    .write( DstSlot, dstSlot )
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    . send( *m_firstQueue, m_pid );
-            }
-        }
+void MessageQueue :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
+        memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
+{
+    if( size == 0 ) { return; }
+    ASSERT( ! m_memreg.isLocalSlot( srcSlot ) );
+    if ( srcPid == static_cast<pid_t>(m_pid) )
+    {
+        void * const address = m_memreg.getAddress( dstSlot, dstOffset );
+        (void) std::memcpy(
+            address,
+            m_memreg.getAddress( srcSlot, srcOffset), size
+        );
+        return;
     }
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.get(
+            srcPid,
+            m_memreg.getVerbID( srcSlot ),
+            srcOffset,
+            m_memreg.getVerbID( dstSlot ),
+            dstOffset,
+            size, attr);
+#else
+    (void) attr; // this engine does not use message attributes
+    using mpi::ipc::newMsg;
+
+    if (size <= m_tinyMsgSize )
+    {
+        // send immediately the request to the source
+        newMsg( BufGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( DstPid ,  m_pid )
+            .write( SrcSlot, srcSlot)
+            .write( DstSlot, dstSlot)
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, srcPid );
+    } else {
+        // send the request to the destination process (this process)
+        // for write conflict resolution
+        newMsg( HpGet, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( SrcPid, srcPid )
+            .write( DstPid, m_pid )
+            .write( SrcSlot, srcSlot )
+            .write( DstSlot, dstSlot )
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, m_pid );
+     }
+#endif
 }
 
 void MessageQueue :: put( memslot_t srcSlot, size_t srcOffset,
-        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size )
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr)
 {
-    if (size > 0)
+    if (size == 0 ) { return; }
+    ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
+    void * const address = m_memreg.getAddress( srcSlot, srcOffset );
+    if ( dstPid == static_cast<pid_t>(m_pid) )
     {
-        ASSERT( ! m_memreg.isLocalSlot( dstSlot ) );
-        void * address = m_memreg.getAddress( srcSlot, srcOffset );
-        if ( dstPid == static_cast<pid_t>(m_pid) )
-        {
-            std::memcpy( m_memreg.getAddress( dstSlot, dstOffset), address, size);
-        }
-        else
-        {
-            using mpi::ipc::newMsg;
-            if (size <= m_tinyMsgSize )
-            {
-                newMsg( BufPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( DstSlot, dstSlot )
-                    .write( DstOffset, dstOffset )
-                    .write( Payload, address, size )
-                    . send( *m_firstQueue, dstPid );
-            }
-            else
-            {
-                newMsg( HpPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
-                    .write( SrcPid, m_pid )
-                    .write( DstPid, dstPid )
-                    .write( SrcSlot, srcSlot )
-                    .write( DstSlot, dstSlot )
-                    .write( SrcOffset, srcOffset )
-                    .write( DstOffset, dstOffset )
-                    .write( Size, size )
-                    .send( *m_firstQueue, dstPid );
-            }
-        }
+        (void) std::memcpy(
+            m_memreg.getAddress( dstSlot, dstOffset),
+            address, size
+        );
+        return;
     }
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.put( m_memreg.getVerbID( srcSlot),
+            srcOffset,
+            dstPid,
+            m_memreg.getVerbID( dstSlot),
+            dstOffset,
+            size,
+            attr);
+#else
+    (void) attr; // this engine does not use message attributes
+    using mpi::ipc::newMsg;
+    if (size <= m_tinyMsgSize )
+    {
+        newMsg( BufPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( DstSlot, dstSlot )
+            .write( DstOffset, dstOffset )
+            .write( Payload, address, size )
+            .send( *m_firstQueue, dstPid );
+    } else {
+        newMsg( HpPut, m_tinyMsgBuf.data(), m_tinyMsgBuf.size() )
+            .write( SrcPid, m_pid )
+            .write( DstPid, dstPid )
+            .write( SrcSlot, srcSlot )
+            .write( DstSlot, dstSlot )
+            .write( SrcOffset, srcOffset )
+            .write( DstOffset, dstOffset )
+            .write( Size, size )
+            .send( *m_firstQueue, dstPid );
+    }
+#endif
 }
 
-int MessageQueue :: sync( bool abort )
+int MessageQueue :: sync(bool abort, sync_attr_t attr)
 {
+#ifdef LPF_CORE_MPI_USES_zero
+    // if not, deal with normal sync
+    (void)abort;
+    m_memreg.sync();
+    m_ibverbs.sync(m_resized,
+        static_cast< Backend::SyncAttr * >(attr));
+    m_resized = false;
+#else
+    (void)attr;
+
     LOG(4, "mpi :: MessageQueue :: sync( abort " << (abort?"true":"false")
             << " )");
     using mpi::ipc::newMsg;
@@ -971,9 +1038,34 @@ int MessageQueue :: sync( bool abort )
     ASSERT( m_bodyRecvs.empty() );
 
     LOG(4, "End of synchronisation");
+#endif
     return 0;
 }
 
+void MessageQueue :: createNewSyncAttr(sync_attr_t * attr)
+{
+    ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+    m_ibverbs.createNewSyncAttr(
+        reinterpret_cast< Backend::SyncAttr * * >(attr));
+#else
+    *attr = LPF_SYNC_DEFAULT;
+#endif
+}
+
+void MessageQueue :: flushSent()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.flushSent();
+#endif
+}
+
+void MessageQueue :: flushReceived()
+{
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.flushReceived();
+#endif
+}
 
 
 } // namespace lpf

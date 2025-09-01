@@ -52,7 +52,7 @@ const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -296,8 +296,8 @@ lpf_err_t lpf_put(
     lpf_msg_attr_t attr
 )
 {
-    (void) attr; // ignore parameter 'msg' since this implementation only 
-                 // implements core functionality
+    (void) attr; // ignore parameter 'msg' since this engine only implements
+                 // core functionality
     lpf::ThreadLocalData * thread = realCtx(ctx);
 
     if (!thread->isAborted())
@@ -318,8 +318,8 @@ lpf_err_t lpf_get(
     lpf_msg_attr_t attr
 )
 {
-    (void) attr; // ignore parameter 'msg' since this implementation only 
-                 // implements core functionality
+    (void) attr; // ignore parameter 'msg' since this engine only implements
+                 // core functionality
     lpf::ThreadLocalData * thread = realCtx(ctx);
 
     if (!thread->isAborted())

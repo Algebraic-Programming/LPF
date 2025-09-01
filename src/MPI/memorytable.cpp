@@ -23,8 +23,8 @@
 namespace lpf {
 
 MemoryTable :: MemoryTable( Communication & comm
-#ifdef LPF_CORE_MPI_USES_ibverbs
-        , mpi::IBVerbs & ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+        , IBVerbs & ibverbs
 #endif
         )
     : m_memreg()
@@ -34,7 +34,7 @@ MemoryTable :: MemoryTable( Communication & comm
     , m_removed( 0, 0 )
     , m_comm( comm )
 #endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     , m_added( 0, 0 )
     , m_ibverbs( ibverbs )
     , m_comm( comm )
@@ -45,7 +45,7 @@ MemoryTable :: MemoryTable( Communication & comm
 MemoryTable :: Slot
 MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 {
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     Memory rec( mem, size, m_ibverbs.regLocal( mem, size));
 #else
     Memory rec( mem, size);
@@ -55,14 +55,14 @@ MemoryTable :: addLocal( void * mem, std::size_t size )  // nothrow
 
 MemoryTable :: Slot
 MemoryTable :: addGlobal( void * mem, std::size_t size ) // nothrow
-{ 
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    Memory rec(mem, size, -1); 
+{
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+    Memory rec(mem, size, -1);
 #else
-    Memory rec(mem, size); 
+    Memory rec(mem, size);
 #endif
-    Slot slot = m_memreg.addGlobalReg(rec) ; 
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+    Slot slot = m_memreg.addGlobalReg(rec) ;
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     m_added.insert( slot );
 #endif
     return slot;
@@ -92,7 +92,7 @@ void MemoryTable :: remove( Slot slot )   // nothrow
     m_memreg.removeReg( slot );
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     if (m_added.contains(slot)) {
         m_added.erase(slot);
     }
@@ -123,7 +123,7 @@ void MemoryTable :: reserve( size_t size ) // throws bad_alloc, strong safe
     m_memreg.reserve( size );
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     m_memreg.reserve( size );
     size_t range = m_memreg.range();
     m_added.resize( range );
@@ -139,24 +139,25 @@ size_t MemoryTable :: capacity() const
 }
 
 size_t MemoryTable :: range() const
-{ 
+{
     return m_memreg.range();
 }
 
 bool MemoryTable :: needsSync() const
-{ 
+{
 #ifdef LPF_CORE_MPI_USES_mpirma
     return ! m_added.empty() || !m_removed.empty();
-#endif
-#ifdef LPF_CORE_MPI_USES_mpimsg
+#elif LPF_CORE_MPI_USES_mpimsg
     return false;
-#endif
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#elif defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     return !m_added.empty();
+#else // This case should NOT occur?
+    fprintf(stderr, "An unknown engine in MPI/memorytable.cpp\n");
+    std::abort();
 #endif
 }
 
-void MemoryTable :: sync(  ) 
+void MemoryTable :: sync(  )
 {
 #ifdef LPF_CORE_MPI_USES_mpirma
     if ( !m_removed.empty() )
@@ -184,17 +185,17 @@ void MemoryTable :: sync(  )
             ASSERT( !isLocalSlot( *i ));
             void * base = m_memreg.lookup( *i).addr;
             size_t size = m_memreg.lookup( *i ).size;
-            Window w = m_comm.createMemslot( base, size ); 
+            Window w = m_comm.createMemslot( base, size );
             m_windows[ *i ] = w;
             m_comm.fence( w );
         }
 
         // clear the added list
         m_added.clear();
-    } // if 
+    } // if
 #endif
 
-#ifdef LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     if ( !m_added.empty() )
     {
         // Register the global with IBverbs
@@ -204,7 +205,7 @@ void MemoryTable :: sync(  )
             ASSERT( !isLocalSlot( *i ));
             void * base = m_memreg.lookup( *i).addr;
             size_t size = m_memreg.lookup( *i ).size;
-            mpi::IBVerbs::SlotID s = m_ibverbs.regGlobal( base, size ); 
+            IBVerbs::SlotID s = m_ibverbs.regGlobal( base, size );
             m_memreg.update( *i ).slot = s;
         }
 

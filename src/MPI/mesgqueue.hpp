@@ -36,34 +36,133 @@
 #ifdef LPF_CORE_MPI_USES_ibverbs
 #include "ibverbs.hpp"
 #endif
+#ifdef LPF_CORE_MPI_USES_zero
+#include "zero.hpp"
+#endif
+
 
 namespace lpf {
 
 class _LPFLIB_LOCAL MessageQueue
 {
+
 public:
     explicit MessageQueue( Communication & comm );
 
     err_t resizeMemreg( size_t nRegs );
     err_t resizeMesgQueue( size_t nMsgs );
-
+    err_t resizeTagreg( size_t nTags );
 
     memslot_t addLocalReg( void * mem, std::size_t size );
     memslot_t addGlobalReg( void * mem, std::size_t size );
-    void      removeReg( memslot_t slot );
+    tag_t addTag();
+
+    void removeReg( memslot_t slot );
+    void removeTag( tag_t tag );
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset,
-            memslot_t dstSlot, size_t dstOffset, size_t size );
+        memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr);
 
     void put( memslot_t srcSlot, size_t srcOffset,
-            pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size );
+        pid_t dstPid, memslot_t dstSlot, size_t dstOffset, size_t size, lpf_msg_attr_t attr);
 
 
     // returns how many processes have entered in an aborted state
-    int sync( bool abort );
+    int sync(bool abort, sync_attr_t attr);
+
+    inline void getRcvdMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.get_rcvd_msg_count(*msgs,
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
+
+    inline void getSentMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        ASSERT(msgs != nullptr);
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.get_sent_msg_count(*msgs,
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
+
+    void flushSent();
+
+    void flushReceived();
+
+    int countingSyncPerSlot(memslot_t slot, size_t expected_sent, size_t expected_rcvd);
+
+    int syncPerSlot(memslot_t slot);
+
+    void createNewSyncAttr(sync_attr_t * attr);
+
+    inline void destroySyncAttr(sync_attr_t attr)
+    {
+#ifdef LPF_CORE_MPI_USES_zero
+        m_ibverbs.destroySyncAttr(
+            static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)attr;
+#endif
+    }
+
+    inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.getTag(
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        return LPF_INVALID_TAG;
+#endif
+    }
+
+    inline void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.setTag(tag,
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)tag;
+#endif
+    }
+
+    inline void setZCAttr(size_t sent, size_t rcvd, sync_attr_t attr) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.setZCAttr(sent,rcvd,
+            *static_cast< Backend::SyncAttr * >(attr));
+#else
+        (void)sent;
+        (void)rcvd;
+        (void)attr;
+#endif
+    }
+
+    inline void getZCAttr(sync_attr_t attr, size_t &sent, size_t &rcvd) noexcept
+    {
+        ASSERT(attr != NULL);
+#ifdef LPF_CORE_MPI_USES_zero
+        return m_ibverbs.getZCAttr(
+            *static_cast< Backend::SyncAttr * >(attr),
+            sent, rcvd);
+#else
+        (void)attr;
+        (void)sent;
+        (void)rcvd;
+#endif
+    }
 
 private:
-    enum Msgs { BufPut , 
+    enum Msgs { BufPut ,
         BufGet, BufGetReply,
         HpPut, HpGet , HpBodyReply ,
         HpEdges, HpEdgesReply };
@@ -72,7 +171,7 @@ private:
         SrcPid, DstPid,
         SrcOffset, DstOffset, BufOffset,
         SrcSlot, DstSlot, Size,
-        RoundedDstOffset, RoundedSize, 
+        RoundedDstOffset, RoundedSize,
         Payload, Head, Tail};
 
     struct Edge {
@@ -106,6 +205,11 @@ private:
 
 
     typedef mpi::VirtualAllToAll Queue;
+#if defined LPF_CORE_MPI_USES_ibverbs
+    typedef mpi::IBVerbs Backend;
+#elif defined LPF_CORE_MPI_USES_zero
+    typedef mpi::Zero Backend;
+#endif
     static Queue * newQueue( pid_t pid, pid_t nprocs );
 
     const pid_t m_pid, m_nprocs;
@@ -126,14 +230,14 @@ private:
     std::vector< Edge > m_edgeRecv;
     std::vector< Edge > m_edgeSend;
     std::vector< char > m_edgeBuffer;
-#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs
+#if defined LPF_CORE_MPI_USES_mpirma || defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
     memslot_t m_edgeBufferSlot;
 #endif
     std::vector< Body > m_bodySends;
     std::vector< Body > m_bodyRecvs;
     mpi::Comm m_comm;
-#ifdef LPF_CORE_MPI_USES_ibverbs
-    mpi::IBVerbs m_ibverbs;
+#if defined LPF_CORE_MPI_USES_ibverbs || defined LPF_CORE_MPI_USES_zero
+    Backend m_ibverbs;
 #endif
     MemoryTable m_memreg;
     std::vector< char > m_tinyMsgBuf;

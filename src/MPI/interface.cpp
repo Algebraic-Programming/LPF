@@ -93,20 +93,38 @@ catch ( const std::bad_alloc & e)
 
 void Interface :: put( memslot_t srcSlot, size_t srcOffset, 
         pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-        size_t size ) 
+        size_t size, lpf_msg_attr_t attr )
 {
     m_mesgQueue.put( srcSlot, srcOffset,
             dstPid, dstSlot, dstOffset, 
-            size );
+            size, attr);
+}
+
+void Interface :: flushSent() {
+    m_mesgQueue.flushSent();
+}
+
+void Interface :: flushReceived() {
+    m_mesgQueue.flushReceived();
+}
+
+err_t Interface :: createNewSyncAttr(sync_attr_t * attr)
+{
+    if ( 0 == m_aborted )
+    {
+        m_mesgQueue.createNewSyncAttr(attr);
+        return LPF_SUCCESS;
+    }
+    return LPF_ERR_FATAL;
 }
 
 void Interface :: get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
         memslot_t dstSlot, size_t dstOffset,
-        size_t size )
+        size_t size, lpf_msg_attr_t attr )
 {
     m_mesgQueue.get( srcPid, srcSlot, srcOffset,
             dstSlot, dstOffset,
-            size );
+            size, attr);
 }
 
 memslot_t Interface :: registerGlobal( void * mem, size_t size )
@@ -119,9 +137,19 @@ memslot_t Interface :: registerLocal( void * mem, size_t size )
     return m_mesgQueue.addLocalReg( mem, size );
 }
 
+tag_t Interface :: registerTag()
+{
+    return m_mesgQueue.addTag();
+}
+
 void Interface :: deregister( memslot_t slot )
 {
     m_mesgQueue.removeReg( slot );
+}
+
+void Interface :: destroyTag( tag_t tag )
+{
+    m_mesgQueue.removeTag( tag );
 }
 
 err_t Interface :: resizeMemreg( size_t nRegs ) 
@@ -134,12 +162,24 @@ err_t Interface :: resizeMesgQueue( size_t nMsgs )
     return m_mesgQueue.resizeMesgQueue( nMsgs );
 }
 
+err_t Interface :: resizeTagRegister( size_t nTags )
+{
+    return m_mesgQueue.resizeTagreg( nTags );
+}
+
 void Interface :: abort()
 {
     ASSERT( 0 == m_aborted );
+#ifdef LPF_CORE_MPI_USES_zero
+    int vote = 1;
+    int voted;
+    m_comm.allreduceSum(&vote, &voted, 1);
+    m_aborted = voted;
+#else
     // signal all other processes at the start of the next 'sync' that
     // this process aborted.
-    m_aborted = m_mesgQueue.sync( true );
+    m_aborted = m_mesgQueue.sync( true, LPF_SYNC_DEFAULT );
+#endif
 }
 
 pid_t Interface  :: isAborted() const
@@ -147,11 +187,11 @@ pid_t Interface  :: isAborted() const
     return m_aborted;
 }
 
-err_t Interface ::  sync()
+err_t Interface ::  sync( sync_attr_t attr )
 {
     if ( 0 == m_aborted )
     {
-        m_aborted = m_mesgQueue.sync( false );
+        m_aborted = m_mesgQueue.sync( false, attr );
     }
     
     if ( 0 == m_aborted )

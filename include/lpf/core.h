@@ -688,8 +688,10 @@
 
 #ifdef __cplusplus
 #include <cstddef>
+#include <cstdint>
 #else
 #include <stddef.h>
+#include <stdint.h>
 #endif
 
 #endif // DOXYGEN
@@ -705,7 +707,7 @@ extern "C" {
  * released, and NN the number of the specifications released before this one in
  * the same year.
  */
-#define _LPF_VERSION 202000L
+#define _LPF_VERSION 202500L
 
 /**
  * An implementation that has defined this macro may never define the
@@ -942,7 +944,7 @@ typedef void * lpf_init_t;
 #ifdef DOXYGEN
 typedef ... lpf_sync_attr_t;
 #else
-typedef int lpf_sync_attr_t;
+typedef void * lpf_sync_attr_t;
 #endif
 
 /**
@@ -984,7 +986,7 @@ typedef struct lpf_machine {
      * byte. This value may depend on the actual number of processes \a p used,
      * the minimum message size \a min_msg_size the user aims to send and
      * receive, and the type of synchronisation requested via \a attr. The
-	 * value is bitwise equivalent across all processes.
+     * value is bitwise equivalent across all processes.
      *
      * \param[in] p            A value between 1 and #lpf_machine_t.p, where
      *                         both bounds are inclusive.
@@ -1038,7 +1040,19 @@ typedef struct lpf_machine {
  * memory areas must be registered for direct remote memory access (DRMA).
  *
  * \par Communication
- * Object of this type must not be communicated.
+ * Objects of this type must not be communicated; if they are, objects copied
+ * to a remote process in principle do \em not represent valid memory slots.
+ *
+ * \par Trivially Copyable
+ * Objects of this type are trivially copyable in the same sense of the C++11
+ * TriviallyCopyable type category.
+ *
+ * \note Rationale: extensions could rely on the trivially copyability of memory
+ *       slots. Therefore, while the core specification stipulates memory slots
+ *       should not be copied across nodes with the expectation that a valid
+ *       memory slot on process A when copied to process B yields a valid memory
+ *       slot on process B, it must account for the possibility (provided by
+ *       extensions) that such a copy could be meaningful.
  */
 #ifdef DOXYGEN
 typedef ... lpf_memslot_t;
@@ -1066,7 +1080,7 @@ typedef size_t lpf_memslot_t;
 #ifdef DOXYGEN
 typedef ... lpf_msg_attr_t;
 #else
-typedef int lpf_msg_attr_t;
+typedef void * lpf_msg_attr_t;
 #endif
 
 /**

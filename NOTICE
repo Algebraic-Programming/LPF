@@ -33,6 +33,8 @@ Implementation
         1) BSMP
         2) Collectives
         3) Pthread implementation
+    - 2022 - 2024, Kiril Dichev
+        1) Develop zero engine for LPF
 
     - 2018, Pierre Leca
         1) Usability improvements of compiler frontends and CMake integration
@@ -50,6 +52,8 @@ Quality Assurance
 
     - 2015 - 2017, Albert-Jan Yzelman
         1) Performance test suite
+    - 2022 - 2024, Kiril Dichev
+        1) Rewrite all functional tests to use CTest/Gtest
 
 
 Miscellaneous / Acknowledgments

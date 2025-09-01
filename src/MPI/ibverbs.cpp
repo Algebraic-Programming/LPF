@@ -45,14 +45,11 @@ namespace {
     }
 }
 
-
 IBVerbs :: IBVerbs( Communication & comm )
     : m_pid( comm.pid() )
     , m_nprocs( comm.nprocs() )
-    , m_devName()
     , m_ibPort( Config::instance().getIBPort() )
     , m_gidIdx( Config::instance().getIBGidIndex() )
-    , m_mtu( getMTU( Config::instance().getIBMTU() ))
     , m_maxRegSize(0)
     , m_maxMsgSize(0)
     , m_minNrMsgs(0)
@@ -60,19 +57,21 @@ IBVerbs :: IBVerbs( Communication & comm )
     , m_device()
     , m_pd()
     , m_cq()
+    , m_dummyMemReg()
+    , m_comm( comm )
+    , m_mtu( getMTU( Config::instance().getIBMTU() ))
+    , m_devName()
     , m_stagedQps( m_nprocs )
     , m_connectedQps( m_nprocs )
     , m_srs()
     , m_srsHeads( m_nprocs, 0u )
     , m_nMsgsPerPeer( m_nprocs, 0u )
-    , m_activePeers(0, m_nprocs)
     , m_peerList()
     , m_sges()
     , m_wcs(m_nprocs)
-    , m_memreg()
-    , m_dummyMemReg()
     , m_dummyBuffer()
-    , m_comm( comm )
+    , m_activePeers(0, m_nprocs)
+    , m_memreg()
 {
     m_peerList.reserve( m_nprocs );
 
@@ -96,7 +95,6 @@ IBVerbs :: IBVerbs( Communication & comm )
                 " available, which is not enough" );
         throw Exception( "No Infiniband devices available" );
     }
-
 
     std::string wantDevName = Config::instance().getIBDeviceName();
     LOG( 3, "Searching for device '"<< wantDevName << "'" );
@@ -144,7 +142,8 @@ IBVerbs :: IBVerbs( Communication & comm )
     // maximum number of work requests per Queue Pair
     m_maxSrs = std::min<size_t>( m_deviceAttr.max_qp_wr, // maximum work requests per QP
                                  m_deviceAttr.max_cqe ); // maximum entries per CQ
-    LOG(3, "Maximum number of send requests is the minimum of "
+
+    LOG(3, "Initial maximum number of send requests is the minimum of "
             << m_deviceAttr.max_qp_wr << " (the maximum of work requests per QP)"
             << " and " << m_deviceAttr.max_cqe << " (the maximum of completion "
             << " queue entries per QP), nameley " << m_maxSrs );
@@ -196,6 +195,58 @@ IBVerbs :: IBVerbs( Communication & comm )
 
     LOG(3, "Allocated completion queue with " << m_nprocs << " entries.");
 
+    /* 
+     * Unfortunately, some RDMA devices advertise max_qp_wr but 
+     * support a much smaller number. We can probe that.
+     * Note that the inofficial documentation on rdmamojo.com states:
+     * <quote>
+     * There may be RDMA devices that for specific transport types may support
+     * less outstanding Work Requests than the maximum reported value.
+     * </quote>
+     * Therefore, we here do binary search to find the actual value
+     */
+    struct ibv_qp_init_attr testAttr;
+    (void) std::memset(&testAttr, 0, sizeof(testAttr));
+
+    // We only care about the attr.cap.max_send_wr
+    testAttr.qp_type = IBV_QPT_RC;
+
+    struct ibv_qp * ibv_new_qp_p; 
+    testAttr.cap.max_send_wr = m_maxSrs;
+    testAttr.send_cq = m_cq.get();
+    testAttr.recv_cq = m_cq.get();
+    ibv_new_qp_p = ibv_create_qp(m_pd.get(), &testAttr);
+    if (ibv_new_qp_p == NULL) {
+        size_t left = 1;
+        size_t right = m_maxSrs;
+        size_t largestOkaySize = 0;
+        while (left <= right) 
+        {
+            size_t mid = (left + right) / 2;
+            testAttr.cap.max_send_wr = mid;
+            // test if call succeeds
+            ibv_new_qp_p = ibv_create_qp(m_pd.get(), &testAttr);
+            if (ibv_new_qp_p == NULL) {
+                if (errno != EINVAL) { // error points to unsupported max_send_wr by device
+                    throw Exception("Unexpected error code during binary search for maximum send WR.");
+                }
+                else {
+                    right = mid - 1;
+                }
+            }
+            else {
+                // clean up dummy QP
+                ibv_destroy_qp(ibv_new_qp_p);
+                left = mid + 1;
+                // record that we still succeed
+                largestOkaySize = mid;
+            }
+        }
+        ASSERT(largestOkaySize > 0);
+        m_maxSrs = largestOkaySize;
+        LOG(3, "Revised maximum number of send requests is " << m_maxSrs );
+    }
+
     // allocate dummy buffer
     m_dummyBuffer.resize( 8 );
     struct ibv_mr * const ibv_reg_mr_new_p = ibv_reg_mr(
@@ -237,6 +288,7 @@ void IBVerbs :: stageQPs( size_t maxMsgs )
         attr.cap.max_recv_sge = 1;
 
         struct ibv_qp * const ibv_new_qp_p = ibv_create_qp( m_pd.get(), &attr );
+
         if( ibv_new_qp_p == NULL ) {
             m_stagedQps[i].reset();
         } else {
@@ -460,8 +512,8 @@ IBVerbs :: SlotID IBVerbs :: regLocal( void * addr, size_t size )
     MemoryRegistration local;
     local.addr = addr;
     local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    local.lkey = size ? slot.mr->lkey : 0;
+    local.rkey = size ? slot.mr->rkey : 0;
 
     SlotID id =  m_memreg.addLocalReg( slot );
 
@@ -504,8 +556,8 @@ IBVerbs :: SlotID IBVerbs :: regGlobal( void * addr, size_t size )
     MemoryRegistration local;
     local.addr = addr;
     local.size = size;
-    local.lkey = size?slot.mr->lkey:0;
-    local.rkey = size?slot.mr->rkey:0;
+    local.lkey = size ? slot.mr->lkey : 0;
+    local.rkey = size ? slot.mr->rkey : 0;
 
     LOG(4, "All-gathering memory register data" );
 

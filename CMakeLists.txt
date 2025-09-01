@@ -176,6 +176,7 @@ if ( LIB_MATH AND LIB_DL AND MPI_FOUND )
 
     if (ENABLE_IBVERBS)
         list(APPEND ENGINES "ibverbs")
+        list(APPEND ENGINES "zero")
     endif()
 
 endif()
@@ -493,7 +494,7 @@ if (LPF_ENABLE_TESTS)
             TEST_PREFIX ${ENGINE}_
             EXTRA_ARGS --gtest_output=xml:${test_output}/${ENGINE}_${testName}
             DISCOVERY_MODE POST_BUILD
-            DISCOVERY_TIMEOUT 15
+            DISCOVERY_TIMEOUT 60
         )
 
     endfunction(add_gtest)

@@ -27,7 +27,7 @@
 
 namespace lpf
 {
-    class _LPFLIB_LOCAL Process;
+class _LPFLIB_LOCAL Process;
 
 class _LPFLIB_LOCAL Interface  
 {
@@ -39,36 +39,107 @@ public:
     }
 
     _LPFLIB_API
-    static void initRoot(int *argc, char ***argv);
+    static void initRoot(int *argc, char ***argv) ;
 
-    Interface( mpi::Comm machine, Process & subprocess );
+    Interface( mpi::Comm machine, Process & subprocess ) ;
 
     void put( memslot_t srcSlot, size_t srcOffset, 
             pid_t dstPid, memslot_t dstSlot, size_t dstOffset,
-            size_t size ) ; // nothrow
+            size_t size, lpf_msg_attr_t attr) ; // nothrow
 
     void get( pid_t srcPid, memslot_t srcSlot, size_t srcOffset, 
             memslot_t dstSlot, size_t dstOffset,
-            size_t size ) ;// nothrow
+            size_t size, lpf_msg_attr_t attr) ; // nothrow
 
     memslot_t registerGlobal( void * mem, size_t size ) ; // nothrow
 
     memslot_t registerLocal( void * mem, size_t size ) ;  // nothrow
 
+    tag_t registerTag() ; // can throw(!)
+
     void deregister( memslot_t slot ) ; // nothrow
+
+    void destroyTag( tag_t tag ) ; // can throw(!)
 
     err_t resizeMemreg( size_t nRegs ) ; // nothrow
     err_t resizeMesgQueue( size_t nMsgs ) ; // nothrow
+
+    err_t resizeTagRegister( size_t nTags ) ; // can throw(!)
 
     void abort() ; // nothrow
 
     pid_t isAborted() const ;
  
-    err_t sync(); // nothrow
+    err_t sync( sync_attr_t attr ) ; // nothrow
 
     err_t exec( pid_t P, spmd_t spmd, args_t args ) ;
 
-    static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args );
+    static err_t hook( const mpi::Comm & comm , spmd_t spmd, args_t args ) ;
+
+    err_t createNewSyncAttr(sync_attr_t * attr) ;
+
+    inline void destroySyncAttr(sync_attr_t attr)
+    {
+        if ( 0 == m_aborted )
+        {
+            return m_mesgQueue.destroySyncAttr(attr);
+        }
+    }
+
+    inline tag_t getTagFromSyncAttr(sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            return m_mesgQueue.getTagFromSyncAttr(attr);
+        }
+        return LPF_INVALID_TAG;
+    }
+
+    inline void setTagInSyncAttr(tag_t tag, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.setTagInSyncAttr(tag,attr);
+        }
+    }
+
+    inline void setZCAttr(size_t sent, size_t rcvd, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.setZCAttr(sent,rcvd,attr);
+        }
+    }
+
+    inline void getZCAttr(sync_attr_t attr, size_t &sent, size_t &rcvd) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getZCAttr(attr,sent,rcvd);
+        }
+    }
+
+    typedef size_t SlotID;
+
+    inline void getRcvdMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getRcvdMsgCount(msgs, attr);
+        }
+    }
+
+    inline void getSentMsgCount(size_t * msgs, sync_attr_t attr) noexcept
+    {
+        if ( 0 == m_aborted )
+        {
+            m_mesgQueue.getSentMsgCount(msgs, attr);
+        }
+    }
+
+    void flushSent();
+
+    void flushReceived();
 
     err_t rehook( spmd_t spmd, args_t args);
 

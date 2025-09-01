@@ -105,7 +105,7 @@ public:
     { return m_atExit[0]; }
  
     err_t sync( bool expectExit = false ); // nothrow
-       
+
 private:
     ThreadLocalData( const ThreadLocalData & ) ; // prohibit copying
     ThreadLocalData & operator=( const ThreadLocalData & ); // prohibit assignment 
