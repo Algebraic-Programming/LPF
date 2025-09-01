@@ -67,7 +67,7 @@ const lpf_t LPF_NONE = NULL;
 
 const lpf_init_t LPF_INIT_NONE = NULL;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 0;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 1;
 
 const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ; 
 
