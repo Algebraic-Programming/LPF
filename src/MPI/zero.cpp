@@ -250,10 +250,7 @@ Zero :: ~Zero()
 inline void Zero :: tryIncrement(const Op op, const Phase phase,
     const TagID tag) noexcept
 {
-    if (tag == INVALID_TAG) {
-        LOG(2, "Zero::tryIncrement called on invalid tag");
-        return;
-    }
+    if (tag == LPF_MSG_DEFAULT) return;
 
     switch (phase) {
         case Phase::INIT:
@@ -741,9 +738,6 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
-    const uint32_t tag = attr == NULL
-	    ? INVALID_TAG
-	    : * static_cast< uint32_t * >(attr);
 
     ASSERT( src.mr );
 
@@ -774,10 +768,13 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         // we only need a signal from the last message in the queue
         sr->send_flags = lastMsg ? IBV_SEND_SIGNALED : 0;
         sr->opcode = lastMsg? IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
-        // use wr_id to store the comm tag (passed as attr)
-        sr->wr_id = tag;
-        // use wr_id to store the comm tag (passed as attr)
-        sr->imm_data = tag;
+        /* use wr_id to later demultiplex srcSlot */
+        sr->wr_id = attr; //srcSlot;
+        /*
+         * In HiCR, we need to know at receiver end which slot
+         * has received the message. But here is a trick:
+         */
+        sr->imm_data = attr; //dstSlot;
 
         sr->sg_list = &sges[i];
         sr->num_sge = 1;
@@ -790,7 +787,7 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         dstOffset += sge->length;
 
         LOG(4, "PID " << m_pid << ": Enqueued put message of " << sge->length
-            << " bytes to " << dstPid << " on slot" << dstSlot << " and tag " << attr);
+            << " bytes to " << dstPid << " on slot" << dstSlot );
     }
     struct ibv_send_wr *bad_wr = NULL;
     // srs[0] should be sufficient because the rest of srs are on a chain
@@ -800,7 +797,7 @@ void Zero :: put( SlotID srcSlot, size_t srcOffset,
         throw Exception("Error while posting RDMA requests");
     }
 
-    tryIncrement(Op::SEND, Phase::PRE, tag);
+    tryIncrement(Op::SEND, Phase::PRE, attr);
 }
 
 void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
@@ -808,9 +805,6 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
 {
     const MemorySlot & src = m_memreg.lookup( srcSlot );
     const MemorySlot & dst = m_memreg.lookup( dstSlot );
-    const uint32_t tag = attr == NULL
-	    ? INVALID_TAG
-	    : * static_cast< uint32_t * >(attr);
 
     ASSERT( dst.mr );
 
@@ -849,8 +843,10 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         sr->wr.rdma.remote_addr = reinterpret_cast<uintptr_t>( remoteAddr );
         sr->wr.rdma.rkey = src.glob[srcPid]._rkey;
         // This logic is reversed compared to ::put
-        sr->wr_id = tag; // <= This enables virtual tag matching
-        sr->imm_data = 0; // This is irrelevant as we don't send _WITH_IMM
+        // (not srcSlot, as this slot is remote)
+        //sr->wr_id = dstSlot; // <= This enables virtual tag matching
+        sr->wr_id = attr; // <= This enables virtual tag matching
+        sr->imm_data = 0; //srcSlot; // This is irrelevant as we don't send _WITH_IMM
         srs[i] = *sr;
         size -= sge->length;
         srcOffset += sge->length;
@@ -867,7 +863,7 @@ void Zero :: get( int srcPid, SlotID srcSlot, size_t srcOffset,
         }
         throw Exception("Error while posting RDMA requests");
     }
-    tryIncrement(Op::GET, Phase::PRE, tag);
+    tryIncrement(Op::GET, Phase::PRE, attr);
 
 }
 
@@ -916,7 +912,7 @@ void Zero :: doLocalProgress(int& error) {
                         << wcs[i].vendor_err );
                 const char * status_descr;
                 status_descr = ibv_wc_status_str(wcs[i].status);
-                LOG( 2, "Process " << m_pid << ": The work completion status string: " << status_descr);
+                LOG( 2, "The work completion status string: " << status_descr);
                 error = 1;
             }
             else {
@@ -992,6 +988,14 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
     // This is semantically equivalent to a non-blocking test call,
     // triggering progress on the network card without expecting anything
     // from a particular tag
+
+    /*
+     * 1) Are we expecting nothing here (sentOK/recvdOK = true)
+     * 2) do the sent and received messages  match our expectations?
+     */
+    sentOK = (sentOK || sentMsgCount[tag] >= expectedSent);
+    // We can receive messages passively (from remote puts) and actively (from our gets)
+    recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
     if (tag == INVALID_TAG && sentOK && recvdOK) {
         doLocalProgress(error);
         if (error) {
@@ -1001,7 +1005,6 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
         // this call triggers doRemoteProgress
         doRemoteProgress();
     }
-
     // This is a blocking call on a particular tag with some expected
     // sent / received messages
     else {
@@ -1015,17 +1018,12 @@ void Zero :: countingSyncPerSlot(const TagID tag, const size_t expectedSent,
                 // this call triggers doRemoteProgress
                 doRemoteProgress();
 
-                /*
-                 * 1) Are we expecting nothing here (sentOK/recvdOK = true)
-                 * 2) do the sent and received messages  match our expectations?
-                 */
                 sentOK = (sentOK || sentMsgCount[tag] >= expectedSent);
                 // We can receive messages passively (from remote puts) and actively (from our gets)
                 recvdOK = (recvdOK || (rcvdMsgCount[tag] + getMsgCount[tag]) >= expectedRecvd);
                 LOG(4, "PID: " << m_pid << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
-                        << " expectedRecvd = " << expectedRecvd
-                        << " rcvdMsgCount[" << tag << "] = " << rcvdMsgCount[tag]
                         << " getMsgCount[" << tag << "] = " << getMsgCount[tag]
+                        << " expectedRecvd = " << expectedRecvd
                         << " sentMsgCount[" << tag << "] = " << sentMsgCount[tag]
                         << " expectedSent = " << expectedSent);
             } while (!(sentOK && recvdOK));

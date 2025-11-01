@@ -1080,7 +1080,7 @@ typedef size_t lpf_memslot_t;
 #ifdef DOXYGEN
 typedef ... lpf_msg_attr_t;
 #else
-typedef void * lpf_msg_attr_t;
+typedef uint32_t lpf_msg_attr_t;
 #endif
 
 /**

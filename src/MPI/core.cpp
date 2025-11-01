@@ -57,7 +57,7 @@ const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = NULL;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = LPF_INVALID_TAG;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -67,7 +67,7 @@ const lpf_t LPF_NONE = NULL;
 
 const lpf_init_t LPF_INIT_NONE = NULL;
 
-extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 1;
+extern "C" const int LPF_MPI_AUTO_INITIALIZE __attribute__((weak)) = 0;
 
 const lpf_t LPF_ROOT = static_cast<void*>(const_cast<char *>("LPF_ROOT")) ;
 
@@ -218,7 +218,7 @@ lpf_err_t lpf_tag_get_mattr(
 {
     (void) ctx;
     ASSERT( tag != NULL );
-    *tag = *static_cast< uint32_t * >(attr);
+    *tag = attr;
     return LPF_SUCCESS;
 }
 
@@ -253,12 +253,12 @@ lpf_err_t lpf_tag_set_sattr(
 lpf_err_t lpf_tag_set_mattr(
     lpf_t ctx,
     lpf_tag_t tag,
-    lpf_msg_attr_t attr
+    lpf_msg_attr_t * attr
 )
 {
     (void) ctx;
     ASSERT( attr != NULL );
-    *static_cast< uint32_t * >(attr) = tag;
+    *attr = tag;
     return LPF_SUCCESS;
 }
 
@@ -495,7 +495,7 @@ lpf_err_t lpf_put( lpf_t ctx,
     lpf_msg_attr_t attr
 )
 {
-    (void) attr; // ignore parameter 'msg' since this implementation only
+    (void) attr; // ignore parameter 'msg' since this implementation only 
                  // implements core functionality
     lpf::Interface * i = realContext(ctx);
     if (!i->isAborted())

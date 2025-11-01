@@ -34,7 +34,7 @@ const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
-const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
+const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
 
 const lpf_pid_t LPF_MAX_P = UINT_MAX;
 

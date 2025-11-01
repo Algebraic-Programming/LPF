@@ -49,7 +49,7 @@ _LPFLIB_VAR const lpf_args_t LPF_NO_ARGS = { NULL, 0, NULL, 0, NULL, 0 };
 
 _LPFLIB_VAR const lpf_sync_attr_t LPF_SYNC_DEFAULT = 0;
 
-_LPFLIB_VAR const lpf_msg_attr_t LPF_MSG_DEFAULT = NULL;
+_LPFLIB_VAR const lpf_msg_attr_t LPF_MSG_DEFAULT = 0;
 
 _LPFLIB_VAR const lpf_pid_t LPF_MAX_P = UINT_MAX;
 
@@ -68,7 +68,6 @@ namespace {
     using lpf::hybrid::LPF_CORE_IMPL_CONFIG::MachineParams;
 
     struct Init {
-
         lpf::hybrid::Thread m_thread;
         lpf::hybrid::MPI    m_mpi;
         lpf_pid_t m_threadId, m_nThreads;
@@ -290,6 +289,7 @@ _LPFLIB_API lpf_err_t lpf_put( lpf_t ctx,
     lpf_msg_attr_t attr
 )
 {
+    (void) attr;
     using namespace lpf::hybrid;
     if (ctx == LPF_SINGLE_PROCESS) {
         char * null = NULL;
@@ -300,10 +300,8 @@ _LPFLIB_API lpf_err_t lpf_put( lpf_t ctx,
     }
 
     ThreadState * t = realContext(ctx);
-    if (!t->error()) {
-        t->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size,
-            attr );
-    }
+    if (!t->error())
+        t->put( src_slot, src_offset, dst_pid, dst_slot, dst_offset, size );
     return LPF_SUCCESS;
 }
 
@@ -319,6 +317,7 @@ _LPFLIB_API lpf_err_t lpf_get(
     lpf_msg_attr_t attr
 )
 {
+    (void) attr;
     using namespace lpf::hybrid;
     if (ctx == LPF_SINGLE_PROCESS) {
         char * null = NULL;
@@ -329,10 +328,8 @@ _LPFLIB_API lpf_err_t lpf_get(
     }
 
     ThreadState * t = realContext(ctx);
-    if (!t->error()) {
-        t->get( src_pid, src_slot, src_offset, dst_slot, dst_offset, size,
-            attr );
-    }
+    if (!t->error())
+        t->get( src_pid, src_slot, src_offset, dst_slot, dst_offset, size );
     return LPF_SUCCESS;
 }
 

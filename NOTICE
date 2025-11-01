@@ -33,8 +33,9 @@ Implementation
         1) BSMP
         2) Collectives
         3) Pthread implementation
-    - 2022 - 2024, Kiril Dichev
-        1) Develop zero engine for LPF
+    - 2022 - 2026, Kiril Dichev
+        1) Develop a first version of zero engine for LPF
+        2) Refine zero engine of LPF to support a bounded lag synchronous (BLS) backend for PyTorch on Infiniband clusters
 
     - 2018, Pierre Leca
         1) Usability improvements of compiler frontends and CMake integration

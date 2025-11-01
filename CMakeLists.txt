@@ -15,7 +15,10 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
+# For LPF as a library required by BLS, do not
+# request CMake 3.29.0, since it is mostly needed for
+# LPF unit tests
+#cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
 project(LPF C CXX ASM)
 
 # Version info
@@ -582,5 +585,6 @@ install(DIRECTORY "include/bsp" DESTINATION ${INSTALL_HEADERS})
 install(DIRECTORY "include/debug"  DESTINATION ${INSTALL_HEADERS}/lpf )
 
 # Post install actions
-add_subdirectory(post-install)
+# Kiril: See https://github.com/Algebraic-Programming/LPF/issues/28
+#add_subdirectory(post-install)
 
